@@ -5,51 +5,19 @@ import pika
 import json
 from chargePointRepr import ChargePoint
 
+from aio_pika import Message, connect, ExchangeType
+from aio_pika.abc import AbstractIncomingMessage
+
+from occp_server_Request_Handler import Request_Handler
+
 logging.basicConfig(level=logging.INFO)
 
-def api_request(ch, method, properties, body):
-    print("-----Received")
-    print(body)
-
-    print(properties.reply_to)
-
-    ch.basic_publish(exchange='',
-                     routing_key=properties.reply_to,
-                     properties=pika.BasicProperties(correlation_id = \
-                                                         properties.correlation_id),
-                     body=str("response123"))
-
-    ch.basic_ack(delivery_tag=method.delivery_tag)
-
-    print("Response sent")
-
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters('localhost'))
-channel = connection.channel()
-
-#Declare exchange
-channel.exchange_declare(exchange='requests', exchange_type='topic')
-
-#Declare queue
-result = channel.queue_declare('Requests_Queue')
-queue_name = result.method.queue
-
-#Bind queue to exchange
-channel.queue_bind(exchange='requests',
-                   queue=queue_name,
-                   routing_key='request.ocppserver')
 
 
-#channel.basic_consume(
- #       queue=result, on_message_callback=api_request)
-
-
-
-"""
 async def on_connect(websocket, path):
-    """""" For every new charge point that connects, create a ChargePoint
+    """ For every new charge point that connects, create a ChargePoint
     instance and start listening for messages.
-    """"""
+    """
     try:
         requested_protocols = websocket.request_headers[
             'Sec-WebSocket-Protocol']
@@ -73,12 +41,10 @@ async def on_connect(websocket, path):
 
     await cp.start()
 
-    #TODO
-    #create task to listen API
-"""
+
 
 async def main():
-    """server = await websockets.serve(
+    server = await websockets.serve(
         on_connect,
         '0.0.0.0',
         9000,
@@ -86,11 +52,11 @@ async def main():
     )
     logging.info("WebSocket Server Started")
 
+    request_handler = await Request_Handler().connect()
 
-    await server.wait_closed()"""
-    channel.basic_consume(queue=queue_name, on_message_callback=api_request)
 
-    channel.start_consuming()
+    await server.wait_closed()
+
 
 
 if __name__ == '__main__':

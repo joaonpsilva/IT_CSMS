@@ -1,66 +1,88 @@
-import pika
+from aio_pika import ExchangeType, Message, connect
 import uuid
 import json
-import queue
+import asyncio
+from typing import MutableMapping
+
+from aio_pika.abc import (
+    AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
+)
 
 class Request_Handler:
 
     def __init__(self):
-        
-        #Declare channel
-        self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='localhost'))
-        self.channel = self.connection.channel()
 
-        #Declare exchange
-        self.channel.exchange_declare(exchange='requests', exchange_type='topic')
+        #map of key: request_id, value: future
+        # futures are async objects that will have a value in the future        
+        self.futures: MutableMapping[str, asyncio.Future] = {}
 
-        #Declare a queue for the responses
-        self.response_queue = self.channel.queue_declare(queue='', exclusive=True)
-        self.response_queue_name = self.response_queue.method.queue
 
-        
-        #Initiate consumer on the response queue
-        
-
-        
-        self.waiting_Requests={}
-    
-    async def init_Consumer(self):
-        #self.response_queue.consume(self.on_response, no_ack=True)
-        self.channel.basic_consume(
-            queue=self.response_queue_name,
-            on_message_callback=self.on_response,
-            auto_ack=True)
-        
-        self.channel.start_consuming()
-    
-
-    def on_response(self, ch, method, props, body):
-
-        print("received somthing")
-
-        self.waiting_Requests[props.correlation_id].put(body)
+        self.loop = asyncio.get_running_loop()
 
     
-    def call(self, message):
+    async def connect(self):
+        """
+        connect to the rabbitmq server and setup connection
+        """
 
+        #Declare connection
+        self.connection = await connect(
+            "amqp://guest:guest@localhost/", loop=self.loop,
+        )
+
+        #declare channel
+        self.channel = await self.connection.channel()
+
+        #declare exchange to which the requests will be sent
+        self.request_Exchange = await self.channel.declare_exchange(name="requests", type=ExchangeType.TOPIC)
+
+        #declare a callback queue to where the reponses will be consumed
+        self.callback_queue = await self.channel.declare_queue(exclusive=True)
+
+        #consume messages from the queue
+        await self.callback_queue.consume(self.on_response)
+
+        return self
+
+
+    
+    def on_response(self, message: AbstractIncomingMessage) -> None:
+        """
+        callback funtion. Will be executed when a message is received in the callback queue
+        """
+        if message.correlation_id is None:
+            print(f"Bad message {message!r}")
+            return
+
+        #get the future with key = correlationid
+        future: asyncio.Future = self.futures.pop(message.correlation_id)
+        
+        #set a result to that future
+        future.set_result(message.body)
+
+    
+    async def call(self, message):
+        """
+        Send a request
+        """
+
+        #create an ID for the request
         requestID = str(uuid.uuid4())
 
-        self.waiting_Requests[requestID] = queue.Queue()
+        #create a future and introduce it in the request map
+        future = self.loop.create_future()
+        self.futures[requestID] = future
 
-
-        self.channel.basic_publish(
-            exchange='requests',
-            routing_key='request.ocppserver',
-            properties=pika.BasicProperties(
-                reply_to=self.response_queue_name,
+        #send request
+        await self.request_Exchange.publish(
+            Message(
+                body=json.dumps(message),#encode()
+                content_type="application/json",
                 correlation_id=requestID,
+                reply_to=self.callback_queue.name,  #tell consumer: reply to this queue
             ),
-            body=json.dumps(message))
-        
-        try:
-            return self.waiting_Requests[requestID].get(timeout=5)
-        except Exception:
-            
-            print("Giving up")
+            routing_key="request.ocppserver",
+        )
+
+        #wait for the future to have a value and then return it
+        return str(await future)
