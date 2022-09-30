@@ -8,14 +8,14 @@ from aio_pika.abc import (
     AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
 )
 
-class Request_Handler:
+class CSMS_Rabbit_Handler:
 
     def __init__(self):
 
         self.loop = asyncio.get_running_loop()
 
     
-    async def connect(self):
+    async def connect(self, callback_function):
         """
         connect to the rabbitmq server and setup connection
         """
@@ -35,25 +35,6 @@ class Request_Handler:
         #Bind queue to exchange so that the queue is eligible to receive requests
         await self.request_queue.bind(self.request_Exchange, routing_key='request.ocppserver')
 
-        await self.request_queue.consume(self.on_api_request)
+        await self.request_queue.consume(callback_function, no_ack=False)
 
         return self
-
-
-    
-    async def on_api_request(self, message: AbstractIncomingMessage) -> None:
-
-        #assert message.reply_to is not None
-        n = json.loads(message.body.decode())
-
-        print(n)
-        response = "RESPONSE".encode()
-
-        await self.channel.default_exchange.publish(
-            Message(
-                body=response,
-                correlation_id=message.correlation_id,
-            ),
-            routing_key=message.reply_to,
-        )
-        print("Request complete")
