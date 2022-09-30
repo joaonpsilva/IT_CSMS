@@ -76,7 +76,7 @@ class Request_Handler:
         #send request
         await self.request_Exchange.publish(
             Message(
-                body=json.dumps(message),#encode()
+                body=json.dumps(message).encode(),
                 content_type="application/json",
                 correlation_id=requestID,
                 reply_to=self.callback_queue.name,  #tell consumer: reply to this queue

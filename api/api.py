@@ -14,12 +14,10 @@ async def GetVariablesRequest(CS_Number: int):
         "content" : "Hello"
     }
 
-    print("---Sending")
     print(message)
 
     reponse = await request_handler.call(message)
 
-    print("----Receiving")
     print(str(reponse))
 
     return str(reponse)
