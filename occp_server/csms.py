@@ -58,7 +58,7 @@ class CSMS:
         self.broker = CSMS_Rabbit_Handler()
 
         await self.broker.connect(self.new_cp)
-        await self.ocpp_server.start_server(self.on_cp_connect)
+        await self.ocpp_server.start_server(self.new_cp)
 
 
 

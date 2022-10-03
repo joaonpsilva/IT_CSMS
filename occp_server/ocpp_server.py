@@ -46,4 +46,4 @@ class OCPP_Server:
                             requested_protocols)
             return await websocket.close()
 
-        self.callback_funtion(websocket, path.strip('/'))
+        await self.callback_funtion(websocket, path.strip('/'))
