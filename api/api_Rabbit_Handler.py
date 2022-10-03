@@ -61,7 +61,7 @@ class API_Rabbit_Handler:
         future.set_result(message.body)
 
     
-    async def call(self, message):
+    async def send_get_request(self, message):
         """
         Send a request
         """
