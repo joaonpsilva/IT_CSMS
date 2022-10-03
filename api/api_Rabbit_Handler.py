@@ -8,6 +8,15 @@ from aio_pika.abc import (
     AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
 )
 
+import dataclasses
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+        def default(self, o):
+            if dataclasses.is_dataclass(o):
+                return dataclasses.asdict(o)
+            return super().default(o)
+            
+
 class API_Rabbit_Handler:
 
     def __init__(self):
@@ -76,7 +85,7 @@ class API_Rabbit_Handler:
         #send request
         await self.request_Exchange.publish(
             Message(
-                body=json.dumps(message).encode(),
+                body=json.dumps(message, cls=EnhancedJSONEncoder).encode(),
                 content_type="application/json",
                 correlation_id=requestID,
                 reply_to=self.callback_queue.name,  #tell consumer: reply to this queue

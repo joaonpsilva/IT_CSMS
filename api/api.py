@@ -1,6 +1,10 @@
 import uvicorn
 from fastapi import FastAPI, Depends
 from api_Rabbit_Handler import API_Rabbit_Handler
+from pydantic import BaseModel
+from typing import Dict, List, Optional
+from ocpp.v201 import call, call_result, enums, datatypes
+
 
 import asyncio
 
@@ -8,19 +12,21 @@ app = FastAPI()
 broker = None
 
 
-@app.get("/{CS_Number}/GetVariablesRequest")
-async def GetVariablesRequest(CS_Number: int):
+#class GetVariablesRequestBody(BaseModel):
+#    getVariableData: List[datatypes.GetVariableDataType]
+
+
+@app.post("/GetVariablesRequest/{CS_Number}")
+async def GetVariablesRequest(CS_Number: int, payload: List[datatypes.GetVariableDataType]):
+    
     message = {
-        "content" : "Hello"
+        "CS_ID" : CS_Number,
+        "Message" : payload
     }
 
-    print(message)
+    response = await broker.send_get_request(message)
 
-    reponse = await broker.send_get_request(message)
-
-    print(str(reponse))
-
-    return str(reponse)
+    return response
 
 
 
