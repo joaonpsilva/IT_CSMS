@@ -8,7 +8,7 @@ from aio_pika.abc import (
     AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
 )
 
-class Request_Handler:
+class API_Rabbit_Handler:
 
     def __init__(self):
 

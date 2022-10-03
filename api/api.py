@@ -1,11 +1,11 @@
 import uvicorn
 from fastapi import FastAPI, Depends
-from Request_Handler import Request_Handler
+from api_Rabbit_Handler import API_Rabbit_Handler
 
 import asyncio
 
 app = FastAPI()
-request_handler = None
+broker = None
 
 
 @app.get("/{CS_Number}/GetVariablesRequest")
@@ -16,7 +16,7 @@ async def GetVariablesRequest(CS_Number: int):
 
     print(message)
 
-    reponse = await request_handler.call(message)
+    reponse = await broker.send_get_request(message)
 
     print(str(reponse))
 
@@ -27,8 +27,8 @@ async def GetVariablesRequest(CS_Number: int):
 @app.on_event("startup")
 async def main():
 
-    global request_handler
-    request_handler = await Request_Handler().connect()
+    global broker
+    broker = await API_Rabbit_Handler().connect()
 
     
 if __name__ == '__main__':
