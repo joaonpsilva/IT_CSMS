@@ -21,16 +21,10 @@ class ChargePoint(cp):
 
 
     async def getVariables(self, 
-        attributeType: enums.AttributeType,
-        component: datatypes.ComponentType,
-        variable: datatypes.VariableType):
+        payload):
 
-        request = call.GetVariablesPayload(get_variable_data=[{
-            'attributeType': attributeType,
-            'component': component,
-            'variable': variable
-        }])
+        request = call.GetVariablesPayload(get_variable_data=payload)
 
-        response_get_variable = await self.call(request)
+        return await self.call(request)
     
  

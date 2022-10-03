@@ -24,9 +24,7 @@ class CSMS:
     async def new_cp(self,websocket, charge_point_id):
         
         cp = ChargePoint(charge_point_id, websocket)
-
         self.connected_cp[charge_point_id] = cp
-
         await cp.start()
 
 
@@ -35,17 +33,19 @@ class CSMS:
         """API sent a message"""
 
         #assert message.reply_to is not None
-        content = json.loads(message.body.decode())
-
-        logging.info("Received from API: %s", str(content))
-
         await message.ack()
 
-        response = "RESPONSE".encode()
+        content = json.loads(message.body.decode())
+        logging.info("Received from API: %s", str(content))
+
+        cp_id = content['CS_ID']
+
+        response = await self.connected_cp["CP_1"].getVariables(content["Message"])
+
 
         await self.broker.channel.default_exchange.publish(
             Message(
-                body=response,
+                body=json.dumps(response).encode(),
                 correlation_id=message.correlation_id,
             ),
             routing_key=message.reply_to,
