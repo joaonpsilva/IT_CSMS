@@ -40,7 +40,8 @@ class CSMS:
 
         cp_id = request['CS_ID']
 
-        response = await self.connected_CPs["CP_1"].getVariables(request["Message"])
+        response = await self.connected_CPs["CP_" + str(cp_id)].send_CP_Message(
+                request["METHOD"], request["PAYLOAD"])
 
         return response
 

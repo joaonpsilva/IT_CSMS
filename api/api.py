@@ -12,16 +12,13 @@ app = FastAPI()
 broker = None
 
 
-#class GetVariablesRequestBody(BaseModel):
-#    getVariableData: List[datatypes.GetVariableDataType]
-
-
 @app.post("/GetVariablesRequest/{CS_Number}")
 async def GetVariablesRequest(CS_Number: int, payload: List[datatypes.GetVariableDataType]):
     
     message = {
         "CS_ID" : CS_Number,
-        "Message" : payload
+        "METHOD" : "GETVARIABLES",
+        "PAYLOAD" : payload
     }
 
     response = await broker.send_get_request(message)

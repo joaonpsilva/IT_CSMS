@@ -54,10 +54,10 @@ class ChargePoint(cp):
                     'attribute_status': enums.GetVariableStatusType.accepted, 
                     'attribute_value' : 'ATRIBUTE_VALUE',
                     'component' : {
-                        'name': get_variable_data[0].get('component').get('name')
+                        'name': var.get('component').get('name')
                     },
                     'variable' : {
-                        'name': get_variable_data[0].get('variable').get('name')
+                        'name': var.get('variable').get('name')
                     }
                 }
                         
