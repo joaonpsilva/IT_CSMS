@@ -18,47 +18,45 @@ logging.basicConfig(level=logging.INFO)
 class CSMS:
 
     def __init__(self):
-        self.connected_cp = {}
+        self.connected_CPs = {}
 
 
     async def new_cp(self,websocket, charge_point_id):
+        """Call back funtion called by ocpp server when new CP connects"""
         
+        #create new charge point object that will handle the comunication
         cp = ChargePoint(charge_point_id, websocket)
-        self.connected_cp[charge_point_id] = cp
+
+        #add to known connections
+        self.connected_CPs[charge_point_id] = cp
+
+        #start comunication
         await cp.start()
 
 
     
-    async def on_api_request(self, message: AbstractIncomingMessage) -> None:
-        """API sent a message"""
+    async def handle_api_request(self, request) -> None:
+        """Funtions that handles requests from the api to comunicate with CPs"""
 
-        #assert message.reply_to is not None
-        await message.ack()
+        cp_id = request['CS_ID']
 
-        content = json.loads(message.body.decode())
-        logging.info("Received from API: %s", str(content))
+        response = await self.connected_CPs["CP_1"].getVariables(request["Message"])
 
-        cp_id = content['CS_ID']
+        return response
 
-        response = await self.connected_cp["CP_1"].getVariables(content["Message"])
-
-
-        await self.broker.channel.default_exchange.publish(
-            Message(
-                body=json.dumps(response).encode(),
-                correlation_id=message.correlation_id,
-            ),
-            routing_key=message.reply_to,
-        )
 
 
     async def run(self):
+        
+        #OCPP server listens to CP connections
+        self.ocpp_server = OCPP_Server(self.new_cp)
 
-        self.ocpp_server = OCPP_Server()
-        self.broker = CSMS_Rabbit_Handler()
+        #broker handles the rabbit mq queues and communication between services
+        self.broker = CSMS_Rabbit_Handler(self.handle_api_request)
 
-        await self.broker.connect(self.on_api_request)
-        await self.ocpp_server.start_server(self.new_cp)
+        #start broker and server
+        await self.broker.connect()
+        await self.ocpp_server.start_server()
 
 
 

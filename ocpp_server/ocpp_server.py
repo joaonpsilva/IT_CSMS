@@ -6,12 +6,10 @@ logging.basicConfig(level=logging.INFO)
 
 class OCPP_Server:
 
-    def __init__(self):
-        self.callback_funtion = None
-
-    async def start_server(self, callback_function):
-
+    def __init__(self, callback_function):
         self.callback_funtion = callback_function
+
+    async def start_server(self):
 
         server = await websockets.serve(
             self.on_cp_connect,

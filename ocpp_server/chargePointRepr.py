@@ -20,8 +20,7 @@ class ChargePoint(cp):
         )
 
 
-    async def getVariables(self, 
-        payload):
+    async def getVariables(self, payload):
 
         request = call.GetVariablesPayload(get_variable_data=payload)
 
