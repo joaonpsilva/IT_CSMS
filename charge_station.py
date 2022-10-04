@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from requests import request
 import websockets
 from ocpp.routing import after,on
 import sys
@@ -26,23 +27,112 @@ class ChargePoint(cp):
 
        if response.status == 'Accepted':
            logging.info("Connected to central system.")
+
+
     
     async def meterValuesRequest(self):
 
-        meter_Values=[
-            datatypes.MeterValueType(
-                timestamp=datetime.utcnow().isoformat(),
-                sampled_value=datatypes.SampledValueType(value=0.1))
-        ]
-
         request = call.MeterValuesPayload(
             evse_id = self.id,
-            meter_value = meter_Values
+            meter_value = [
+                datatypes.MeterValueType(
+                    timestamp=datetime.utcnow().isoformat(),
+                    sampled_value=[
+                        datatypes.SampledValueType(
+                            value=0.1,
+                            context=enums.ReadingContextType.interruption_begin,
+                            measurand = enums.MeasurandType.current_export,
+                            phase= enums.PhaseType.l1,
+                            location= enums.LocationType.body,
+                            signed_meter_value= datatypes.SignedMeterValueType(
+                                signed_meter_data = "",
+                                signing_method = "",
+                                encoding_method = "",
+                                public_key = "",
+                            )
+                            #unit_of_measure= datatypes.UnitOfMeasureType()
+                        )
+                    ]
+                )
+            ]
         )
+        response = await self.call(request)
     
+
+    async def transactionEventRequest(self):
+        request = call.TransactionEventPayload(
+            event_type=enums.TransactionEventType.started,
+            timestamp=datetime.utcnow().isoformat(),
+            trigger_reason=enums.TriggerReasonType.ev_detected,
+            seq_no=1,
+            transaction_info=datatypes.TransactionType(
+                id="123"
+            )
+        )
+        response = await self.call(request)
     
+
+
+    
+    async def startTransaction_CablePluginFirst(self):
+
+        request = call.StatusNotificationPayload(
+            timestamp=datetime.utcnow().isoformat(),
+            connector_status=enums.ConnectorStatusType.occupied,
+            evse_id=1,
+            connector_id=1
+        )
+        response = await self.call(request)
+
+
+        request = call.TransactionEventPayload(
+            event_type=enums.TransactionEventType.started,
+            timestamp=datetime.utcnow().isoformat(),
+            trigger_reason=enums.TriggerReasonType.cable_plugged_in,
+            seq_no=1,
+            transaction_info=datatypes.TransactionType(
+                id="AB1234",
+                charging_state=enums.ChargingStateType.ev_connected
+            ),
+            evse=datatypes.EVSEType(id=1, connector_id=1)
+            
+        )
+        response = await self.call(request)
+
+        logging.info("User authorization successful")
+
+        request = call.TransactionEventPayload(
+            event_type=enums.TransactionEventType.updated,
+            timestamp=datetime.utcnow().isoformat(),
+            trigger_reason=enums.TriggerReasonType.authorized,
+            seq_no=2,
+            id_token=datatypes.IdTokenType(id_token="1234", type=enums.IdTokenType.central),
+            transaction_info=datatypes.TransactionType(
+                id="AB1234",
+                charging_state=enums.ChargingStateType.ev_connected
+            )
+        )
+        response = await self.call(request)
+
+
+        request = call.TransactionEventPayload(
+            event_type=enums.TransactionEventType.updated,
+            timestamp=datetime.utcnow().isoformat(),
+            trigger_reason=enums.TriggerReasonType.charging_state_changed,
+            seq_no=3,
+            id_token=datatypes.IdTokenType(id_token="1234", type=enums.IdTokenType.central),
+            transaction_info=datatypes.TransactionType(
+                id="AB1234",
+                charging_state=enums.ChargingStateType.charging
+            )
+        )
+        response = await self.call(request)
+
+
+
+
     @on('GetVariables')
-    async def on_get_variables(self,get_variable_data,**kwargs):
+    def on_get_variables(self,get_variable_data,**kwargs):
 
         logging.info("Received getVariables")
 
@@ -64,6 +154,7 @@ class ChargePoint(cp):
             )
 
         return call_result.GetVariablesPayload(get_variable_result)
+    
 
 
 async def main(id):
