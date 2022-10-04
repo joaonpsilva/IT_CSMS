@@ -25,7 +25,6 @@ class API_Rabbit_Handler:
         # futures are async objects that will have a value in the future        
         self.futures: MutableMapping[str, asyncio.Future] = {}
 
-
         self.loop = asyncio.get_running_loop()
 
     
@@ -54,7 +53,6 @@ class API_Rabbit_Handler:
         return self
 
 
-    
     def on_response(self, message: AbstractIncomingMessage) -> None:
         """
         callback funtion. Will be executed when a message is received in the callback queue
@@ -67,7 +65,8 @@ class API_Rabbit_Handler:
         future: asyncio.Future = self.futures.pop(message.correlation_id)
         
         #set a result to that future
-        future.set_result(message.body)
+        future.set_result(json.loads(message.body.decode()))
+        
 
     
     async def send_get_request(self, message):
