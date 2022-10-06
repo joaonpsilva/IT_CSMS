@@ -1,7 +1,9 @@
+from calendar import c
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
 
 from ocpp.routing import on
+from datetime import datetime
 from datetime import datetime
 
 import logging
@@ -14,7 +16,8 @@ class ChargePoint(cp):
         super().__init__(id, connection, response_timeout)
 
         self.method_mapping = {
-            "GETVARIABLES" : self.getVariables
+            "GET_VARIABLES" : self.getVariables,
+            "GET_TRANSACTION_STATUS" : self.getTransactionStatus
         }
     
     async def send_CP_Message(self, method, payload):
@@ -29,6 +32,11 @@ class ChargePoint(cp):
         """Funtion initiated by the csms to get variables"""
         request = call.GetVariablesPayload(get_variable_data=payload)
         return await self.call(request)
+    
+    async def getTransactionStatus(self, transaction_id=None):#CHECK THIS, RETHING ARGUMENTS
+        request = call.GetTransactionStatusPayload(transaction_id=transaction_id['transaction_id'])
+        return await self.call(request)
+
 
 
 #######################Funtions staring from the CP Initiative
@@ -53,11 +61,26 @@ class ChargePoint(cp):
         #TODO construct better TransactionEventPayload
         return call_result.TransactionEventPayload()
     
-    on('StatusNotification')
+    @on('StatusNotification')
     async def on_StatusNotification(self, timestamp, connector_status, evse_id, connector_id):
         #what TODO with parameters
         return call_result.StatusNotificationPayload()
 
+    @on('Heartbeat')
+    async def on_Heartbeat(self):
+        return call_result.HeartbeatPayload(
+            current_time=datetime.utcnow().isoformat()
+        )
+    
+    @on('Authorize')
+    async def on_Authorize(self,id_token, **kwargs):
+        return call_result.AuthorizePayload(
+            id_token_info=datatypes.IdTokenInfoType(
+                status=enums.AuthorizationStatusType.accepted
+            )
+        )
+
+    
 
 
     

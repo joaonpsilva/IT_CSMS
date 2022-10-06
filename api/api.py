@@ -12,19 +12,28 @@ app = FastAPI()
 broker = None
 
 
-@app.post("/GetVariablesRequest/{CS_Number}")
+@app.post("/GetVariables/{CS_Number}")
 async def GetVariablesRequest(CS_Number: int, payload: List[datatypes.GetVariableDataType]):
     
     message = {
         "CS_ID" : CS_Number,
-        "METHOD" : "GETVARIABLES",
+        "METHOD" : "GET_VARIABLES",
         "PAYLOAD" : payload
     }
 
     response = await broker.send_get_request(message)
-
     return response
 
+
+@app.get("/GetTransactionStatus/{CS_Number}")
+async def GetTransactionStatus(CS_Number: int, transactionId: str = None ):
+    message = {
+        "CS_ID" : CS_Number,
+        "METHOD" : "GET_TRANSACTION_STATUS",
+        "PAYLOAD" : {"transaction_id" : transactionId}
+    }
+    response = await broker.send_get_request(message)
+    return response
 
 
 @app.on_event("startup")

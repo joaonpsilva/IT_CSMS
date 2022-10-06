@@ -1,4 +1,5 @@
 import asyncio
+import enum
 import logging
 from requests import request
 import websockets
@@ -127,14 +128,24 @@ class ChargePoint(cp):
             )
         )
         response = await self.call(request)
+    
+    async def authorizeRequest(self):
+        request = call.AuthorizePayload(
+            id_token=datatypes.IdTokenType(
+                id_token="AAA",
+                type=enums.IdTokenType.central
+            )
+        )
+        
+        response = await self.call(request)
 
 
-
+########################################
 
     @on('GetVariables')
     def on_get_variables(self,get_variable_data,**kwargs):
 
-        logging.info("Received getVariables")
+        logging.info("Received GetVariables")
 
         get_variable_result=[]
 
@@ -154,6 +165,20 @@ class ChargePoint(cp):
             )
 
         return call_result.GetVariablesPayload(get_variable_result)
+    
+    
+    @on('GetTransactionStatus')
+    def on_GetTransactionStatus(self,**kwargs):
+
+        logging.info("Received GetTransactionStatus")
+
+        return call_result.GetTransactionStatusPayload(
+            messages_in_queue=True,
+            ongoing_indicator=True
+        )
+
+
+
     
 
 
