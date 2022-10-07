@@ -164,7 +164,26 @@ class ChargePoint(cp):
                         
             )
 
-        return call_result.GetVariablesPayload(get_variable_result)
+        return call_result.GetVariablesPayload(get_variable_result=get_variable_result)
+    
+
+    @on('SetVariables')
+    def on_set_variables(self, set_variable_data):
+
+        return call_result.SetVariablesPayload(
+            set_variable_result=[
+                datatypes.SetVariableResultType(
+                    attribute_status=enums.SetVariableStatusType.accepted,
+                    component=datatypes.ComponentType(
+                        name="ABC"
+                    ),
+                    variable=datatypes.VariableType(
+                        name="ABC"
+                    )
+                )
+            ]
+        )
+
     
     
     @on('GetTransactionStatus')
@@ -175,6 +194,14 @@ class ChargePoint(cp):
         return call_result.GetTransactionStatusPayload(
             messages_in_queue=True,
             ongoing_indicator=True
+        )
+    
+
+    @on('RequestStartTransaction')
+    def on_RequestStartTransaction(self, id_token, remote_start_id, **kwargs):
+
+        return call_result.RequestStartTransactionPayload(
+            status=enums.RequestStartStopStatusType.accepted
         )
 
 

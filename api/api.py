@@ -4,7 +4,7 @@ from api_Rabbit_Handler import API_Rabbit_Handler
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 from ocpp.v201 import call, call_result, enums, datatypes
-
+import payloads
 
 import asyncio
 
@@ -13,17 +13,40 @@ broker = None
 
 
 @app.post("/GetVariables/{CS_Number}")
-async def GetVariablesRequest(CS_Number: int, payload: List[datatypes.GetVariableDataType]):
+async def GetVariables(CS_Number: int, payload: List[datatypes.GetVariableDataType]):
     
     message = {
         "CS_ID" : CS_Number,
         "METHOD" : "GET_VARIABLES",
-        "PAYLOAD" : payload
+        "PAYLOAD" : {'get_variable_data' : payload}
     }
 
     response = await broker.send_get_request(message)
     return response
 
+
+@app.post("/SetVariables/{CS_Number}")
+async def SetVariables(CS_Number: int, payload: List[datatypes.SetVariableDataType]):
+    message = {
+        "CS_ID" : CS_Number,
+        "METHOD" : "SET_VARIABLES",
+        "PAYLOAD" : {'set_variable_data' : payload}
+    }
+
+    response = await broker.send_get_request(message)
+    return response  
+
+
+@app.post("/RequestStartTransaction/{CS_Number}")
+async def RequestStartTransaction(CS_Number: int, payload: payloads.RequestStartTransaction_Payload):
+    message = {
+        "CS_ID" : CS_Number,
+        "METHOD" : "REQUEST_START_TRANSACTION",
+        "PAYLOAD" : payload
+    }
+
+    response = await broker.send_get_request(message)
+    return response  
 
 @app.get("/GetTransactionStatus/{CS_Number}")
 async def GetTransactionStatus(CS_Number: int, transactionId: str = None ):

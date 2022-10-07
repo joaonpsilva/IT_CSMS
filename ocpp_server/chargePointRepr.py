@@ -7,6 +7,8 @@ from datetime import datetime
 from datetime import datetime
 
 import logging
+
+from requests import request
 logging.basicConfig(level=logging.INFO)
 
 
@@ -17,7 +19,9 @@ class ChargePoint(cp):
 
         self.method_mapping = {
             "GET_VARIABLES" : self.getVariables,
-            "GET_TRANSACTION_STATUS" : self.getTransactionStatus
+            "GET_TRANSACTION_STATUS" : self.getTransactionStatus,
+            "SET_VARIABLES" : self.setVariables,
+            "REQUEST_START_TRANSACTION" : self.requestStartTransaction
         }
     
     async def send_CP_Message(self, method, payload):
@@ -25,17 +29,33 @@ class ChargePoint(cp):
         return await self.method_mapping[method](payload)
 
 
+
 #######################Functions starting from CSMS Initiative
 
 
     async def getVariables(self, payload):
         """Funtion initiated by the csms to get variables"""
-        request = call.GetVariablesPayload(get_variable_data=payload)
+        request = call.GetVariablesPayload(get_variable_data=payload['get_variable_data'])
         return await self.call(request)
     
-    async def getTransactionStatus(self, transaction_id=None):#CHECK THIS, RETHING ARGUMENTS
-        request = call.GetTransactionStatusPayload(transaction_id=transaction_id['transaction_id'])
+    async def setVariables(self, payload):
+        request = call.SetVariablesPayload(set_variable_data=payload['set_variable_data'])
         return await self.call(request)
+    
+    async def getTransactionStatus(self, payload={'transaction_id' : None}):#CHECK THIS, RETHING ARGUMENTS
+        request = call.GetTransactionStatusPayload(transaction_id=payload['transaction_id'])
+        return await self.call(request)
+    
+    async def requestStartTransaction(self, payload):
+        request = call.RequestStartTransactionPayload(
+            id_token=payload['id_token'],
+            remote_start_id=payload['remote_start_id'],
+            evse_id=payload['evse_id'],
+            group_id_token=payload['group_id_token'],
+            charging_profile=payload['charging_profile']
+        )
+        return await self.call(request)
+
 
 
 
@@ -79,9 +99,3 @@ class ChargePoint(cp):
                 status=enums.AuthorizationStatusType.accepted
             )
         )
-
-    
-
-
-    
- 
