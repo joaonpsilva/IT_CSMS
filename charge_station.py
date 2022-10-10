@@ -72,8 +72,6 @@ class ChargePoint(cp):
         )
         response = await self.call(request)
     
-
-
     
     async def startTransaction_CablePluginFirst(self):
 
@@ -203,10 +201,6 @@ class ChargePoint(cp):
         return call_result.RequestStartTransactionPayload(
             status=enums.RequestStartStopStatusType.accepted
         )
-
-
-
-    
 
 
 async def main(id):
