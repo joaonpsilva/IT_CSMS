@@ -69,7 +69,7 @@ class API_Rabbit_Handler:
         
 
     
-    async def send_get_request(self, message):
+    async def send_request(self, message):
         """
         Send a request
         """
@@ -93,4 +93,9 @@ class API_Rabbit_Handler:
         )
 
         #wait for the future to have a value and then return it
-        return str(await future)
+
+        try:
+            return await asyncio.wait_for(future, timeout=5)
+        except asyncio.TimeoutError:
+            #maybe delete entry in future map?
+            return "ERROR"

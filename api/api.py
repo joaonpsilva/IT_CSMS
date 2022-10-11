@@ -21,7 +21,7 @@ async def GetVariables(CS_Number: int, payload: List[datatypes.GetVariableDataTy
         "PAYLOAD" : {'get_variable_data' : payload}
     }
 
-    response = await broker.send_get_request(message)
+    response = await broker.send_request(message)
     return response
 
 
@@ -33,7 +33,7 @@ async def SetVariables(CS_Number: int, payload: List[datatypes.SetVariableDataTy
         "PAYLOAD" : {'set_variable_data' : payload}
     }
 
-    response = await broker.send_get_request(message)
+    response = await broker.send_request(message)
     return response  
 
 
@@ -45,7 +45,7 @@ async def RequestStartTransaction(CS_Number: int, payload: payloads.RequestStart
         "PAYLOAD" : payload
     }
 
-    response = await broker.send_get_request(message)
+    response = await broker.send_request(message)
     return response  
 
 @app.get("/GetTransactionStatus/{CS_Number}")
@@ -55,7 +55,7 @@ async def GetTransactionStatus(CS_Number: int, transactionId: str = None ):
         "METHOD" : "GET_TRANSACTION_STATUS",
         "PAYLOAD" : {"transaction_id" : transactionId}
     }
-    response = await broker.send_get_request(message)
+    response = await broker.send_request(message)
     return response
 
 
