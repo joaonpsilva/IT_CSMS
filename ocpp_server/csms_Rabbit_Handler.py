@@ -46,6 +46,8 @@ class CSMS_Rabbit_Handler:
 
         #Declare exchange to where API will send requests
         self.request_Exchange = await self.channel.declare_exchange(name="requests", type=ExchangeType.TOPIC)
+        #Declare exchange where logs are sent
+        self.db_store_Exchange = await self.channel.declare_exchange("db_store", type=ExchangeType.FANOUT)
 
         #Declare queue that will receive the requests to be handled by the occp_server
         self.request_queue = await self.channel.declare_queue("occpServer_Requests_Queue")
@@ -79,3 +81,13 @@ class CSMS_Rabbit_Handler:
                 ),
                 routing_key=message.reply_to,
             )
+    
+    async def send_to_DB(self, message):
+        #send message to store
+        await self.db_store_Exchange.publish(
+            Message(
+                body=json.dumps(message, cls=EnhancedJSONEncoder).encode(),
+                content_type="application/json",
+            ),
+            routing_key="",
+        )

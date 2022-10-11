@@ -14,6 +14,8 @@ logging.basicConfig(level=logging.INFO)
 
 class ChargePoint(cp):
 
+    broker = None
+
     def __init__(self, id, connection, response_timeout=30):
         super().__init__(id, connection, response_timeout)
 
@@ -86,6 +88,14 @@ class ChargePoint(cp):
     @on('MeterValues')
     async def on_MeterValues(self, evse_id, meter_value):
         #what TODO with parameters
+        await ChargePoint.broker.send_to_DB({
+            "METHOD" : "METER_VALUES",
+            "CONTENT" : {
+                "evse_id" : evse_id,
+                "meter_value": meter_value
+            }
+        })
+
         return call_result.MeterValuesPayload()
     
     @on('TransactionEvent')
