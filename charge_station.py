@@ -6,6 +6,7 @@ import websockets
 from ocpp.routing import after,on
 import sys
 from datetime import datetime
+from aioconsole import ainput
 
 from ocpp.v201 import call, call_result, enums, datatypes
 from ocpp.v201 import ChargePoint as cp
@@ -34,24 +35,14 @@ class ChargePoint(cp):
     async def meterValuesRequest(self):
 
         request = call.MeterValuesPayload(
-            evse_id = self.id,
+            evse_id = 0,
             meter_value = [
                 datatypes.MeterValueType(
                     timestamp=datetime.utcnow().isoformat(),
                     sampled_value=[
                         datatypes.SampledValueType(
                             value=0.1,
-                            context=enums.ReadingContextType.interruption_begin,
                             measurand = enums.MeasurandType.current_export,
-                            phase= enums.PhaseType.l1,
-                            location= enums.LocationType.body,
-                            signed_meter_value= datatypes.SignedMeterValueType(
-                                signed_meter_data = "",
-                                signing_method = "",
-                                encoding_method = "",
-                                public_key = "",
-                            )
-                            #unit_of_measure= datatypes.UnitOfMeasureType()
                         )
                     ]
                 )
@@ -182,8 +173,6 @@ class ChargePoint(cp):
             ]
         )
 
-    
-    
     @on('GetTransactionStatus')
     def on_GetTransactionStatus(self,**kwargs):
 
@@ -203,6 +192,21 @@ class ChargePoint(cp):
         )
 
 
+
+
+
+async def get_input(cp):
+    
+    command_map={
+        "meterValuesRequest":cp.meterValuesRequest
+    }
+
+    while True:
+        command = await ainput("")
+        if command in command_map:
+            await command_map[command]()
+
+
 async def main(id):
 
     cp_id = "CP_" + id
@@ -214,7 +218,16 @@ async def main(id):
 
         cp = ChargePoint(cp_id, ws)
 
-        await asyncio.gather(cp.start(), cp.send_boot_notification())
+        await asyncio.gather(cp.start(), cp.send_boot_notification(), get_input(cp))
+
+
+
+
+
+
+
+
+        
 
 
 if __name__ == '__main__':
