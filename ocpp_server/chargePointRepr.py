@@ -1,14 +1,11 @@
-from calendar import c
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
 
 from ocpp.routing import on
 from datetime import datetime
-from datetime import datetime
 
 import logging
 
-from requests import request
 logging.basicConfig(level=logging.INFO)
 
 

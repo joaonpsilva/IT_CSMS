@@ -1,7 +1,5 @@
 import asyncio
-import enum
 import logging
-from requests import request
 import websockets
 from ocpp.routing import after,on
 import sys

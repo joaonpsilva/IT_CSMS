@@ -1,13 +1,6 @@
 import asyncio
 import logging
-import websockets
-import pika
-import json
 from chargePointRepr import ChargePoint
-
-from aio_pika import Message, connect, ExchangeType
-from aio_pika.message import IncomingMessage
-from aio_pika.abc import AbstractIncomingMessage
 
 from csms_Rabbit_Handler import CSMS_Rabbit_Handler
 from ocpp_server import OCPP_Server
