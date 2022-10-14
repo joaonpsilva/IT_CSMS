@@ -23,7 +23,6 @@ class DB_Rabbit_Handler:
 
     def __init__(self, request_queue_callback_function, store_queue_callback_function):
 
-        self.loop = asyncio.get_running_loop()
         self.request_queue_callback_function = request_queue_callback_function
         self.store_queue_callback_function = store_queue_callback_function
 
