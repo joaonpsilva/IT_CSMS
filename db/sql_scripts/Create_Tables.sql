@@ -6,6 +6,7 @@ CREATE TABLE Charge_Point(
     model VARCHAR(20) NOT NULL,
     vendorName VARCHAR(50) NOT NULL,
     serialNumber VARCHAR(25),
+    --modem
     firmwareVersion VARCHAR(50)
 );
 

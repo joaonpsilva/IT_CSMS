@@ -76,6 +76,8 @@ class ChargePoint(cp):
     @on('BootNotification')
     async def on_BootNotification(self, charging_station, reason, **kwargs):
 
+        #inform db that new cp has connected
+
         return call_result.BootNotificationPayload(
             current_time=datetime.utcnow().isoformat(),
             interval=10,
@@ -102,6 +104,8 @@ class ChargePoint(cp):
     
     @on('StatusNotification')
     async def on_StatusNotification(self, timestamp, connector_status, evse_id, connector_id):
+
+        
         #what TODO with parameters
         return call_result.StatusNotificationPayload()
 
