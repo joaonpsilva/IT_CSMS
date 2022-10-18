@@ -205,9 +205,8 @@ async def get_input(cp):
             await command_map[command]()
 
 
-async def main(id):
+async def main(cp_id):
 
-    cp_id = "CP_" + id
     async with websockets.connect(
         'ws://localhost:9000/' + cp_id,
         
