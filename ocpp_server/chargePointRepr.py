@@ -67,9 +67,6 @@ class ChargePoint(cp):
 
 
 
-
-
-
 #######################Funtions staring from the CP Initiative
 
 
@@ -77,6 +74,17 @@ class ChargePoint(cp):
     async def on_BootNotification(self, charging_station, reason, **kwargs):
 
         #inform db that new cp has connected
+        charging_station["id"] = self.id
+
+        message = {
+            "METHOD" : "BootNotification",
+            "CONTENT" : {
+                "charging_station" : charging_station,
+                "reason" : reason
+            }
+        }
+
+        await ChargePoint.broker.send_to_DB(message)
 
         return call_result.BootNotificationPayload(
             current_time=datetime.utcnow().isoformat(),
@@ -88,7 +96,7 @@ class ChargePoint(cp):
     async def on_MeterValues(self, evse_id, meter_value):
         #what TODO with parameters
         await ChargePoint.broker.send_to_DB({
-            "METHOD" : "METER_VALUES",
+            "METHOD" : "MeterValues",
             "CONTENT" : {
                 "evse_id" : evse_id,
                 "meter_value": meter_value
