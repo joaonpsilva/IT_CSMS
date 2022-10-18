@@ -5,7 +5,9 @@ pip install fastapi
 pip install aio-pika
 pip install ocpp
 pip install websockets
-pip install mysql-connector-python
+pip install mysql-connector-python ?
+pip3 install sqlalchemy
+pip install pymysql
 pip install aioconsole (apenas para debug)
 
 ## Rabbit MQ Server
