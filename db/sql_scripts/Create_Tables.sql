@@ -1,4 +1,4 @@
-
+--OLD
 
 --@block
 CREATE TABLE Charge_Point(
@@ -6,7 +6,8 @@ CREATE TABLE Charge_Point(
     model VARCHAR(20) NOT NULL,
     vendorName VARCHAR(50) NOT NULL,
     serialNumber VARCHAR(25),
-    --modem
+    modem_iccid VARCHAR(20),
+    modem_imsi VARCHAR(20), 
     firmwareVersion VARCHAR(50)
 );
 
