@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Table, create_engine, Enum
+from sqlalchemy import Column, ForeignKey, Integer, String, Table, create_engine, Enum, ForeignKeyConstraint
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from ocpp.v201 import enums
 
@@ -20,9 +20,8 @@ class Charge_Point(Base):
 
 class EVSE(Base):
     __tablename__ = "EVSE"
-    id = Column(Integer, primary_key=True)
-    evse_id = Column(Integer, nullable=False)
-    cp_id = Column(Integer, ForeignKey("Charge_point.id"))
+    cp_id = Column(Integer, ForeignKey("Charge_point.id"), primary_key=True)
+    evse_id = Column(Integer, primary_key=True)   #This id is only unique inside each CP
 
     connectors = relationship("Connector", backref="EVSE")
 
@@ -30,12 +29,17 @@ class EVSE(Base):
 
 class Connector(Base):
     __tablename__ = "Connector"
-    id = Column(Integer, primary_key=True)
-    connector_id = Column(Integer, nullable=False)
-    evse_id = Column(Integer, ForeignKey("EVSE.id"))
-    connectorStatus = Enum(enums.ConnectorStatusType)
+    cp_id = Column(Integer, primary_key=True)
+    evse_id = Column(Integer, primary_key=True)
+    connector_id = Column(Integer, primary_key=True) #This id is only unique inside each EVSE
+    connector_status = Enum(enums.ConnectorStatusType)
+
+    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
+                                            [ "EVSE.cp_id", "EVSE.evse_id"]),
+                        {})
 
 
 
 def create_Tables(engine):
+    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)

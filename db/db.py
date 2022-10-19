@@ -5,7 +5,10 @@ from aio_pika.abc import AbstractIncomingMessage
 import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from sqlalchemy.sql import exists
 import db_Tables
+from sqlalchemy.orm.util import identity_key
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,6 +21,7 @@ class DataBase:
 
         #MySql engine
         self.engine = create_engine("mysql+pymysql://root:password123@localhost:3306/csms_db")
+        logging.info("Connected to the database")
 
         #Create SQL tables
         db_Tables.create_Tables(self.engine)
@@ -28,7 +32,8 @@ class DataBase:
 
         #map incoming messages to methods
         self.method_mapping={
-            "BootNotification" : self.BootNotification
+            "BootNotification" : self.BootNotification,
+            "StatusNotification" : self.StatusNotification
         }
 
 
@@ -51,12 +56,17 @@ class DataBase:
         self.method_mapping[message["METHOD"]](message=message)
 
         #commit changes to the database
+        #try:
         self.session.commit()
+        #except:
+        #    logging.error("Error commiting changes to the database")
 
 
     async def run(self):
         #Start listening to messages
         await self.broker.connect()
+
+        logging.info("Connected to the RMQ Broker")
 
 
 
@@ -74,9 +84,38 @@ class DataBase:
             
             charge_point_InMessage.pop('modem', None)
 
-        charge_point = db_Tables.Charge_Point(**charge_point_InMessage)
+        charge_point = db_Tables.Charge_Point(id= message["CP_ID"], **charge_point_InMessage)
 
         self.session.add(charge_point)
+    
+
+    def StatusNotification(self, message):
+        
+        #check if evse is already in DB
+        q = self.session.query(db_Tables.EVSE.evse_id)\
+        .filter(db_Tables.EVSE.evse_id==message["CONTENT"]["evse_id"])\
+        .filter(db_Tables.EVSE.cp_id==message["CP_ID"])
+
+        exists = self.session.query(q.exists()).scalar()
+
+        #If not exists, insert
+        if not exists:
+            evse = db_Tables.EVSE(
+                evse_id = message["CONTENT"]["evse_id"] , 
+                cp_id= message["CP_ID"]
+            )
+            self.session.add(evse)
+
+        #Insert connector
+        connector = db_Tables.Connector(
+            cp_id=message["CP_ID"],
+            connector_id = message["CONTENT"]["connector_id"], 
+            connector_status = message["CONTENT"]["connector_status"],
+            evse_id = message["CONTENT"]["evse_id"]
+        )
+        
+        self.session.add(connector)
+
 
 
 
