@@ -73,17 +73,16 @@ class ChargePoint(cp):
     @on('BootNotification')
     async def on_BootNotification(self, charging_station, reason, **kwargs):
 
-        #inform db that new cp has connected
-        charging_station["id"] = self.id
-
         message = {
             "METHOD" : "BootNotification",
+            "CP_ID" : self.id,
             "CONTENT" : {
                 "charging_station" : charging_station,
                 "reason" : reason
             }
         }
 
+        #inform db that new cp has connected
         await ChargePoint.broker.send_to_DB(message)
 
         return call_result.BootNotificationPayload(
@@ -91,6 +90,25 @@ class ChargePoint(cp):
             interval=10,
             status='Accepted'
         )
+
+    @on('StatusNotification')
+    async def on_StatusNotification(self, timestamp, connector_status, evse_id, connector_id):
+
+        message = {
+            "METHOD" : "StatusNotification",
+            "CP_ID" : self.id,
+            "CONTENT" : {
+                "timestamp" : timestamp,
+                "connector_status" : connector_status,
+                "evse_id" : evse_id,
+                "connector_id" : connector_id,
+            }
+        }
+        #inform db that new cp has connected
+        await ChargePoint.broker.send_to_DB(message)
+        
+        return call_result.StatusNotificationPayload()
+
     
     @on('MeterValues')
     async def on_MeterValues(self, evse_id, meter_value):
@@ -110,12 +128,6 @@ class ChargePoint(cp):
         #TODO construct better TransactionEventPayload
         return call_result.TransactionEventPayload()
     
-    @on('StatusNotification')
-    async def on_StatusNotification(self, timestamp, connector_status, evse_id, connector_id):
-
-        
-        #what TODO with parameters
-        return call_result.StatusNotificationPayload()
 
     @on('Heartbeat')
     async def on_Heartbeat(self):
