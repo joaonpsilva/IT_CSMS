@@ -8,6 +8,9 @@ from aio_pika.abc import (
     AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
 )
 
+import logging
+logging.basicConfig(level=logging.INFO)
+
 import dataclasses
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -49,6 +52,8 @@ class API_Rabbit_Handler:
 
         #consume messages from the queue
         await self.callback_queue.consume(self.on_response)
+
+        logging.info("Connected to the RMQ Broker")
 
         return self
 

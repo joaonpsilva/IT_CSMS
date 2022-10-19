@@ -58,6 +58,8 @@ class DB_Rabbit_Handler:
 
         await self.request_queue.consume(self.on_request, no_ack=False)
         await self.db_store_queue.consume(self.on_store, no_ack=False)
+
+        logging.info("Connected to the RMQ Broker")
     
 
     async def unpack(self, message: AbstractIncomingMessage):

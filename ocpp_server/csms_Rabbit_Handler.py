@@ -55,6 +55,8 @@ class CSMS_Rabbit_Handler:
 
         #Start consuming requests from the queue
         await self.request_queue.consume(self.on_api_request, no_ack=False)
+
+        logging.info("Connected to the RMQ Broker")
     
 
     async def on_api_request(self, message: AbstractIncomingMessage) -> None:
