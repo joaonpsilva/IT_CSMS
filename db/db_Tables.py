@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Table, create_engine, Enum, ForeignKeyConstraint
+from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, create_engine, Enum, ForeignKeyConstraint
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from ocpp.v201 import enums
 
@@ -37,6 +37,37 @@ class Connector(Base):
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                             [ "EVSE.cp_id", "EVSE.evse_id"]),
                         {})
+
+
+class MeterValue(Base):
+    __tablename__ = "MeterValue"
+    cp_id = Column(Integer)
+    evse_id = Column(Integer)
+    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
+                                            [ "EVSE.cp_id", "EVSE.evse_id"]),
+                        {})
+    timestamp = Column(DateTime)
+
+"""
+metervaluereq:
+    evse:
+    values: [
+        time: 10:30
+        values: [
+            {10,......}
+            {10,......}
+            {10,......}
+        ],
+        time: 10:40
+        values: [
+            {10,......}
+            {10,......}
+            {10,......}
+        ]
+
+    ]
+
+"""
 
 
 
