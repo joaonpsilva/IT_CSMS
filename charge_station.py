@@ -14,8 +14,9 @@ logging.basicConfig(level=logging.INFO)
 
 class ChargePoint(cp):
 
-    async def send_boot_notification(self):
-       request = call.BootNotificationPayload(
+    async def cold_Boot(self):
+
+        request = call.BootNotificationPayload(
                     charging_station=datatypes.ChargingStationType(
                         vendor_name="vendor_name",
                         model="model"
@@ -23,10 +24,20 @@ class ChargePoint(cp):
                     reason=enums.BootReasonType.power_up
                 )
 
-       response = await self.call(request)
+        response = await self.call(request)
 
-       if response.status == 'Accepted':
+        if response.status == 'Accepted':
            logging.info("Connected to central system.")
+
+        for i in range(3):
+            request = call.StatusNotificationPayload(
+                timestamp=datetime.utcnow().isoformat(),
+                evse_id=1,
+                connector_id=i,
+                connector_status=enums.ConnectorStatusType.available
+            )
+            response = await self.call(request)
+
 
 
     
@@ -215,11 +226,7 @@ async def main(cp_id):
 
         cp = ChargePoint(cp_id, ws)
 
-        await asyncio.gather(cp.start(), cp.send_boot_notification(), get_input(cp))
-
-
-
-
+        await asyncio.gather(cp.start(), cp.cold_Boot(), get_input(cp))
 
 
 
