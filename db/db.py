@@ -33,7 +33,8 @@ class DataBase:
         #map incoming messages to methods
         self.method_mapping={
             "BootNotification" : self.BootNotification,
-            "StatusNotification" : self.StatusNotification
+            "StatusNotification" : self.StatusNotification,
+            "MeterValues" : self.MeterValues
         }
 
 
@@ -55,19 +56,15 @@ class DataBase:
         #call method depending on the message
         self.method_mapping[message["METHOD"]](message=message)
 
-        #commit changes to the database
-        #try:
         self.session.commit()
-        #except:
-        #    logging.error("Error commiting changes to the database")
 
 
     async def run(self):
         #Start listening to messages
         await self.broker.connect()
 
-        logging.info("Connected to the RMQ Broker")
-
+    def get_class_attributes(self, c):
+        return [attr for attr in dir(c) if not callable(getattr(c, attr)) and not attr.startswith("_")]
 
 
     def BootNotification(self, message):
@@ -116,7 +113,24 @@ class DataBase:
         
         self.session.add(connector)
 
+    def MeterValues(self, message): 
+        
+        cp_id = message["CP_ID"]
+        evse_id = message["CONTENT"]["evse_id"]
 
+        for meter_value in message["CONTENT"]["meter_value"]:
+            timestamp = meter_value["timestamp"]
+
+            for sampled_value in meter_value["sampled_value"]:
+                filtered_sampled_value = {key: value for key, value in sampled_value.items() if key in self.get_class_attributes(db_Tables.MeterValue)}
+                
+                meter_value_obj = db_Tables.MeterValue(
+                    cp_id=cp_id,
+                    evse_id=evse_id,
+                    timestamp=timestamp,
+                    **filtered_sampled_value)
+                
+                self.session.add(meter_value_obj)
 
 
 

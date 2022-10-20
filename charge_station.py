@@ -44,7 +44,7 @@ class ChargePoint(cp):
     async def meterValuesRequest(self):
 
         request = call.MeterValuesPayload(
-            evse_id = 0,
+            evse_id = 1,
             meter_value = [
                 datatypes.MeterValueType(
                     timestamp=datetime.utcnow().isoformat(),

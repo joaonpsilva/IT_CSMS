@@ -112,14 +112,17 @@ class ChargePoint(cp):
     
     @on('MeterValues')
     async def on_MeterValues(self, evse_id, meter_value):
-        #what TODO with parameters
-        await ChargePoint.broker.send_to_DB({
+
+        message = {
             "METHOD" : "MeterValues",
+            "CP_ID" : self.id,
             "CONTENT" : {
                 "evse_id" : evse_id,
-                "meter_value": meter_value
+                "meter_value" : meter_value
             }
-        })
+        }
+        #inform db that new cp has connected
+        await ChargePoint.broker.send_to_DB(message)
 
         return call_result.MeterValuesPayload()
     

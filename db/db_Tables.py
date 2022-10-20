@@ -1,5 +1,5 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, create_engine, Enum, ForeignKeyConstraint
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float
+from sqlalchemy.orm import declarative_base, relationship
 from ocpp.v201 import enums
 
 
@@ -24,6 +24,7 @@ class EVSE(Base):
     evse_id = Column(Integer, primary_key=True)   #This id is only unique inside each CP
 
     connectors = relationship("Connector", backref="EVSE")
+    meterValues = relationship("MeterValue", backref="EVSE")
 
 
 
@@ -32,7 +33,7 @@ class Connector(Base):
     cp_id = Column(Integer, primary_key=True)
     evse_id = Column(Integer, primary_key=True)
     connector_id = Column(Integer, primary_key=True) #This id is only unique inside each EVSE
-    connector_status = Enum(enums.ConnectorStatusType)
+    connector_status = Column(Enum(enums.ConnectorStatusType))
 
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                             [ "EVSE.cp_id", "EVSE.evse_id"]),
@@ -41,6 +42,7 @@ class Connector(Base):
 
 class MeterValue(Base):
     __tablename__ = "MeterValue"
+    id = Column(Integer, primary_key=True)
     cp_id = Column(Integer)
     evse_id = Column(Integer)
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
@@ -48,26 +50,14 @@ class MeterValue(Base):
                         {})
     timestamp = Column(DateTime)
 
-"""
-metervaluereq:
-    evse:
-    values: [
-        time: 10:30
-        values: [
-            {10,......}
-            {10,......}
-            {10,......}
-        ],
-        time: 10:40
-        values: [
-            {10,......}
-            {10,......}
-            {10,......}
-        ]
+    value = Column(Float, nullable=False)
+    context = Column(Enum(enums.ReadingContextType))
+    measurand = Column(Enum(enums.MeasurandType))
+    phase = Column(Enum(enums.PhaseType))
+    location = Column(Enum(enums.LocationType))
+    #signed_meter_value = 
+    #unit_of_measure = 
 
-    ]
-
-"""
 
 
 
