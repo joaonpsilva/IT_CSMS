@@ -88,10 +88,10 @@ class DataBase:
 
     def StatusNotification(self, message):
         
-        #check if evse is already in DB
-        q = self.session.query(db_Tables.EVSE.evse_id)\
-        .filter(db_Tables.EVSE.evse_id==message["CONTENT"]["evse_id"])\
-        .filter(db_Tables.EVSE.cp_id==message["CP_ID"])
+        #-----------check if evse is already in DB
+        q = self.session.query(db_Tables.EVSE)\
+            .filter(db_Tables.EVSE.evse_id==message["CONTENT"]["evse_id"])\
+            .filter(db_Tables.EVSE.cp_id==message["CP_ID"])
 
         exists = self.session.query(q.exists()).scalar()
 
@@ -103,15 +103,29 @@ class DataBase:
             )
             self.session.add(evse)
 
-        #Insert connector
-        connector = db_Tables.Connector(
-            cp_id=message["CP_ID"],
-            connector_id = message["CONTENT"]["connector_id"], 
-            connector_status = message["CONTENT"]["connector_status"],
-            evse_id = message["CONTENT"]["evse_id"]
-        )
+        #------------check if connector exists
+        q = self.session.query(db_Tables.Connector)\
+            .filter(db_Tables.Connector.connector_id==message["CONTENT"]["connector_id"])\
+            .filter(db_Tables.Connector.evse_id==message["CONTENT"]["evse_id"])\
+            .filter(db_Tables.Connector.cp_id==message["CP_ID"])
         
-        self.session.add(connector)
+        exists = self.session.query(q.exists()).scalar()
+
+        if not exists:
+            #Insert connector
+            connector = db_Tables.Connector(
+                cp_id=message["CP_ID"],
+                connector_id = message["CONTENT"]["connector_id"], 
+                connector_status = message["CONTENT"]["connector_status"],
+                evse_id = message["CONTENT"]["evse_id"]
+            )
+            
+            self.session.add(connector)
+        else:
+            #update status
+            q.update({'connector_status': message["CONTENT"]["connector_status"]})
+
+
 
     def MeterValues(self, message): 
         
