@@ -13,9 +13,6 @@ class CSMS:
     def __init__(self):
         self.connected_CPs = {}
         
-        #OCPP server listens to CP connections
-        self.ocpp_server = OCPP_Server(self.new_cp)
-
 
     async def new_cp(self,websocket, charge_point_id):
         """Call back funtion called by ocpp server when new CP connects"""
@@ -48,6 +45,9 @@ class CSMS:
         #broker handles the rabbit mq queues and communication between services
         self.broker = CSMS_Rabbit_Handler(self.handle_api_request)
         ChargePoint.broker = self.broker
+
+        #OCPP server listens to CP connections
+        self.ocpp_server = OCPP_Server(self.new_cp, self.broker)
 
         #start broker and server
         await self.broker.connect()

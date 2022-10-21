@@ -3,19 +3,45 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
+def Basic_auth_with_broker(broker):
+
+    class BasicAuth(websockets.BasicAuthWebSocketServerProtocol):
+        def __init__(self, *args, **kwargs):
+            super(BasicAuth, self).__init__(*args, **kwargs)
+            self.broker = broker
+        
+        async def check_credentials(self, username, password):
+            self.user = username
+            self.password = password
+
+            message = {
+                "CS_ID" : CS_Number,
+                "METHOD" : "GET_PASSWORD",
+            }
+
+            reponse =  await self.broker.send_request(message)
+
+            return True
+    
+    return BasicAuth
+
 
 class OCPP_Server:
 
-    def __init__(self, callback_function):
+    def __init__(self, callback_function, broker):
         self.callback_funtion = callback_function
-
+        self.broker = broker
+    
     async def start_server(self):
 
+        BasicAuth_Custom_Handler = Basic_auth_with_broker(self.broker)
+        
         server = await websockets.serve(
             self.on_cp_connect,
             '0.0.0.0',
             9000,
-            subprotocols=['ocpp2.0.1']
+            subprotocols=['ocpp2.0.1'],
+            create_protocol=BasicAuth_Custom_Handler
         )
         logging.info("WebSocket Server Started")
 
