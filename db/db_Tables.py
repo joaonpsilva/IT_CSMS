@@ -7,7 +7,8 @@ Base = declarative_base()
 
 class Charge_Point(Base):
     __tablename__ = "Charge_point"
-    id = Column(Integer, primary_key=True)
+    id = Column(String, primary_key=True)
+    password = Column(String)
     model = Column(String(20), nullable=False)
     vendor_name = Column(String(50), nullable=False)
     serial_number = Column(String(25))

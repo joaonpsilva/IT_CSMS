@@ -3,7 +3,7 @@ from itertools import chain
 from db_Rabbit_Handler import DB_Rabbit_Handler
 from aio_pika.abc import AbstractIncomingMessage
 import logging
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, update
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import exists
 import db_Tables
@@ -23,12 +23,17 @@ class DataBase:
         self.engine = create_engine("mysql+pymysql://root:password123@localhost:3306/csms_db")
         logging.info("Connected to the database")
 
-        #Create SQL tables
-        db_Tables.create_Tables(self.engine)
-
         #Create new sqlachemy session
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
+
+        #Create SQL tables
+        db_Tables.create_Tables(self.engine)
+
+        #Insert some CPs (testing)
+        cp1 = db_Tables.Charge_Point(id = "CP_1", password="passcp1")
+        cp2 = db_Tables.Charge_Point(id = "CP_2", password="passcp2")
+
 
         #map incoming messages to methods
         self.method_mapping={
@@ -36,6 +41,7 @@ class DataBase:
             "StatusNotification" : self.StatusNotification,
             "MeterValues" : self.MeterValues
         }
+    
 
 
     async def on_api_request(self, message: AbstractIncomingMessage) -> None:
@@ -68,9 +74,8 @@ class DataBase:
 
 
     def BootNotification(self, message):
-        
-        #Handles the creation of new chargepoints 
-        
+
+                
         charge_point_InMessage = message["CONTENT"]["charging_station"]
 
         if "modem" in charge_point_InMessage:
@@ -81,9 +86,11 @@ class DataBase:
             
             charge_point_InMessage.pop('modem', None)
 
-        charge_point = db_Tables.Charge_Point(id= message["CP_ID"], **charge_point_InMessage)
-
-        self.session.add(charge_point)
+        stmt = (
+            update(db_Tables.Charge_Point).
+            where(db_Tables.Charge_Point.id == message["CP_ID"]).
+            values(**charge_point_InMessage)
+        )
     
 
     def StatusNotification(self, message):
