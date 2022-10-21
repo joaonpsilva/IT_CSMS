@@ -219,7 +219,7 @@ async def get_input(cp):
 async def main(cp_id):
 
     async with websockets.connect(
-        'ws://localhost:9000/' + cp_id,
+        'ws://{cp_id}:{password}@localhost:9000/{cp_id}'.format(cp_id = "CP_" + str(cp_id), password='a'),
         
             subprotocols=['ocpp2.0.1']
     ) as ws:

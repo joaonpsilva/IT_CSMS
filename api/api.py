@@ -12,11 +12,11 @@ app = FastAPI()
 broker = None
 
 
-@app.post("/GetVariables/{CS_Number}")
-async def GetVariables(CS_Number: int, payload: List[datatypes.GetVariableDataType]):
+@app.post("/GetVariables/{CP_Id}")
+async def GetVariables(CP_Id: str, payload: List[datatypes.GetVariableDataType]):
     
     message = {
-        "CS_ID" : CS_Number,
+        "CS_ID" : CP_Id,
         "METHOD" : "GET_VARIABLES",
         "PAYLOAD" : {'get_variable_data' : payload}
     }
@@ -25,10 +25,10 @@ async def GetVariables(CS_Number: int, payload: List[datatypes.GetVariableDataTy
     return response
 
 
-@app.post("/SetVariables/{CS_Number}")
-async def SetVariables(CS_Number: int, payload: List[datatypes.SetVariableDataType]):
+@app.post("/SetVariables/{CP_Id}")
+async def SetVariables(CP_Id: str, payload: List[datatypes.SetVariableDataType]):
     message = {
-        "CS_ID" : CS_Number,
+        "CS_ID" : CP_Id,
         "METHOD" : "SET_VARIABLES",
         "PAYLOAD" : {'set_variable_data' : payload}
     }
@@ -37,10 +37,10 @@ async def SetVariables(CS_Number: int, payload: List[datatypes.SetVariableDataTy
     return response  
 
 
-@app.post("/RequestStartTransaction/{CS_Number}")
-async def RequestStartTransaction(CS_Number: int, payload: payloads.RequestStartTransaction_Payload):
+@app.post("/RequestStartTransaction/{CP_Id}")
+async def RequestStartTransaction(CP_Id: str, payload: payloads.RequestStartTransaction_Payload):
     message = {
-        "CS_ID" : CS_Number,
+        "CS_ID" : CP_Id,
         "METHOD" : "REQUEST_START_TRANSACTION",
         "PAYLOAD" : payload
     }
@@ -48,10 +48,10 @@ async def RequestStartTransaction(CS_Number: int, payload: payloads.RequestStart
     response = await broker.send_request(message)
     return response  
 
-@app.get("/GetTransactionStatus/{CS_Number}")
-async def GetTransactionStatus(CS_Number: int, transactionId: str = None ):
+@app.get("/GetTransactionStatus/{CP_Id}")
+async def GetTransactionStatus(CP_Id: str, transactionId: str = None ):
     message = {
-        "CS_ID" : CS_Number,
+        "CS_ID" : CP_Id,
         "METHOD" : "GET_TRANSACTION_STATUS",
         "PAYLOAD" : {"transaction_id" : transactionId}
     }
