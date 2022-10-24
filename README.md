@@ -7,6 +7,7 @@ pip install ocpp
 pip install websockets  
 pip install sqlalchemy  
 pip install pymysql  
+pip install passlib
 pip install aioconsole (apenas para debug)
 
 ## Rabbit MQ Server
