@@ -44,6 +44,10 @@ class DataBase:
             "StatusNotification" : self.StatusNotification,
             "MeterValues" : self.MeterValues
         }
+
+        self.request_mapping={
+            "VERIFY_PASSWORD" : self.verify_password
+        }
     
 
 
@@ -53,6 +57,9 @@ class DataBase:
         """
 
         logging.info("REQUEST - %s", str(message))
+
+        #call method depending on the message
+        self.request_mapping[message["METHOD"]](message=message)
 
 
     async def on_log(self, message: AbstractIncomingMessage) -> None:
@@ -76,8 +83,24 @@ class DataBase:
         return [attr for attr in dir(c) if not callable(getattr(c, attr)) and not attr.startswith("_")]
 
 
-    def BootNotification(self, message):
+    def verify_password(self, message):
+        charge_point = db_Tables.charge_point.query.get(message["CP_ID"])
 
+        result = charge_point.verify_password(message["PASSWORD"])
+
+        message = {
+            "METHOD" : "VERIFY_PASSWORD",
+            "CP_ID" : message["CP_ID"],
+            "PASSWORD" : message["PASSWORD"],
+            "APROVED" : result
+        }
+
+        return message
+
+
+
+
+    def BootNotification(self, message):
                 
         charge_point_InMessage = message["CONTENT"]["charging_station"]
 
