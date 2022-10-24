@@ -33,6 +33,9 @@ class DataBase:
         #Insert some CPs (testing)
         cp1 = db_Tables.Charge_Point(id = "CP_1", password="passcp1")
         cp2 = db_Tables.Charge_Point(id = "CP_2", password="passcp2")
+        self.session.add(cp1)
+        self.session.add(cp2)
+        self.session.commit()
 
 
         #map incoming messages to methods
@@ -91,19 +94,20 @@ class DataBase:
             where(db_Tables.Charge_Point.id == message["CP_ID"]).
             values(**charge_point_InMessage)
         )
-    
+
+        self.session.execute(stmt)    
 
     def StatusNotification(self, message):
         
-        #-----------check if evse is already in DB
+        #------------check if EVSE is already in DB
         q = self.session.query(db_Tables.EVSE)\
             .filter(db_Tables.EVSE.evse_id==message["CONTENT"]["evse_id"])\
             .filter(db_Tables.EVSE.cp_id==message["CP_ID"])
 
         exists = self.session.query(q.exists()).scalar()
 
-        #If not exists, insert
         if not exists:
+            #If not exists, insert
             evse = db_Tables.EVSE(
                 evse_id = message["CONTENT"]["evse_id"] , 
                 cp_id= message["CP_ID"]
