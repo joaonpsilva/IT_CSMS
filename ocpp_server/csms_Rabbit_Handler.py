@@ -1,19 +1,9 @@
-from aio_pika import ExchangeType, Message, connect
-import json
-import asyncio
-import uuid
-from aio_pika.abc import (
-    AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
-)
-import logging
-
- 
 import sys
 from os import path
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from rabbit_handler import Rabbit_Handler
 
-
+import logging
 logging.basicConfig(level=logging.INFO)
 
 

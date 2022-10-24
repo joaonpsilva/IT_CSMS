@@ -1,12 +1,3 @@
-from aio_pika import ExchangeType, Message, connect
-import uuid
-import json
-import asyncio
-from typing import MutableMapping
-
-from aio_pika.abc import (
-    AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
-)
 
 import logging
 logging.basicConfig(level=logging.INFO)

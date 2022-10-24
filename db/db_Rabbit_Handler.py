@@ -1,16 +1,9 @@
-from aio_pika import ExchangeType, Message, connect
-import json
-import asyncio
-from typing import MutableMapping
 
-from aio_pika.abc import (
-    AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
-)
+from aio_pika.abc import AbstractIncomingMessage
+
 import logging
-
 logging.basicConfig(level=logging.INFO)
 
-import dataclasses
 
 import sys
 from os import path
@@ -49,8 +42,6 @@ class DB_Rabbit_Handler(Rabbit_Handler):
         await self.db_store_queue.consume(self.on_store, no_ack=False)
     
 
-
-    
     async def on_store(self, message: AbstractIncomingMessage) -> None:
         """Received message to store"""
 
