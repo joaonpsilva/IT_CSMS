@@ -83,7 +83,7 @@ class DB_Rabbit_Handler:
         content = await self.unpack(message)
         response = await self.request_queue_callback_function(content)
         
-        #send response to the api if requested
+        #send response if requested
         if message.reply_to is not None:
             await self.channel.default_exchange.publish(
                 Message(
@@ -92,3 +92,4 @@ class DB_Rabbit_Handler:
                 ),
                 routing_key=message.reply_to,
             )
+

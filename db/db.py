@@ -17,7 +17,7 @@ class DataBase:
     def __init__(self):
 
         #Initialize broker that will handle Rabbit coms
-        self.broker = DB_Rabbit_Handler(self.on_api_request, self.on_log)
+        self.broker = DB_Rabbit_Handler(self.on_request, self.on_log)
 
         #MySql engine
         self.engine = create_engine("mysql+pymysql://root:password123@localhost:3306/csms_db")
@@ -51,7 +51,7 @@ class DataBase:
     
 
 
-    async def on_api_request(self, message: AbstractIncomingMessage) -> None:
+    async def on_request(self, message: AbstractIncomingMessage) -> None:
         """
         Function that will handle incoming requests from the api or ocpp Server
         """
@@ -59,7 +59,7 @@ class DataBase:
         logging.info("REQUEST - %s", str(message))
 
         #call method depending on the message
-        self.request_mapping[message["METHOD"]](message=message)
+        return self.request_mapping[message["METHOD"]](message=message)
 
 
     async def on_log(self, message: AbstractIncomingMessage) -> None:
@@ -84,18 +84,18 @@ class DataBase:
 
 
     def verify_password(self, message):
-        charge_point = db_Tables.charge_point.query.get(message["CP_ID"])
+        charge_point = self.session.query(db_Tables.Charge_Point).get(message["CP_ID"])
 
         result = charge_point.verify_password(message["PASSWORD"])
 
-        message = {
+        response = {
             "METHOD" : "VERIFY_PASSWORD",
             "CP_ID" : message["CP_ID"],
             "PASSWORD" : message["PASSWORD"],
-            "APROVED" : result
+            "APPROVED" : result
         }
 
-        return message
+        return response
 
 
 

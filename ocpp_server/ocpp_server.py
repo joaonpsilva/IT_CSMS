@@ -15,13 +15,14 @@ def Basic_auth_with_broker(broker):
             self.password = password
 
             message = {
-                "CS_ID" : CS_Number,
-                "METHOD" : "GET_PASSWORD",
+                "METHOD" : "VERIFY_PASSWORD",
+                "CP_ID" : username,
+                "PASSWORD" : password
             }
 
-            reponse =  await self.broker.send_request(message)
+            response =  await self.broker.send_request(message)
 
-            return True
+            return response['APPROVED']
     
     return BasicAuth
 

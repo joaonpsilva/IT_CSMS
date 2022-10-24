@@ -1,7 +1,7 @@
 from aio_pika import ExchangeType, Message, connect
 import json
 import asyncio
-
+import uuid
 from aio_pika.abc import (
     AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
 )
@@ -26,9 +26,7 @@ class CSMS_Rabbit_Handler:
     def __init__(self, csms_handle_request):
 
         self.loop = asyncio.get_running_loop()
-
         self.futures: MutableMapping[str, asyncio.Future] = {}
-
 
         #csms callback funtion that will handle api requests
         self.csms_handle_request = csms_handle_request
@@ -60,23 +58,11 @@ class CSMS_Rabbit_Handler:
 
         #Start consuming requests from the queue
         await self.request_queue.consume(self.on_api_request, no_ack=False)
+        #consume messages from the queue
+        await self.callback_queue.consume(self.on_response)
 
         logging.info("Connected to the RMQ Broker")
     
-
-    def on_response(self, message: AbstractIncomingMessage) -> None:
-        """
-        callback funtion. Will be executed when a message is received in the callback queue
-        """
-        if message.correlation_id is None:
-            print(f"Bad message {message!r}")
-            return
-
-        #get the future with key = correlationid
-        future: asyncio.Future = self.futures.pop(message.correlation_id)
-        
-        #set a result to that future
-        future.set_result(json.loads(message.body.decode()))
 
 
     async def on_api_request(self, message: AbstractIncomingMessage) -> None:
@@ -101,16 +87,21 @@ class CSMS_Rabbit_Handler:
                 ),
                 routing_key=message.reply_to,
             )
+
+    def on_response(self, message: AbstractIncomingMessage) -> None:
+        """
+        callback funtion. Will be executed when a message is received in the callback queue
+        """
+        if message.correlation_id is None:
+            logging.info(f"Bad message {message!r}")
+            return
+
+        #get the future with key = correlationid
+        future: asyncio.Future = self.futures.pop(message.correlation_id)
+        
+        #set a result to that future
+        future.set_result(json.loads(message.body.decode()))
     
-    async def send_to_DB(self, message):
-        #send message to store
-        await self.db_store_Exchange.publish(
-            Message(
-                body=json.dumps(message, cls=EnhancedJSONEncoder).encode(),
-                content_type="application/json",
-            ),
-            routing_key="",
-        )
     
 
     async def send_request(self, message):
@@ -143,3 +134,13 @@ class CSMS_Rabbit_Handler:
         except asyncio.TimeoutError:
             #maybe delete entry in future map?
             return "ERROR"
+
+    async def send_to_DB(self, message):
+        #send message to store
+        await self.db_store_Exchange.publish(
+            Message(
+                body=json.dumps(message, cls=EnhancedJSONEncoder).encode(),
+                content_type="application/json",
+            ),
+            routing_key="",
+        )
