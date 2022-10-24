@@ -21,7 +21,7 @@ async def GetVariables(CP_Id: str, payload: List[datatypes.GetVariableDataType])
         "PAYLOAD" : {'get_variable_data' : payload}
     }
 
-    response = await broker.send_request(message)
+    response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
     return response
 
 
@@ -33,7 +33,7 @@ async def SetVariables(CP_Id: str, payload: List[datatypes.SetVariableDataType])
         "PAYLOAD" : {'set_variable_data' : payload}
     }
 
-    response = await broker.send_request(message)
+    response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
     return response  
 
 
@@ -45,7 +45,7 @@ async def RequestStartTransaction(CP_Id: str, payload: payloads.RequestStartTran
         "PAYLOAD" : payload
     }
 
-    response = await broker.send_request(message)
+    response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
     return response  
 
 @app.get("/GetTransactionStatus/{CP_Id}")
@@ -55,7 +55,7 @@ async def GetTransactionStatus(CP_Id: str, transactionId: str = None ):
         "METHOD" : "GET_TRANSACTION_STATUS",
         "PAYLOAD" : {"transaction_id" : transactionId}
     }
-    response = await broker.send_request(message)
+    response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
     return response
 
 
@@ -63,7 +63,8 @@ async def GetTransactionStatus(CP_Id: str, transactionId: str = None ):
 async def main():
 
     global broker
-    broker = await API_Rabbit_Handler().connect()
+    broker = API_Rabbit_Handler()
+    await broker.connect()
 
     
 if __name__ == '__main__':

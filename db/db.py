@@ -16,9 +16,6 @@ class DataBase:
 
     def __init__(self):
 
-        #Initialize broker that will handle Rabbit coms
-        self.broker = DB_Rabbit_Handler(self.on_request, self.on_log)
-
         #MySql engine
         self.engine = create_engine("mysql+pymysql://root:password123@localhost:3306/csms_db")
         logging.info("Connected to the database")
@@ -51,12 +48,10 @@ class DataBase:
     
 
 
-    async def on_request(self, message: AbstractIncomingMessage) -> None:
+    async def on_db_request(self, message: AbstractIncomingMessage) -> None:
         """
         Function that will handle incoming requests from the api or ocpp Server
         """
-
-        logging.info("REQUEST - %s", str(message))
 
         #call method depending on the message
         return self.request_mapping[message["METHOD"]](message=message)
@@ -67,15 +62,16 @@ class DataBase:
         Function that will handle icoming messages to store information in the database
         """
 
-        logging.info("STORE - %s", str(message))
-
         #call method depending on the message
-        self.method_mapping[message["METHOD"]](message=message)
+        self.method_mapping[message["METHOD"]](message)
 
         self.session.commit()
 
 
     async def run(self):
+
+        #Initialize broker that will handle Rabbit coms
+        self.broker = DB_Rabbit_Handler(self.on_db_request, self.on_log)
         #Start listening to messages
         await self.broker.connect()
 
