@@ -218,8 +218,10 @@ async def get_input(cp):
 
 async def main(cp_id):
 
+    logging.info("Trying to connect to csms with id %s", cp_id)
+
     async with websockets.connect(
-        'ws://{cp_id}:{password}@localhost:9000/{cp_id}'.format(cp_id = "CP_" + str(cp_id), password='passcp1'),
+        'ws://{cp_id}:{password}@localhost:9000/{cp_id}'.format(cp_id = cp_id, password='passcp1'),
         
             subprotocols=['ocpp2.0.1']
     ) as ws:

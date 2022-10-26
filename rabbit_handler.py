@@ -42,7 +42,7 @@ class Rabbit_Handler:
         #Declare exchange to where API will send requests
         self.request_Exchange = await self.channel.declare_exchange(name="requests", type=ExchangeType.TOPIC)
         #Declare exchange where logs are sent
-        self.db_store_Exchange = await self.channel.declare_exchange("db_store", type=ExchangeType.FANOUT)
+        #self.db_store_Exchange = await self.channel.declare_exchange("db_store", type=ExchangeType.FANOUT)
 
         if create_response_queue:
             #declare a callback queue to where the reponses will be consumed
@@ -134,15 +134,15 @@ class Rabbit_Handler:
             return "ERROR"
     
     
-    async def send_to_DB(self, message):
+    async def send_to_DB(self, message, routing_key="store"):
 
         logging.info("RabbitMQ SENDING info to store: %s", str(message))
 
         #send message to store
-        await self.db_store_Exchange.publish(
+        await self.request_Exchange.publish(
             Message(
                 body=json.dumps(message, cls=EnhancedJSONEncoder).encode(),
                 content_type="application/json",
             ),
-            routing_key="",
+            routing_key=routing_key, #send to all DBs
         )

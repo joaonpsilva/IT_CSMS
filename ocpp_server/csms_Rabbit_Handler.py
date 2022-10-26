@@ -24,5 +24,9 @@ class CSMS_Rabbit_Handler(Rabbit_Handler):
         await self.request_queue.bind(self.request_Exchange, routing_key='request.ocppserver')
         #Start consuming requests from the queue
         await self.request_queue.consume(self.on_request, no_ack=False)
+    
+    async def send_request_wait_response(self, message, routing_key='request.db.db1'):
+        return await super().send_request_wait_response(message, routing_key)
+
 
 

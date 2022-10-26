@@ -39,13 +39,10 @@ class DataBase:
         self.method_mapping={
             "BootNotification" : self.BootNotification,
             "StatusNotification" : self.StatusNotification,
-            "MeterValues" : self.MeterValues
-        }
-
-        self.request_mapping={
+            "MeterValues" : self.MeterValues,
             "VERIFY_PASSWORD" : self.verify_password
+
         }
-    
 
 
     async def on_db_request(self, message: AbstractIncomingMessage) -> None:
@@ -54,24 +51,28 @@ class DataBase:
         """
 
         #call method depending on the message
-        return self.request_mapping[message["METHOD"]](message=message)
-
-
-    async def on_log(self, message: AbstractIncomingMessage) -> None:
-        """
-        Function that will handle icoming messages to store information in the database
-        """
-
-        #call method depending on the message
-        self.method_mapping[message["METHOD"]](message)
-
+        toReturn = self.method_mapping[message["METHOD"]](message=message)
+        
+        #commit possible changes
         self.session.commit()
+
+        return toReturn
+
+    # async def on_log(self, message: AbstractIncomingMessage) -> None:
+    #     """
+    #     Function that will handle icoming messages to store information in the database
+    #     """
+
+    #     #call method depending on the message
+    #     self.method_mapping[message["METHOD"]](message)
+    #     self.session.commit()
+
 
 
     async def run(self):
 
         #Initialize broker that will handle Rabbit coms
-        self.broker = DB_Rabbit_Handler(self.on_db_request, self.on_log)
+        self.broker = DB_Rabbit_Handler(self.on_db_request)
         #Start listening to messages
         await self.broker.connect()
 
@@ -82,8 +83,10 @@ class DataBase:
     def verify_password(self, message):
         charge_point = self.session.query(db_Tables.Charge_Point).get(message["CP_ID"])
 
-        result = charge_point.verify_password(message["PASSWORD"])
-
+        result = False
+        if charge_point is not None:
+            result = charge_point.verify_password(message["PASSWORD"])
+        
         response = {
             "METHOD" : "VERIFY_PASSWORD",
             "CP_ID" : message["CP_ID"],
