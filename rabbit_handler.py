@@ -3,6 +3,7 @@ from aio_pika import ExchangeType, Message, connect
 import json
 import asyncio
 import uuid
+from typing import MutableMapping
 from aio_pika.abc import (
     AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
 )
