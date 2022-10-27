@@ -69,18 +69,20 @@ class ChargePoint(cp):
 
 #######################Funtions staring from the CP Initiative
 
+    def build_message(self, method, content):
+        message = {
+            "METHOD" : method,
+            "CP_ID" : self.id,
+            "CONTENT" : content
+        }
+
+        return message
+
 
     @on('BootNotification')
-    async def on_BootNotification(self, charging_station, reason, **kwargs):
+    async def on_BootNotification(self, **kwargs):
 
-        message = {
-            "METHOD" : "BootNotification",
-            "CP_ID" : self.id,
-            "CONTENT" : {
-                "charging_station" : charging_station,
-                "reason" : reason
-            }
-        }
+        message = self.build_message("BootNotification", kwargs)
 
         #inform db that new cp has connected
         await ChargePoint.broker.send_to_DB(message)
@@ -92,18 +94,10 @@ class ChargePoint(cp):
         )
 
     @on('StatusNotification')
-    async def on_StatusNotification(self, timestamp, connector_status, evse_id, connector_id):
+    async def on_StatusNotification(self, **kwargs):
 
-        message = {
-            "METHOD" : "StatusNotification",
-            "CP_ID" : self.id,
-            "CONTENT" : {
-                "timestamp" : timestamp,
-                "connector_status" : connector_status,
-                "evse_id" : evse_id,
-                "connector_id" : connector_id,
-            }
-        }
+        message = self.build_message("StatusNotification", kwargs)
+
         #inform db that new cp has connected
         await ChargePoint.broker.send_to_DB(message)
         
@@ -111,20 +105,27 @@ class ChargePoint(cp):
 
     
     @on('MeterValues')
-    async def on_MeterValues(self, evse_id, meter_value):
+    async def on_MeterValues(self, **kwargs):
 
-        message = {
-            "METHOD" : "MeterValues",
-            "CP_ID" : self.id,
-            "CONTENT" : {
-                "evse_id" : evse_id,
-                "meter_value" : meter_value
-            }
-        }
+        message = self.build_message("MeterValues", kwargs)
+
         #inform db that new cp has connected
         await ChargePoint.broker.send_to_DB(message)
 
         return call_result.MeterValuesPayload()
+    
+    @on('Authorize')
+    async def on_Authorize(self, **kwargs):
+
+        message = self.build_message("Authorize", kwargs)
+
+        response = await ChargePoint.broker.send_request_wait_response(message)
+
+        return call_result.AuthorizePayload(
+            id_token_info=datatypes.IdTokenInfoType(
+                status=enums.AuthorizationStatusType.accepted
+            )
+        )
     
     @on('TransactionEvent')
     async def on_TransactionEvent(self, event_type, timestamp, trigger_reason, seq_no, transaction_info, **kwargs):
@@ -138,10 +139,3 @@ class ChargePoint(cp):
             current_time=datetime.utcnow().isoformat()
         )
     
-    @on('Authorize')
-    async def on_Authorize(self,id_token, **kwargs):
-        return call_result.AuthorizePayload(
-            id_token_info=datatypes.IdTokenInfoType(
-                status=enums.AuthorizationStatusType.accepted
-            )
-        )
