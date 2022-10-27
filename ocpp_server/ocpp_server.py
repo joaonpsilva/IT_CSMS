@@ -17,7 +17,10 @@ def Basic_auth_with_broker(broker):
             message = {
                 "METHOD" : "VERIFY_PASSWORD",
                 "CP_ID" : username,
-                "PASSWORD" : password
+                "CONTENT" : {
+                    "CP_ID" : username,
+                    "password": password
+                }
             }
 
             response =  await self.broker.send_request_wait_response(message)

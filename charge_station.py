@@ -130,8 +130,8 @@ class ChargePoint(cp):
     async def authorizeRequest(self):
         request = call.AuthorizePayload(
             id_token=datatypes.IdTokenType(
-                id_token="AAA",
-                type=enums.IdTokenType.central
+                id_token="123456789",
+                type=enums.IdTokenType.iso14443
             )
         )
         
@@ -207,7 +207,8 @@ class ChargePoint(cp):
 async def get_input(cp):
     
     command_map={
-        "meterValuesRequest":cp.meterValuesRequest
+        "meterValuesRequest":cp.meterValuesRequest,
+        "authorizeRequest" : cp.authorizeRequest
     }
 
     while True:
