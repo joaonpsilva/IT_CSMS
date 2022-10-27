@@ -28,11 +28,7 @@ class DataBase:
         db_Tables.create_Tables(self.engine)
 
         #Insert some CPs (testing)
-        cp1 = db_Tables.Charge_Point(id = "CP_1", password="passcp1")
-        cp2 = db_Tables.Charge_Point(id = "CP_2", password="passcp2")
-        self.session.add(cp1)
-        self.session.add(cp2)
-        self.session.commit()
+        db_Tables.insert_Hard_Coded(self)
 
 
         #map incoming messages to methods
@@ -40,6 +36,7 @@ class DataBase:
             "BootNotification" : self.BootNotification,
             "StatusNotification" : self.StatusNotification,
             "MeterValues" : self.MeterValues,
+            "Authorize" : self.Authorize,
             "VERIFY_PASSWORD" : self.verify_password
 
         }
@@ -51,7 +48,7 @@ class DataBase:
         """
 
         #call method depending on the message
-        toReturn = self.method_mapping[message["METHOD"]](message=message)
+        toReturn = self.method_mapping[message["METHOD"]](cp_id = message['CP_ID'], content = message['CONTENT'])
         
         #commit possible changes
         self.session.commit()
@@ -80,17 +77,17 @@ class DataBase:
         return [attr for attr in dir(c) if not callable(getattr(c, attr)) and not attr.startswith("_")]
 
 
-    def verify_password(self, message):
-        charge_point = self.session.query(db_Tables.Charge_Point).get(message["CP_ID"])
+    def verify_password(self, cp_id, content):
+        charge_point = self.session.query(db_Tables.Charge_Point).get(cp_id)
 
         result = False
         if charge_point is not None:
-            result = charge_point.verify_password(message["PASSWORD"])
+            result = charge_point.verify_password(content["password"])
         
         response = {
             "METHOD" : "VERIFY_PASSWORD",
-            "CP_ID" : message["CP_ID"],
-            "PASSWORD" : message["PASSWORD"],
+            "CP_ID" : cp_id,
+            "PASSWORD" : content["password"],
             "APPROVED" : result
         }
 
@@ -99,9 +96,9 @@ class DataBase:
 
 
 
-    def BootNotification(self, message):
+    def BootNotification(self, cp_id, content):
                 
-        charge_point_InMessage = message["CONTENT"]["charging_station"]
+        charge_point_InMessage = content["charging_station"]
 
         if "modem" in charge_point_InMessage:
             if "iccid" in charge_point_InMessage["modem"]:
@@ -113,59 +110,60 @@ class DataBase:
 
         stmt = (
             update(db_Tables.Charge_Point).
-            where(db_Tables.Charge_Point.id == message["CP_ID"]).
+            where(db_Tables.Charge_Point.id == cp_id).
             values(**charge_point_InMessage)
         )
 
-        self.session.execute(stmt)    
+        self.session.execute(stmt)  
 
-    def StatusNotification(self, message):
+
+
+    def StatusNotification(self, cp_id, content):
         
         #------------check if EVSE is already in DB
         q = self.session.query(db_Tables.EVSE)\
-            .filter(db_Tables.EVSE.evse_id==message["CONTENT"]["evse_id"])\
-            .filter(db_Tables.EVSE.cp_id==message["CP_ID"])
+            .filter(db_Tables.EVSE.evse_id==content["evse_id"])\
+            .filter(db_Tables.EVSE.cp_id==cp_id)
 
         exists = self.session.query(q.exists()).scalar()
 
         if not exists:
             #If not exists, insert
             evse = db_Tables.EVSE(
-                evse_id = message["CONTENT"]["evse_id"] , 
-                cp_id= message["CP_ID"]
+                evse_id = content["evse_id"] , 
+                cp_id= cp_id
             )
             self.session.add(evse)
 
         #------------check if connector exists
         q = self.session.query(db_Tables.Connector)\
-            .filter(db_Tables.Connector.connector_id==message["CONTENT"]["connector_id"])\
-            .filter(db_Tables.Connector.evse_id==message["CONTENT"]["evse_id"])\
-            .filter(db_Tables.Connector.cp_id==message["CP_ID"])
+            .filter(db_Tables.Connector.connector_id==content["connector_id"])\
+            .filter(db_Tables.Connector.evse_id==content["evse_id"])\
+            .filter(db_Tables.Connector.cp_id==cp_id)
         
         exists = self.session.query(q.exists()).scalar()
 
         if not exists:
             #Insert connector
             connector = db_Tables.Connector(
-                cp_id=message["CP_ID"],
-                connector_id = message["CONTENT"]["connector_id"], 
-                connector_status = message["CONTENT"]["connector_status"],
-                evse_id = message["CONTENT"]["evse_id"]
+                cp_id=cp_id,
+                connector_id = content["connector_id"], 
+                connector_status = content["connector_status"],
+                evse_id = content["evse_id"]
             )
             
             self.session.add(connector)
         else:
             #update status
-            q.update({'connector_status': message["CONTENT"]["connector_status"]})
+            q.update({'connector_status': content["connector_status"]})
 
 
 
-    def MeterValues(self, message): 
+    def MeterValues(self, cp_id, content): 
         
-        cp_id = message["CP_ID"]
-        evse_id = message["CONTENT"]["evse_id"]
+        evse_id = content["evse_id"]
 
-        for meter_value in message["CONTENT"]["meter_value"]:
+        for meter_value in content["meter_value"]:
             timestamp = meter_value["timestamp"]
 
             for sampled_value in meter_value["sampled_value"]:
@@ -178,6 +176,22 @@ class DataBase:
                     **filtered_sampled_value)
                 
                 self.session.add(meter_value_obj)
+    
+
+    def Authorize(self, cp_id, content):
+
+        idToken = self.session.query(db_Tables.IdToken).get(content['id_token']['id_token'])
+        if idToken is None:
+
+
+        response = {
+            "METHOD" : "Authorize",
+            "CP_ID" : cp_id,
+            "APPROVED" : result
+        }
+
+        return response
+
 
 
 

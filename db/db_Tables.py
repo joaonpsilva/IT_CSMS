@@ -1,5 +1,5 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table
+from sqlalchemy.orm import declarative_base, relationship, backref
 from ocpp.v201 import enums
 from passlib.context import CryptContext
 
@@ -10,6 +10,19 @@ PASSLIB_CONTEXT = CryptContext(
 )
 
 Base = declarative_base()
+
+evse_idTokens = Table(
+    'evse_idTokens',
+    Base.metadata,
+    Column('cp_id', String(20)),
+    Column('evse_id', Integer),
+    Column('id_token', String(36), ForeignKey('IdTokenInfo.id_token')),
+    ForeignKeyConstraint(("cp_id", "evse_id"),
+                        ("EVSE.cp_id", "EVSE.evse_id"))
+)
+
+
+
 
 class Charge_Point(Base):
     __tablename__ = "Charge_point"
@@ -88,9 +101,43 @@ class MeterValue(Base):
     #signed_meter_value = 
     #unit_of_measure = 
 
+class IdToken(Base):
+    __tablename__ = "IdToken"
+    id_token = Column(String(36), primary_key=True)
+    type = Column(Enum(enums.IdTokenType))
+
+    id_token_info = relationship("IdTokenInfo", backref=backref("IdToken", uselist=False))
+
+
+
+class IdTokenInfo(Base):
+    __tablename__ = "IdTokenInfo"
+    id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
+    cache_expiry_date_time = Column(DateTime)
+    charging_priority = Column(Integer)
+    language1 = Column(String(8))
+    language2 = Column(String(8))
+    allowed_evse_id = relationship('EVSE', secondary=evse_idTokens, backref='allowed_idTokens')
+    group_id_token = Column(String(36)), ForeignKey("IdToken.id_token")
 
 
 
 def create_Tables(engine):
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
+
+
+def insert_Hard_Coded(db):
+    objects = []
+    objects.append(Charge_Point(id = "CP_1", password="passcp1"))
+    objects.append(Charge_Point(id = "CP_2", password="passcp2"))
+
+    id_Token = IdToken(id_token = "123456789", type=enums.IdTokenType.iso14443)
+    objects.append(id_Token)
+
+    objects.append(IdTokenInfo(IdToken=id_Token, language1="PT"))
+
+
+
+    db.session.add_all(objects)
+    db.session.commit()
