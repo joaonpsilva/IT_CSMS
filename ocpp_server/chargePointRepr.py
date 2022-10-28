@@ -44,25 +44,13 @@ class ChargePoint(cp):
     
     async def getTransactionStatus(self, payload={'transaction_id' : None}):
 
-        transaction_id = payload['transaction_id'] if 'transaction_id' in payload else None
-
-        request = call.GetTransactionStatusPayload(transaction_id=transaction_id)
+        request = call.GetTransactionStatusPayload(**payload)
         return await self.call(request)
     
 
     async def requestStartTransaction(self, payload):
 
-        evse_id = payload['evse_id'] if 'evse_id' in payload else None
-        charging_profile = payload['charging_profile'] if 'charging_profile' in payload else None
-        group_id_token = payload['group_id_token'] if 'group_id_token' in payload else None
-
-        request = call.RequestStartTransactionPayload(
-            id_token=payload['id_token'],
-            remote_start_id=payload['remote_start_id'],
-            evse_id=evse_id,
-            group_id_token=group_id_token,
-            charging_profile=charging_profile
-        )
+        request = call.RequestStartTransactionPayload(**payload)
         return await self.call(request)
 
 
