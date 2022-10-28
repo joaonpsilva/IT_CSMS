@@ -181,13 +181,25 @@ class DataBase:
     def Authorize(self, cp_id, content):
 
         idToken = self.session.query(db_Tables.IdToken).get(content['id_token']['id_token'])
-        if idToken is None:
+
+        print(idToken.id_token_info.return_json())
+        """if idToken is None:
+            result = {"status" : "invalid"}
+        else:
+            result = {
+                "status" : "authorzed",
+                "cache_expiry_date_time" : idToken.id_token_info.cache_expiry_date_time,
+                "charging_priority" : idToken.id_token_info.charging_priority,
+                "language1" : idToken.id_token_info.language1,
+                "language2" : idToken.id_token_info.language2,
+                "group_id_token" : idToken.id_token_info.GroupIdToken
+            }"""
 
 
         response = {
             "METHOD" : "Authorize",
             "CP_ID" : cp_id,
-            "APPROVED" : result
+            "APPROVED" : "result"
         }
 
         return response

@@ -16,7 +16,7 @@ evse_idTokens = Table(
     Base.metadata,
     Column('cp_id', String(20)),
     Column('evse_id', Integer),
-    Column('id_token', String(36), ForeignKey('IdTokenInfo.id_token')),
+    Column('id_token', String(36), ForeignKey('IdTokenInfo._id_token')),
     ForeignKeyConstraint(("cp_id", "evse_id"),
                         ("EVSE.cp_id", "EVSE.evse_id"))
 )
@@ -106,19 +106,30 @@ class IdToken(Base):
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
 
-    id_token_info = relationship("IdTokenInfo", backref=backref("IdToken", uselist=False))
+    id_token_info = relationship("IdTokenInfo", backref=backref("IdToken", uselist=False), uselist=False)
 
+class GroupIdToken(Base):
+    __tablename__ = "GroupIdToken"
+    id_token = Column(String(36), primary_key=True)
+    type = Column(Enum(enums.IdTokenType))
 
+    belonging_id_tokens = relationship("IdTokenInfo", backref=backref("GroupIdToken",uselist=False))
 
 class IdTokenInfo(Base):
     __tablename__ = "IdTokenInfo"
-    id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
+    _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
     cache_expiry_date_time = Column(DateTime)
     charging_priority = Column(Integer)
     language1 = Column(String(8))
     language2 = Column(String(8))
-    allowed_evse_id = relationship('EVSE', secondary=evse_idTokens, backref='allowed_idTokens')
-    group_id_token = Column(String(36)), ForeignKey("IdToken.id_token")
+    allowed_evse = relationship('EVSE', secondary=evse_idTokens, backref='allowed_idTokens')
+    
+    _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
+
+    def return_json(self):
+        d = {}
+        atrs = [attr for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("_")]
+        print(self.atrs[4])
 
 
 
@@ -133,9 +144,11 @@ def insert_Hard_Coded(db):
     objects.append(Charge_Point(id = "CP_2", password="passcp2"))
 
     id_Token = IdToken(id_token = "123456789", type=enums.IdTokenType.iso14443)
+    group_id_token = GroupIdToken(id_token = "group123456789", type=enums.IdTokenType.iso14443)
+    
     objects.append(id_Token)
-
-    objects.append(IdTokenInfo(IdToken=id_Token, language1="PT"))
+    objects.append(group_id_token)
+    objects.append(IdTokenInfo(IdToken=id_Token, language1="PT", GroupIdToken=group_id_token))
 
 
 
