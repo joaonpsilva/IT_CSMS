@@ -8,11 +8,14 @@ from aio_pika.abc import (
     AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
 )
 import logging
+import datetime
 
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
+        if isinstance(o, datetime.datetime):
+            return o.strftime("%Y-%m-%d %H:%M:%S")
         return super().default(o)
 
 class Rabbit_Handler:

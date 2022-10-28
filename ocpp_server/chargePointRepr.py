@@ -120,10 +120,22 @@ class ChargePoint(cp):
         message = self.build_message("Authorize", kwargs)
 
         response = await ChargePoint.broker.send_request_wait_response(message)
+        content = response["CONTENT"]
+
+        if content is None:
+            status = enums.AuthorizationStatusType.unknown
+            content = {}
+        elif "evse_id" in content and len(content["evse_id"]):
+            status = enums.AuthorizationStatusType.not_at_this_location
+        elif "cache_expiry_date_time" in content and content["cache_expiry_date_time"] < datetime.utcnow().isoformat():
+            status = enums.AuthorizationStatusType.invalid
+        else: 
+            status = enums.AuthorizationStatusType.accepted
 
         return call_result.AuthorizePayload(
             id_token_info=datatypes.IdTokenInfoType(
-                status=enums.AuthorizationStatusType.accepted
+                status=status,
+                **content
             )
         )
     

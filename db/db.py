@@ -75,6 +75,10 @@ class DataBase:
 
     def get_class_attributes(self, c):
         return [attr for attr in dir(c) if not callable(getattr(c, attr)) and not attr.startswith("_")]
+    
+    def get_dict_obj(self, obj):
+        return { attr:value for attr, value in obj.__dict__.items() if not attr.startswith("_") and value is not None }
+
 
 
     def verify_password(self, cp_id, content):
@@ -182,24 +186,33 @@ class DataBase:
 
         idToken = self.session.query(db_Tables.IdToken).get(content['id_token']['id_token'])
 
-        print(idToken.id_token_info.return_json())
-        """if idToken is None:
-            result = {"status" : "invalid"}
-        else:
-            result = {
-                "status" : "authorzed",
-                "cache_expiry_date_time" : idToken.id_token_info.cache_expiry_date_time,
-                "charging_priority" : idToken.id_token_info.charging_priority,
-                "language1" : idToken.id_token_info.language1,
-                "language2" : idToken.id_token_info.language2,
-                "group_id_token" : idToken.id_token_info.GroupIdToken
-            }"""
+        result = None
+        if idToken is not None:
 
+            #get id token info
+            id_token_info = idToken.id_token_info 
+            
+            #add available information
+            result = self.get_dict_obj(id_token_info)
+
+            #check if belongs to a group
+            if id_token_info.GroupIdToken is not None:
+                result["group_id_token"] = self.get_dict_obj(id_token_info.GroupIdToken)
+            
+            #check if has evse restrictions
+            if len(id_token_info.allowed_evse) > 0:
+                
+                #get evse in which can charge in this cp
+                allowed_evse = [evse.evse_id for evse in id_token_info.allowed_evse if evse.cp_id == cp_id]
+                
+                #check if not allowed for whole cp
+                if len(allowed_evse) != len(self.session.query(db_Tables.Charge_Point).get({"cp_id" : cp_id})):
+                    result["evse_id"] = allowed_evse
 
         response = {
-            "METHOD" : "Authorize",
+            "METHOD" : "AuthorizeResponse",
             "CP_ID" : cp_id,
-            "APPROVED" : "result"
+            "CONTENT" : result
         }
 
         return response

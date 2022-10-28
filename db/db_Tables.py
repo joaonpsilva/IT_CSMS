@@ -2,6 +2,7 @@ from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, Fore
 from sqlalchemy.orm import declarative_base, relationship, backref
 from ocpp.v201 import enums
 from passlib.context import CryptContext
+from datetime import datetime
 
 PASSLIB_CONTEXT = CryptContext(
     # in a new application with no previous schemes, start with pbkdf2 SHA512
@@ -120,16 +121,12 @@ class IdTokenInfo(Base):
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
     cache_expiry_date_time = Column(DateTime)
     charging_priority = Column(Integer)
-    language1 = Column(String(8))
-    language2 = Column(String(8))
+    language_1 = Column(String(8))
+    language_2 = Column(String(8))
     allowed_evse = relationship('EVSE', secondary=evse_idTokens, backref='allowed_idTokens')
     
     _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
 
-    def return_json(self):
-        d = {}
-        atrs = [attr for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("_")]
-        print(self.atrs[4])
 
 
 
@@ -148,7 +145,12 @@ def insert_Hard_Coded(db):
     
     objects.append(id_Token)
     objects.append(group_id_token)
-    objects.append(IdTokenInfo(IdToken=id_Token, language1="PT", GroupIdToken=group_id_token))
+    objects.append(IdTokenInfo(
+            IdToken=id_Token, 
+            language_1="PT", 
+            GroupIdToken=group_id_token
+            #cache_expiry_date_time = datetime.utcnow().isoformat()
+            ))
 
 
 
