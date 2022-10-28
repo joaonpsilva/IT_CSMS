@@ -91,8 +91,9 @@ class DataBase:
         response = {
             "METHOD" : "VERIFY_PASSWORD",
             "CP_ID" : cp_id,
-            "PASSWORD" : content["password"],
-            "APPROVED" : result
+            "CONTENT" : {
+                "APPROVED" : result
+            }
         }
 
         return response
