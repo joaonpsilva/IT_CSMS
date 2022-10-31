@@ -1,4 +1,6 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table
+from numbers import Integral
+from xmlrpc.client import Boolean
+from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean
 from sqlalchemy.orm import declarative_base, relationship, backref
 from ocpp.v201 import enums
 from passlib.context import CryptContext
@@ -27,7 +29,7 @@ evse_idTokens = Table(
 
 class Charge_Point(Base):
     __tablename__ = "Charge_point"
-    id = Column(String(20), primary_key=True)
+    cp_id = Column(String(20), primary_key=True)
     password_hash = Column(String(256)) #https://stackoverflow.com/questions/56738384/sqlalchemy-call-function-and-save-returned-value-in-table-always
     model = Column(String(20))
     vendor_name = Column(String(50))
@@ -35,8 +37,6 @@ class Charge_Point(Base):
     firmware_version = Column(String(50))
     modem_iccid = Column(String(20))
     modem_imsi = Column(String(20))
-
-    evses = relationship("EVSE", backref="Charge_point")
 
     def __init__(self, password, **kwargs):
         
@@ -64,34 +64,39 @@ class Charge_Point(Base):
 
 class EVSE(Base):
     __tablename__ = "EVSE"
-    cp_id = Column(String(20), ForeignKey("Charge_point.id"), primary_key=True)
     evse_id = Column(Integer, primary_key=True)   #This id is only unique inside each CP
 
-    connectors = relationship("Connector", backref="EVSE")
-    meterValues = relationship("MeterValue", backref="EVSE")
+    cp_id = Column(String(20), ForeignKey("Charge_point.cp_id"), primary_key=True)
+    Charge_Point = relationship("Charge_Point", backref="EVSEs")
 
 
 
 class Connector(Base):
     __tablename__ = "Connector"
-    cp_id = Column(String(20), primary_key=True)
-    evse_id = Column(Integer, primary_key=True)
+
     connector_id = Column(Integer, primary_key=True) #This id is only unique inside each EVSE
     connector_status = Column(Enum(enums.ConnectorStatusType))
 
+    cp_id = Column(String(20), primary_key=True)
+    evse_id = Column(Integer, primary_key=True)
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                             [ "EVSE.cp_id", "EVSE.evse_id"]),
                         {})
+    EVSE = relationship("EVSE", backref="Connectors")
+
 
 
 class MeterValue(Base):
     __tablename__ = "MeterValue"
     id = Column(Integer, primary_key=True)
+
     cp_id = Column(String(20))
     evse_id = Column(Integer)
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                             [ "EVSE.cp_id", "EVSE.evse_id"]),
                         {})
+    EVSE = relationship("EVSE", backref="MeterValues")
+
     timestamp = Column(DateTime)
 
     value = Column(Float, nullable=False)
@@ -107,25 +112,28 @@ class IdToken(Base):
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
 
-    id_token_info = relationship("IdTokenInfo", backref=backref("IdToken", uselist=False), uselist=False)
 
 class GroupIdToken(Base):
     __tablename__ = "GroupIdToken"
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
 
-    belonging_id_tokens = relationship("IdTokenInfo", backref=backref("GroupIdToken",uselist=False))
 
 class IdTokenInfo(Base):
     __tablename__ = "IdTokenInfo"
+
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
+    IdToken = relationship("IdToken", backref=backref("IdTokenInfo", uselist=False), uselist=False)
+
     cache_expiry_date_time = Column(DateTime)
     charging_priority = Column(Integer)
     language_1 = Column(String(8))
     language_2 = Column(String(8))
-    allowed_evse = relationship('EVSE', secondary=evse_idTokens, backref='allowed_idTokens')
+    EVSEs = relationship('EVSE', secondary=evse_idTokens, backref='IdTokenInfos')
     
     _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
+    GroupIdToken = relationship("GroupIdToken", backref="IdTokenInfos", uselist=False)
+
 
 
 
