@@ -136,6 +136,43 @@ class IdTokenInfo(Base):
 
 
 
+class Transaction(Base):
+    __tablename__ = "Transaction"
+    transaction_id = Column(String(36), primary_key=True)
+    charging_state = Column(Enum(enums.ChargingStateType))
+    time_spent_charging = Column(Integer)
+    stopped_reason = Column(Enum(enums.ReasonType))
+    remote_start_id = Column(Integer)
+
+    _id_token = Column(String(36), ForeignKey("IdToken.id_token"))
+    IdToken = relationship("IdToken", backref="Transactions", uselist=False)
+    
+    #Connector
+    cp_id = Column(String(20))
+    evse_id = Column(Integer)
+    connector_id = Column(Integer) 
+    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id", "connector_id"],
+                                            [ "Connector.cp_id", "Connector.evse_id", "Connector.connector_id"]),
+                        {})
+    Connector = relationship("Connector", backref="Transactions", uselist=False)
+    
+
+
+class Transaction_Message(Base):
+    __tablename__ = "Transaction_Message"
+    id = Column(Integer, primary_key=True)
+    event_type = Column(Enum(enums.TransactionEventType))
+    timestamp = Column(DateTime)
+    trigger_reason = Column(Enum(enums.TriggerReasonType))
+    seq_no = Column(Integer)
+    offline = Column(Boolean)
+    number_of_phases_used = Column(Integer)
+    cable_max_current = Column(Integer)
+    reservation_id = Column(Integer)
+
+    _transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"))
+    Transaction = relationship("Transaction", backref="Transaction_Messages",uselist=False)
+
 
 
 def create_Tables(engine):
@@ -145,8 +182,8 @@ def create_Tables(engine):
 
 def insert_Hard_Coded(db):
     objects = []
-    objects.append(Charge_Point(id = "CP_1", password="passcp1"))
-    objects.append(Charge_Point(id = "CP_2", password="passcp2"))
+    objects.append(Charge_Point(cp_id = "CP_1", password="passcp1"))
+    objects.append(Charge_Point(cp_id = "CP_2", password="passcp2"))
 
     id_Token = IdToken(id_token = "123456789", type=enums.IdTokenType.iso14443)
     group_id_token = GroupIdToken(id_token = "group123456789", type=enums.IdTokenType.iso14443)
