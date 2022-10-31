@@ -115,7 +115,7 @@ class DataBase:
 
         stmt = (
             update(db_Tables.Charge_Point).
-            where(db_Tables.Charge_Point.id == cp_id).
+            where(db_Tables.Charge_Point.cp_id == cp_id).
             values(**charge_point_InMessage)
         )
 
