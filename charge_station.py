@@ -19,7 +19,10 @@ class ChargePoint(cp):
         request = call.BootNotificationPayload(
                     charging_station=datatypes.ChargingStationType(
                         vendor_name="vendor_name",
-                        model="model"
+                        model="model",
+                        modem=datatypes.ModemType(
+                            iccid="jklasdfhlkjashdl"
+                        )
                     ),
                     reason=enums.BootReasonType.power_up
                 )

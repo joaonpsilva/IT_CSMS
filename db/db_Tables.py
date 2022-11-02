@@ -1,4 +1,3 @@
-from numbers import Integral
 from xmlrpc.client import Boolean
 from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean
 from sqlalchemy.orm import declarative_base, relationship, backref
@@ -26,6 +25,12 @@ evse_idTokens = Table(
 
 
 
+class Modem(Base):
+    __tablename__ = "Modem"
+    id = Column(Integer, primary_key=True)
+    iccid = Column(String(20))
+    imsi = Column(String(20))
+
 
 class Charge_Point(Base):
     __tablename__ = "Charge_point"
@@ -35,13 +40,21 @@ class Charge_Point(Base):
     vendor_name = Column(String(50))
     serial_number = Column(String(25))
     firmware_version = Column(String(50))
-    modem_iccid = Column(String(20))
-    modem_imsi = Column(String(20))
 
-    def __init__(self, password, **kwargs):
+    _modem_id = Column(Integer, ForeignKey("Modem.id"))
+    modem = relationship("Modem", backref="Charge_Point")
+
+    def __init__(self, password=None, modem=None, **kwargs):
         
-        password_hash = self.generate_hash(password)
-        super().__init__(password_hash=password_hash, **kwargs)
+        if modem:
+            modem = Modem(**modem)
+            kwargs["modem"] = modem
+        
+        if password:
+            password_hash = self.generate_hash(password) #Encript password (Hash)
+            kwargs["password_hash"] = password_hash
+        
+        super().__init__(**kwargs)
     
     @property
     def password(self):
@@ -76,6 +89,7 @@ class Connector(Base):
 
     connector_id = Column(Integer, primary_key=True) #This id is only unique inside each EVSE
     connector_status = Column(Enum(enums.ConnectorStatusType))
+    timestamp = Column(DateTime)
 
     cp_id = Column(String(20), primary_key=True)
     evse_id = Column(Integer, primary_key=True)
@@ -85,27 +99,75 @@ class Connector(Base):
     EVSE = relationship("EVSE", backref="Connectors")
 
 
+    def __init__(self, evse_id, cp_id, **kwargs):
+        evse = EVSE(cp_id=cp_id, evse_id = evse_id)
+        kwargs["EVSE"] = evse
+        super().__init__(**kwargs)
+
 
 class MeterValue(Base):
     __tablename__ = "MeterValue"
     id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime)
 
     cp_id = Column(String(20))
     evse_id = Column(Integer)
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                             [ "EVSE.cp_id", "EVSE.evse_id"]),
                         {})
-    EVSE = relationship("EVSE", backref="MeterValues")
+    EVSE = relationship("EVSE", backref="MeterValues", uselist=False)
 
-    timestamp = Column(DateTime)
+    def __init__(self, sampled_value, **kwargs):
+
+        sampled_value_list = []
+        for sv in sampled_value:
+            sampled_value_list.append(SampledValue(**sv))
+        
+        kwargs["sampled_value"] = sampled_value_list
+        
+        super().__init__(**kwargs)
+
+
+class SignedMeterValue(Base):
+    __tablename__ = "SignedMeterValue"
+    id = Column(Integer, primary_key=True)
+    signed_meter_data = Column(String(2500))
+    signing_method = Column(String(50))
+    encoding_method = Column(String(50))
+    public_key = Column(String(2500))
+
+
+class SampledValue(Base):
+    __tablename__ = "SampledValue"
+    id = Column(Integer, primary_key=True)
 
     value = Column(Float, nullable=False)
     context = Column(Enum(enums.ReadingContextType))
     measurand = Column(Enum(enums.MeasurandType))
     phase = Column(Enum(enums.PhaseType))
     location = Column(Enum(enums.LocationType))
-    #signed_meter_value = 
-    #unit_of_measure = 
+    unit = Column(String(20))
+    multiplier = Column(Integer)
+
+    _meter_value_id = Column(Integer, ForeignKey("MeterValue.id"))
+    meter_value = relationship("MeterValue", backref="sampled_value", uselist=False)
+
+    _signed_meter_value_id = Column(Integer, ForeignKey("SignedMeterValue.id"))
+    signed_meter_value = relationship("SignedMeterValue", backref=backref("sampled_value", uselist=False), uselist=False)
+
+    def __init__(self, unit_of_measure=None, signed_meter_value=None, **kwargs):
+        if unit_of_measure:
+            for key, value in unit_of_measure.items():
+                kwargs[key] = value
+        
+        if signed_meter_value:
+            signed_meter_value = SignedMeterValue(**signed_meter_value)
+            kwargs["signed_meter_value"] = signed_meter_value
+
+        super().__init__(**kwargs)
+
+
+    
 
 class IdToken(Base):
     __tablename__ = "IdToken"

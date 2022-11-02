@@ -19,16 +19,27 @@ class Owner(Base):
 class Pet(Base):
     __tablename__ = "pet"
     id = Column(Integer, primary_key=True)
-    name_pet = Column(String(50))
+    name = Column(String(50))
 
-    owner = relationship("Owner", backref="pets", uselist=False)
+    owner = relationship("Owner", backref="pets")
+
+    def __init__(self, owner=None, **kwargs):
+        if owner:
+            o_l = []
+            for o in owner:
+                o = Owner(**o)
+                o_l.append(o)
+                kwargs["owner"] = o_l
+
+        super().__init__(**kwargs)
+
 
 Base.metadata.create_all(engine)
 
 
 # Map keys to classes
-mapping = {frozenset(('name', '')): Owner,
-           frozenset(('name_pet', 'owner')): Pet}
+mapping = {frozenset(['name']): Owner,
+           frozenset(('id', 'name', 'owner')): Pet}
 
 def class_mapper(d):
     for keys, cls in mapping.items():
@@ -42,12 +53,13 @@ def class_mapper(d):
 
 
 
-data = '{"name_pet": "nina", "owner": {"name": "joao"}}'
+data = {"id": 1,"name":"aaa", "owner": [{"name": "jaojao"}]}
 
-nina = json.loads(data, object_hook=class_mapper)
-print(nina.name_pet)
-print(nina.owner.name)
+#nina = json.loads(data, object_hook=class_mapper)
+nina = Pet(**data)
 
-session.add(nina)
+session.merge(nina)
 session.commit()
+print(nina.name)
+print(nina.owner)
 

@@ -12,6 +12,24 @@ from sqlalchemy.orm.util import identity_key
 
 logging.basicConfig(level=logging.INFO)
 
+
+#UPDATE example
+"""stmt = (
+    update(db_Tables.Charge_Point).
+    where(db_Tables.Charge_Point.cp_id == cp_id).
+    values(**charge_point_InMessage)
+)
+
+self.session.execute(stmt)"""
+
+#CHECK if exists
+"""q = self.session.query(db_Tables.EVSE)\
+    .filter(db_Tables.EVSE.evse_id==content["evse_id"])\
+    .filter(db_Tables.EVSE.cp_id==cp_id)
+
+exists = self.session.query(q.exists()).scalar()
+"""
+
 class DataBase:
 
     def __init__(self):
@@ -99,88 +117,33 @@ class DataBase:
         return response
 
 
-
-
     def BootNotification(self, cp_id, content):
                 
         charge_point_InMessage = content["charging_station"]
+        charge_point_InMessage["cp_id"] = cp_id
 
-        if "modem" in charge_point_InMessage:
-            if "iccid" in charge_point_InMessage["modem"]:
-                charge_point_InMessage["modem_iccid"] = charge_point_InMessage["modem"]["iccid"]
-            if "imsi" in charge_point_InMessage["modem"]:
-                charge_point_InMessage["modem_imsi"] = charge_point_InMessage["modem"]["imsi"]
-            
-            charge_point_InMessage.pop('modem', None)
-
-        stmt = (
-            update(db_Tables.Charge_Point).
-            where(db_Tables.Charge_Point.cp_id == cp_id).
-            values(**charge_point_InMessage)
-        )
-
-        self.session.execute(stmt)  
-
+        cp = db_Tables.Charge_Point(**charge_point_InMessage)
+        self.session.merge(cp)
 
 
     def StatusNotification(self, cp_id, content):
+
+        content["cp_id"] = cp_id
+        connector = db_Tables.Connector(**content)
+        self.session.merge(connector)
         
-        #------------check if EVSE is already in DB
-        q = self.session.query(db_Tables.EVSE)\
-            .filter(db_Tables.EVSE.evse_id==content["evse_id"])\
-            .filter(db_Tables.EVSE.cp_id==cp_id)
-
-        exists = self.session.query(q.exists()).scalar()
-
-        if not exists:
-            #If not exists, insert
-            evse = db_Tables.EVSE(
-                evse_id = content["evse_id"] , 
-                cp_id= cp_id
-            )
-            self.session.add(evse)
-
-        #------------check if connector exists
-        q = self.session.query(db_Tables.Connector)\
-            .filter(db_Tables.Connector.connector_id==content["connector_id"])\
-            .filter(db_Tables.Connector.evse_id==content["evse_id"])\
-            .filter(db_Tables.Connector.cp_id==cp_id)
-        
-        exists = self.session.query(q.exists()).scalar()
-
-        if not exists:
-            #Insert connector
-            connector = db_Tables.Connector(
-                cp_id=cp_id,
-                connector_id = content["connector_id"], 
-                connector_status = content["connector_status"],
-                evse_id = content["evse_id"]
-            )
-            
-            self.session.add(connector)
-        else:
-            #update status
-            q.update({'connector_status': content["connector_status"]})
-
-
 
     def MeterValues(self, cp_id, content): 
         
         evse_id = content["evse_id"]
 
-        for meter_value in content["meter_value"]:
-            timestamp = meter_value["timestamp"]
+        for meter_value_dict in content["meter_value"]:
 
-            for sampled_value in meter_value["sampled_value"]:
-                filtered_sampled_value = {key: value for key, value in sampled_value.items() if key in self.get_class_attributes(db_Tables.MeterValue)}
-                
-                meter_value_obj = db_Tables.MeterValue(
-                    cp_id=cp_id,
-                    evse_id=evse_id,
-                    timestamp=timestamp,
-                    **filtered_sampled_value)
-                
-                self.session.add(meter_value_obj)
+            meter_value_dict["cp_id"] = cp_id
+            meter_value_dict["evse_id"] = evse_id
+
+            meter_value = db_Tables.MeterValue(**meter_value_dict)
+            self.session.add(meter_value)
     
 
     def Authorize(self, cp_id, content):
