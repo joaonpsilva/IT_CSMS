@@ -37,6 +37,9 @@ class CustomBase(Base):
 
 
         super().__init__(**kwargs)
+    
+    def get_dict_obj(self):
+        return { attr:value for attr, value in self.__dict__.items() if not attr.startswith("_") and value is not None }
 
 
 
@@ -95,8 +98,6 @@ class Charge_Point(CustomBase):
         return PASSLIB_CONTEXT.verify(password, self.password_hash)
 
 
-
-
 class EVSE(Base):
     __tablename__ = "EVSE"
     evse_id = Column(Integer, primary_key=True)   #This id is only unique inside each CP
@@ -104,6 +105,10 @@ class EVSE(Base):
     cp_id = Column(String(20), ForeignKey("Charge_point.cp_id"), primary_key=True)
     charge_point = relationship("Charge_Point", backref="evse")
 
+    def __init__(self, id = None, **kwargs):
+        if id:
+            kwargs["cp_id"] = id
+        super().__init__(**kwargs)
 
 
 class Connector(Base):
@@ -122,9 +127,10 @@ class Connector(Base):
 
 
     def __init__(self, evse_id, cp_id, **kwargs):
-        evse = EVSE(cp_id=cp_id, evse_id = evse_id)
-        kwargs["EVSE"] = evse
+        kwargs["evse"] = EVSE(cp_id=cp_id, evse_id = evse_id)
         super().__init__(**kwargs)
+
+
 
 
 class MeterValue(CustomBase):
@@ -134,10 +140,16 @@ class MeterValue(CustomBase):
 
     cp_id = Column(String(20))
     evse_id = Column(Integer)
-    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
-                                            [ "EVSE.cp_id", "EVSE.evse_id"]),
-                        {})
     evse = relationship("EVSE", backref="meter_value", uselist=False)
+
+    seq_no = Column(Integer)
+    transaction_id = Column(String(36))
+
+    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
+                                    [ "EVSE.cp_id", "EVSE.evse_id"]),
+                    ForeignKeyConstraint(["transaction_id", "seq_no"],
+                                    [ "Transaction_Message.transaction_id", "Transaction_Message.seq_no"]),
+                    {})
 
 
 class SignedMeterValue(Base):
@@ -177,19 +189,19 @@ class SampledValue(CustomBase):
 
     
 
-class IdToken(Base):
+class IdToken(CustomBase):
     __tablename__ = "IdToken"
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
 
 
-class GroupIdToken(Base):
+class GroupIdToken(CustomBase):
     __tablename__ = "GroupIdToken"
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
 
 
-class IdTokenInfo(Base):
+class IdTokenInfo(CustomBase):
     __tablename__ = "IdTokenInfo"
 
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
@@ -204,9 +216,26 @@ class IdTokenInfo(Base):
     _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
     group_id_token = relationship("GroupIdToken", backref="id_token_info", uselist=False)
 
+    def get_dict_obj(self):
+        result = super().get_dict_obj()
+
+        #check if belongs to a group
+        if self.group_id_token is not None:
+            result["group_id_token"] = self.group_id_token.get_dict_obj()
+        
+        return result
+    
+    def get_allowed_evse_for_cp(self, cp_id):
+            
+        #get evse in which can charge in this cp
+        return [evse.evse_id for evse in self.evse if evse.cp_id == cp_id]
+            
+        
 
 
-class Transaction(Base):
+
+
+class Transaction(CustomBase):
     __tablename__ = "Transaction"
     transaction_id = Column(String(36), primary_key=True)
     charging_state = Column(Enum(enums.ChargingStateType))
@@ -217,31 +246,33 @@ class Transaction(Base):
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"))
     id_token = relationship("IdToken", backref="transaction", uselist=False)
     
-    #Connector
+    #EVSE
+    connector_id = Column(Integer) #not used in foreign key constraint
     cp_id = Column(String(20))
     evse_id = Column(Integer)
-    connector_id = Column(Integer) 
-    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id", "connector_id"],
-                                            [ "Connector.cp_id", "Connector.evse_id", "Connector.connector_id"]),
+    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
+                                            [ "EVSE.cp_id", "EVSE.evse_id"]),
                         {})
-    connector = relationship("Connector", backref="transaction", uselist=False)
+    connector = relationship("EVSE", backref="transaction", uselist=False)
     
 
-
-class Transaction_Message(Base):
+class Transaction_Message(CustomBase):
     __tablename__ = "Transaction_Message"
-    id = Column(Integer, primary_key=True)
+
     event_type = Column(Enum(enums.TransactionEventType))
     timestamp = Column(DateTime)
     trigger_reason = Column(Enum(enums.TriggerReasonType))
-    seq_no = Column(Integer)
     offline = Column(Boolean)
     number_of_phases_used = Column(Integer)
     cable_max_current = Column(Integer)
     reservation_id = Column(Integer)
+    seq_no = Column(Integer, primary_key = True)
 
-    _transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"))
+    transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"), primary_key = True)
     transaction = relationship("Transaction", backref="transaction_message",uselist=False)
+
+    meter_value = relationship("MeterValue", backref="transaction_message", uselist=False)
+
 
 
 
@@ -266,8 +297,6 @@ def insert_Hard_Coded(db):
             group_id_token=group_id_token
             #cache_expiry_date_time = datetime.utcnow().isoformat()
             ))
-
-
 
     db.session.add_all(objects)
     db.session.commit()

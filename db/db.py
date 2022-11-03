@@ -55,6 +55,7 @@ class DataBase:
             "StatusNotification" : self.StatusNotification,
             "MeterValues" : self.MeterValues,
             "Authorize" : self.Authorize,
+            "TransactionEvent" : self.TransactionEvent,
             "VERIFY_PASSWORD" : self.verify_password
 
         }
@@ -72,16 +73,6 @@ class DataBase:
         self.session.commit()
 
         return toReturn
-
-    # async def on_log(self, message: AbstractIncomingMessage) -> None:
-    #     """
-    #     Function that will handle icoming messages to store information in the database
-    #     """
-
-    #     #call method depending on the message
-    #     self.method_mapping[message["METHOD"]](message)
-    #     self.session.commit()
-
 
 
     async def run(self):
@@ -157,21 +148,12 @@ class DataBase:
             id_token_info = idToken.id_token_info 
             
             #add available information
-            result = self.get_dict_obj(id_token_info)
+            result = id_token_info.get_dict_obj()
 
-            #check if belongs to a group
-            if id_token_info.group_id_token is not None:
-                result["group_id_token"] = self.get_dict_obj(id_token_info.group_id_token)
-            
-            #check if has evse restrictions
-            if len(id_token_info.evse) > 0:
-                
-                #get evse in which can charge in this cp
-                allowed_evse = [evse.evse_id for evse in id_token_info.evse if evse.cp_id == cp_id]
-                
-                #check if not allowed for whole cp
-                if len(allowed_evse) != len(self.session.query(db_Tables.Charge_Point).get({"cp_id" : cp_id})):
-                    result["evse_id"] = allowed_evse
+            allowed_evse = id_token_info.get_allowed_evse_for_cp(cp_id)                
+            #check if not allowed for whole cp
+            if len(allowed_evse) != 0 and len(allowed_evse) != len(self.session.query(db_Tables.Charge_Point).get({"cp_id" : cp_id})):
+                result["evse_id"] = allowed_evse
 
         response = {
             "METHOD" : "AuthorizeResponse",
@@ -180,6 +162,25 @@ class DataBase:
         }
 
         return response
+    
+
+    def TransactionEvent(self, cp_id, content):
+
+        #pass common transaction info to transaction object
+        if "id_token" in content:
+            content["transaction_info"]["id_token"] = content["id_token"]
+            content.pop("id_token")
+
+        if "evse" in content:
+            content["transaction_info"]["evse"] = content["evse"]
+            content.pop("evse")
+            
+            if "connector_id" in content["transaction_info"]["evse"]:
+                content["transaction_info"]["connector_id"] = content["transaction_info"]["evse"]["connector_id"]
+                content["transaction_info"]["evse"].pop("connector_id")
+        
+        transaction_message = db_Tables.Transaction_Message(**content)
+        self.session.merge(transaction_message)
 
 
 
