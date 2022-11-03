@@ -74,6 +74,18 @@ class ChargePoint(cp):
             )
         )
         response = await self.call(request)
+
+    
+    async def authorizeRequest(self):
+        request = call.AuthorizePayload(
+            id_token=datatypes.IdTokenType(
+                id_token="123456789",
+                type=enums.IdTokenType.iso14443
+            )
+        )
+        
+        response = await self.call(request)
+        return response.id_token_info['status'] == "Accepted"
     
     
     async def startTransaction_CablePluginFirst(self):
@@ -101,14 +113,21 @@ class ChargePoint(cp):
         )
         response = await self.call(request)
 
-        logging.info("User authorization successful")
+        if self.authorizeRequest():
+            logging.info("User authorization successful")
+        else:
+            logging.info("User authorization unsuccessful")
+            return 
 
         request = call.TransactionEventPayload(
             event_type=enums.TransactionEventType.updated,
             timestamp=datetime.utcnow().isoformat(),
             trigger_reason=enums.TriggerReasonType.authorized,
             seq_no=2,
-            id_token=datatypes.IdTokenType(id_token="1234", type=enums.IdTokenType.central),
+            id_token=datatypes.IdTokenType(
+                id_token="123456789",
+                type=enums.IdTokenType.iso14443
+            ),
             transaction_info=datatypes.TransactionType(
                 id="AB1234",
                 charging_state=enums.ChargingStateType.ev_connected
@@ -130,15 +149,6 @@ class ChargePoint(cp):
         )
         response = await self.call(request)
     
-    async def authorizeRequest(self):
-        request = call.AuthorizePayload(
-            id_token=datatypes.IdTokenType(
-                id_token="123456789",
-                type=enums.IdTokenType.iso14443
-            )
-        )
-        
-        response = await self.call(request)
 
 
 ########################################
