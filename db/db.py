@@ -160,14 +160,14 @@ class DataBase:
             result = self.get_dict_obj(id_token_info)
 
             #check if belongs to a group
-            if id_token_info.GroupIdToken is not None:
-                result["group_id_token"] = self.get_dict_obj(id_token_info.GroupIdToken)
+            if id_token_info.group_id_token is not None:
+                result["group_id_token"] = self.get_dict_obj(id_token_info.group_id_token)
             
             #check if has evse restrictions
-            if len(id_token_info.allowed_evse) > 0:
+            if len(id_token_info.evse) > 0:
                 
                 #get evse in which can charge in this cp
-                allowed_evse = [evse.evse_id for evse in id_token_info.allowed_evse if evse.cp_id == cp_id]
+                allowed_evse = [evse.evse_id for evse in id_token_info.evse if evse.cp_id == cp_id]
                 
                 #check if not allowed for whole cp
                 if len(allowed_evse) != len(self.session.query(db_Tables.Charge_Point).get({"cp_id" : cp_id})):

@@ -4,14 +4,41 @@ from sqlalchemy.orm import declarative_base, relationship, backref
 from ocpp.v201 import enums
 from passlib.context import CryptContext
 from datetime import datetime
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.inspection import inspect
 
 PASSLIB_CONTEXT = CryptContext(
     # in a new application with no previous schemes, start with pbkdf2 SHA512
     schemes=["pbkdf2_sha512"],
     deprecated="auto",
 )
+        
 
 Base = declarative_base()
+
+class CustomBase(Base):
+    __abstract__ = True
+
+    def __init__(self, **kwargs):
+
+        for arg in kwargs:
+            if arg in self.__mapper__.relationships.keys():
+                rel = self.__mapper__.relationships[arg] 
+
+                if isinstance(kwargs[arg], rel.mapper.class_):
+                    continue
+
+                if rel.uselist:                    
+                    o = [rel.mapper.class_(**d_l) for d_l in kwargs[arg]]
+                else:
+                    o = rel.mapper.class_(**kwargs[arg])
+                
+                kwargs[arg] = o
+
+
+        super().__init__(**kwargs)
+
+
 
 evse_idTokens = Table(
     'evse_idTokens',
@@ -24,7 +51,6 @@ evse_idTokens = Table(
 )
 
 
-
 class Modem(Base):
     __tablename__ = "Modem"
     id = Column(Integer, primary_key=True)
@@ -32,7 +58,7 @@ class Modem(Base):
     imsi = Column(String(20))
 
 
-class Charge_Point(Base):
+class Charge_Point(CustomBase):
     __tablename__ = "Charge_point"
     cp_id = Column(String(20), primary_key=True)
     password_hash = Column(String(256)) #https://stackoverflow.com/questions/56738384/sqlalchemy-call-function-and-save-returned-value-in-table-always
@@ -42,13 +68,9 @@ class Charge_Point(Base):
     firmware_version = Column(String(50))
 
     _modem_id = Column(Integer, ForeignKey("Modem.id"))
-    modem = relationship("Modem", backref="Charge_Point")
+    modem = relationship("Modem", backref="charge_point")
 
-    def __init__(self, password=None, modem=None, **kwargs):
-        
-        if modem:
-            modem = Modem(**modem)
-            kwargs["modem"] = modem
+    def __init__(self, password=None, **kwargs):
         
         if password:
             password_hash = self.generate_hash(password) #Encript password (Hash)
@@ -80,7 +102,7 @@ class EVSE(Base):
     evse_id = Column(Integer, primary_key=True)   #This id is only unique inside each CP
 
     cp_id = Column(String(20), ForeignKey("Charge_point.cp_id"), primary_key=True)
-    Charge_Point = relationship("Charge_Point", backref="EVSEs")
+    charge_point = relationship("Charge_Point", backref="evse")
 
 
 
@@ -96,7 +118,7 @@ class Connector(Base):
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                             [ "EVSE.cp_id", "EVSE.evse_id"]),
                         {})
-    EVSE = relationship("EVSE", backref="Connectors")
+    evse = relationship("EVSE", backref="connector")
 
 
     def __init__(self, evse_id, cp_id, **kwargs):
@@ -105,7 +127,7 @@ class Connector(Base):
         super().__init__(**kwargs)
 
 
-class MeterValue(Base):
+class MeterValue(CustomBase):
     __tablename__ = "MeterValue"
     id = Column(Integer, primary_key=True)
     timestamp = Column(DateTime)
@@ -115,17 +137,7 @@ class MeterValue(Base):
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                             [ "EVSE.cp_id", "EVSE.evse_id"]),
                         {})
-    EVSE = relationship("EVSE", backref="MeterValues", uselist=False)
-
-    def __init__(self, sampled_value, **kwargs):
-
-        sampled_value_list = []
-        for sv in sampled_value:
-            sampled_value_list.append(SampledValue(**sv))
-        
-        kwargs["sampled_value"] = sampled_value_list
-        
-        super().__init__(**kwargs)
+    evse = relationship("EVSE", backref="meter_value", uselist=False)
 
 
 class SignedMeterValue(Base):
@@ -137,7 +149,7 @@ class SignedMeterValue(Base):
     public_key = Column(String(2500))
 
 
-class SampledValue(Base):
+class SampledValue(CustomBase):
     __tablename__ = "SampledValue"
     id = Column(Integer, primary_key=True)
 
@@ -155,14 +167,10 @@ class SampledValue(Base):
     _signed_meter_value_id = Column(Integer, ForeignKey("SignedMeterValue.id"))
     signed_meter_value = relationship("SignedMeterValue", backref=backref("sampled_value", uselist=False), uselist=False)
 
-    def __init__(self, unit_of_measure=None, signed_meter_value=None, **kwargs):
+    def __init__(self, unit_of_measure=None, **kwargs):
         if unit_of_measure:
             for key, value in unit_of_measure.items():
                 kwargs[key] = value
-        
-        if signed_meter_value:
-            signed_meter_value = SignedMeterValue(**signed_meter_value)
-            kwargs["signed_meter_value"] = signed_meter_value
 
         super().__init__(**kwargs)
 
@@ -185,16 +193,16 @@ class IdTokenInfo(Base):
     __tablename__ = "IdTokenInfo"
 
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
-    IdToken = relationship("IdToken", backref=backref("IdTokenInfo", uselist=False), uselist=False)
+    id_token = relationship("IdToken", backref=backref("id_token_info", uselist=False), uselist=False)
 
     cache_expiry_date_time = Column(DateTime)
     charging_priority = Column(Integer)
     language_1 = Column(String(8))
     language_2 = Column(String(8))
-    EVSEs = relationship('EVSE', secondary=evse_idTokens, backref='IdTokenInfos')
+    evse = relationship('EVSE', secondary=evse_idTokens, backref='id_token_info')
     
     _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
-    GroupIdToken = relationship("GroupIdToken", backref="IdTokenInfos", uselist=False)
+    group_id_token = relationship("GroupIdToken", backref="id_token_info", uselist=False)
 
 
 
@@ -207,7 +215,7 @@ class Transaction(Base):
     remote_start_id = Column(Integer)
 
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"))
-    IdToken = relationship("IdToken", backref="Transactions", uselist=False)
+    id_token = relationship("IdToken", backref="transaction", uselist=False)
     
     #Connector
     cp_id = Column(String(20))
@@ -216,7 +224,7 @@ class Transaction(Base):
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id", "connector_id"],
                                             [ "Connector.cp_id", "Connector.evse_id", "Connector.connector_id"]),
                         {})
-    Connector = relationship("Connector", backref="Transactions", uselist=False)
+    connector = relationship("Connector", backref="transaction", uselist=False)
     
 
 
@@ -233,7 +241,7 @@ class Transaction_Message(Base):
     reservation_id = Column(Integer)
 
     _transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"))
-    Transaction = relationship("Transaction", backref="Transaction_Messages",uselist=False)
+    transaction = relationship("Transaction", backref="transaction_message",uselist=False)
 
 
 
@@ -253,9 +261,9 @@ def insert_Hard_Coded(db):
     objects.append(id_Token)
     objects.append(group_id_token)
     objects.append(IdTokenInfo(
-            IdToken=id_Token, 
+            id_token=id_Token, 
             language_1="PT", 
-            GroupIdToken=group_id_token
+            group_id_token=group_id_token
             #cache_expiry_date_time = datetime.utcnow().isoformat()
             ))
 
