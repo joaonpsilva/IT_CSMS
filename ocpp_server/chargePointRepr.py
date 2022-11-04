@@ -101,6 +101,7 @@ class ChargePoint(cp):
         await ChargePoint.broker.send_to_DB(message)
 
         return call_result.MeterValuesPayload()
+
     
     @on('Authorize')
     async def on_Authorize(self, **kwargs):
@@ -108,29 +109,23 @@ class ChargePoint(cp):
         message = self.build_message("Authorize", kwargs)
 
         response = await ChargePoint.broker.send_request_wait_response(message)
-        content = response["CONTENT"]
 
-        if content is None:
-            status = enums.AuthorizationStatusType.unknown
-            content = {}
-        elif "evse_id" in content and len(content["evse_id"]):
-            status = enums.AuthorizationStatusType.not_at_this_location
-        elif "cache_expiry_date_time" in content and content["cache_expiry_date_time"] < datetime.utcnow().isoformat():
-            status = enums.AuthorizationStatusType.invalid
-        else: 
-            status = enums.AuthorizationStatusType.accepted
-
-        return call_result.AuthorizePayload(
-            id_token_info=datatypes.IdTokenInfoType(
-                status=status,
-                **content
-            )
-        )
+        return call_result.AuthorizePayload(**response["CONTENT"])
     
     @on('TransactionEvent')
-    async def on_TransactionEvent(self, event_type, timestamp, trigger_reason, seq_no, transaction_info, **kwargs):
-        #TODO construct better TransactionEventPayload
-        return call_result.TransactionEventPayload()
+    async def on_TransactionEvent(self, **kwargs):
+        
+        message = self.build_message("TransactionEvent", kwargs)
+
+        if "id_token" in kwargs:
+            response = await ChargePoint.broker.send_request_wait_response(message)
+            transactionEventPayload = call_result.TransactionEventPayload(**response["CONTENT"])
+
+        else:
+            await ChargePoint.broker.send_to_DB(message)
+            transactionEventPayload = call_result.TransactionEventPayload()
+        
+        return transactionEventPayload
     
 
     @on('Heartbeat')

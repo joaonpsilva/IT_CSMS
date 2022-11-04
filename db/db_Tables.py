@@ -107,7 +107,7 @@ class EVSE(Base):
 
     def __init__(self, id = None, **kwargs):
         if id:
-            kwargs["cp_id"] = id
+            kwargs["evse_id"] = id
         super().__init__(**kwargs)
 
 
@@ -126,8 +126,8 @@ class Connector(Base):
     evse = relationship("EVSE", backref="connector")
 
 
-    def __init__(self, evse_id, cp_id, **kwargs):
-        kwargs["evse"] = EVSE(cp_id=cp_id, evse_id = evse_id)
+    def __init__(self,**kwargs):
+        kwargs["evse"] = EVSE(cp_id=kwargs["cp_id"], evse_id = kwargs["evse_id"])
         super().__init__(**kwargs)
 
 
@@ -228,8 +228,7 @@ class IdTokenInfo(CustomBase):
     def get_allowed_evse_for_cp(self, cp_id):
             
         #get evse in which can charge in this cp
-        return [evse.evse_id for evse in self.evse if evse.cp_id == cp_id]
-            
+        return [evse.evse_id for evse in self.evse if evse.cp_id == cp_id]            
         
 
 
@@ -243,6 +242,10 @@ class Transaction(CustomBase):
     stopped_reason = Column(Enum(enums.ReasonType))
     remote_start_id = Column(Integer)
 
+    """it is now possible and allowed to send IdTokenType in more than 1 TransactionEventRequest.
+    The CSMS has to be able to handle/process multiple IdTokenType per transaction. It is up to the
+    CSO how they use this information (for billing purposes)??????? PAG 125"""
+
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"))
     id_token = relationship("IdToken", backref="transaction", uselist=False)
     
@@ -253,7 +256,7 @@ class Transaction(CustomBase):
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                             [ "EVSE.cp_id", "EVSE.evse_id"]),
                         {})
-    connector = relationship("EVSE", backref="transaction", uselist=False)
+    evse = relationship("EVSE", backref="transaction", uselist=False)
     
 
 class Transaction_Message(CustomBase):
@@ -269,7 +272,7 @@ class Transaction_Message(CustomBase):
     seq_no = Column(Integer, primary_key = True)
 
     transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"), primary_key = True)
-    transaction = relationship("Transaction", backref="transaction_message",uselist=False)
+    transaction_info = relationship("Transaction", backref="transaction_message",uselist=False)
 
     meter_value = relationship("MeterValue", backref="transaction_message", uselist=False)
 

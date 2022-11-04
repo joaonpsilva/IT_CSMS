@@ -8,6 +8,8 @@ from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import exists
 import db_Tables
 from sqlalchemy.orm.util import identity_key
+from ocpp.v201 import enums
+
 
 
 logging.basicConfig(level=logging.INFO)
@@ -135,13 +137,18 @@ class DataBase:
 
             meter_value = db_Tables.MeterValue(**meter_value_dict)
             self.session.add(meter_value)
+
     
+    def build_idToken_Info(self, idToken, cp_id, evse_id = None):
+        """
+        Builds an idTokenInfo based on id token
+        """
 
-    def Authorize(self, cp_id, content):
+        try:
+            idToken = self.session.query(db_Tables.IdToken).get(idToken)
+        except:
+            return {"status" : enums.AuthorizationStatusType.invalid}
 
-        idToken = self.session.query(db_Tables.IdToken).get(content['id_token']['id_token'])
-
-        result = None
         if idToken is not None:
 
             #get id token info
@@ -154,35 +161,77 @@ class DataBase:
             #check if not allowed for whole cp
             if len(allowed_evse) != 0 and len(allowed_evse) != len(self.session.query(db_Tables.Charge_Point).get({"cp_id" : cp_id})):
                 result["evse_id"] = allowed_evse
+            
+
+            #--------Choose STATUS
+
+            if id_token_info.cache_expiry_date_time != None and id_token_info.cache_expiry_date_time < datetime.utcnow().isoformat():
+                result["status"] = enums.AuthorizationStatusType.expired
+            elif evse_id is not None and "evse_id" in result and evse_id not in result["evse_id"]:
+                #in authorize request, cant know this because dont know the evse
+                result["status"] = enums.AuthorizationStatusType.not_at_this_location
+            else: 
+                result["status"] = enums.AuthorizationStatusType.accepted
+        
+        else:
+            result = {"status" : enums.AuthorizationStatusType.unknown}
+
+        
+        return result
+            
+
+    def Authorize(self, cp_id, content):
+        """cannot deal with certificates yet"""
 
         response = {
             "METHOD" : "AuthorizeResponse",
             "CP_ID" : cp_id,
-            "CONTENT" : result
+            "CONTENT" : {"id_token_info" : self.build_idToken_Info(content['id_token']['id_token'], cp_id)}
         }
 
         return response
     
 
     def TransactionEvent(self, cp_id, content):
+        
+        response = {}
 
-        #pass common transaction info to transaction object
+        #If message contains idtoken
         if "id_token" in content:
-            content["transaction_info"]["id_token"] = content["id_token"]
+            
+            #validate idtoken
+            id_token_info = self.build_idToken_Info(
+                content['id_token']['id_token'],
+                cp_id,
+                content['evse']['id'] if 'evse' in content else None)
+            
+            response = {
+                "METHOD" : "TransactionEventResponse",
+                "CP_ID" : cp_id,
+                "CONTENT" : {"id_token_info" : id_token_info}
+            }
+
+            #pass transaction info to transaction object (DB structure different than message stucture)
+            
+            #if for some reason, this idtoken is not good, dont use it to store in db
+            if id_token_info["status"] not in [enums.AuthorizationStatusType.unknown, enums.AuthorizationStatusType.invalid]:
+                content["transaction_info"]["id_token"] = content["id_token"]
             content.pop("id_token")
 
         if "evse" in content:
             content["transaction_info"]["evse"] = content["evse"]
+            content["transaction_info"]["evse"]["cp_id"] = cp_id
             content.pop("evse")
             
             if "connector_id" in content["transaction_info"]["evse"]:
                 content["transaction_info"]["connector_id"] = content["transaction_info"]["evse"]["connector_id"]
                 content["transaction_info"]["evse"].pop("connector_id")
         
+        #introduce message in DB
         transaction_message = db_Tables.Transaction_Message(**content)
         self.session.merge(transaction_message)
 
-
+        return response
 
 
 if __name__ == '__main__':

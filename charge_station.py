@@ -105,7 +105,7 @@ class ChargePoint(cp):
             trigger_reason=enums.TriggerReasonType.cable_plugged_in,
             seq_no=1,
             transaction_info=datatypes.TransactionType(
-                id="AB1234",
+                transaction_id="AB1234",
                 charging_state=enums.ChargingStateType.ev_connected
             ),
             evse=datatypes.EVSEType(id=1, connector_id=1)
@@ -113,7 +113,7 @@ class ChargePoint(cp):
         )
         response = await self.call(request)
 
-        if self.authorizeRequest():
+        if await self.authorizeRequest():
             logging.info("User authorization successful")
         else:
             logging.info("User authorization unsuccessful")
@@ -129,22 +129,27 @@ class ChargePoint(cp):
                 type=enums.IdTokenType.iso14443
             ),
             transaction_info=datatypes.TransactionType(
-                id="AB1234",
-                charging_state=enums.ChargingStateType.ev_connected
+                transaction_id="AB1234",
+                charging_state=enums.ChargingStateType.charging
             )
         )
         response = await self.call(request)
-
+        if response.id_token_info['status'] != "Accepted":
+            logging.info("User authorization unsuccessful on 2nd check")
+            return 
 
         request = call.TransactionEventPayload(
-            event_type=enums.TransactionEventType.updated,
+            event_type=enums.TransactionEventType.ended,
             timestamp=datetime.utcnow().isoformat(),
-            trigger_reason=enums.TriggerReasonType.charging_state_changed,
+            trigger_reason=enums.TriggerReasonType.ev_departed,
             seq_no=3,
-            id_token=datatypes.IdTokenType(id_token="1234", type=enums.IdTokenType.central),
+            id_token=datatypes.IdTokenType(
+                id_token="123456789",
+                type=enums.IdTokenType.iso14443
+            ),
             transaction_info=datatypes.TransactionType(
-                id="AB1234",
-                charging_state=enums.ChargingStateType.charging
+                transaction_id="AB1234",
+                charging_state=enums.ChargingStateType.idle
             )
         )
         response = await self.call(request)
@@ -220,8 +225,9 @@ class ChargePoint(cp):
 async def get_input(cp):
     
     command_map={
-        "meterValuesRequest":cp.meterValuesRequest,
-        "authorizeRequest" : cp.authorizeRequest
+        "meter_values":cp.meterValuesRequest,
+        "authorize" : cp.authorizeRequest,
+        "start_cable" : cp.startTransaction_CablePluginFirst
     }
 
     while True:
