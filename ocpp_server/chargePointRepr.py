@@ -106,8 +106,7 @@ class ChargePoint(cp):
     @on('Authorize')
     async def on_Authorize(self, **kwargs):
 
-        message = self.build_message("Authorize", kwargs)
-
+        message = self.build_message("Authorize_IdToken", kwargs)
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         return call_result.AuthorizePayload(**response["CONTENT"])
@@ -116,15 +115,15 @@ class ChargePoint(cp):
     async def on_TransactionEvent(self, **kwargs):
         
         message = self.build_message("TransactionEvent", kwargs)
+        await ChargePoint.broker.send_to_DB(message)
+        transactionEventPayload = call_result.TransactionEventPayload()
 
         if "id_token" in kwargs:
+            content = {key : kwargs[key] for key in ["id_token", "evse"] if key in kwargs}
+            message = self.build_message("Authorize_IdToken", content)
             response = await ChargePoint.broker.send_request_wait_response(message)
             transactionEventPayload = call_result.TransactionEventPayload(**response["CONTENT"])
 
-        else:
-            await ChargePoint.broker.send_to_DB(message)
-            transactionEventPayload = call_result.TransactionEventPayload()
-        
         return transactionEventPayload
     
 

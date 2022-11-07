@@ -56,7 +56,7 @@ class DataBase:
             "BootNotification" : self.BootNotification,
             "StatusNotification" : self.StatusNotification,
             "MeterValues" : self.MeterValues,
-            "Authorize" : self.Authorize,
+            "Authorize_IdToken" : self.Authorize_IdToken,
             "TransactionEvent" : self.TransactionEvent,
             "VERIFY_PASSWORD" : self.verify_password
 
@@ -178,15 +178,22 @@ class DataBase:
 
         
         return result
+    
             
 
-    def Authorize(self, cp_id, content):
+    def Authorize_IdToken(self, cp_id, content):
         """cannot deal with certificates yet"""
+        #validate idtoken
+        id_token_info = self.build_idToken_Info(
+            content['id_token']["id_token"],
+            cp_id,
+            content['evse']['id'] if 'evse' in content else None)
+        
 
         response = {
-            "METHOD" : "AuthorizeResponse",
+            "METHOD" : "Authorize_IdTokenResponse",
             "CP_ID" : cp_id,
-            "CONTENT" : {"id_token_info" : self.build_idToken_Info(content['id_token']['id_token'], cp_id)}
+            "CONTENT" : {"id_token_info" : id_token_info}
         }
 
         return response
@@ -194,27 +201,15 @@ class DataBase:
 
     def TransactionEvent(self, cp_id, content):
         
-        response = {}
-
         #If message contains idtoken
         if "id_token" in content:
             
-            #validate idtoken
-            id_token_info = self.build_idToken_Info(
-                content['id_token']['id_token'],
-                cp_id,
-                content['evse']['id'] if 'evse' in content else None)
-            
-            response = {
-                "METHOD" : "TransactionEventResponse",
-                "CP_ID" : cp_id,
-                "CONTENT" : {"id_token_info" : id_token_info}
-            }
+            idToken = self.session.query(db_Tables.IdToken).get(content["id_token"]["id_token"])
 
             #pass transaction info to transaction object (DB structure different than message stucture)
             
             #if for some reason, this idtoken is not good, dont use it to store in db
-            if id_token_info["status"] not in [enums.AuthorizationStatusType.unknown, enums.AuthorizationStatusType.invalid]:
+            if idToken is not None:
                 content["transaction_info"]["id_token"] = content["id_token"]
             content.pop("id_token")
 
@@ -230,8 +225,6 @@ class DataBase:
         #introduce message in DB
         transaction_message = db_Tables.Transaction_Message(**content)
         self.session.merge(transaction_message)
-
-        return response
 
 
 if __name__ == '__main__':

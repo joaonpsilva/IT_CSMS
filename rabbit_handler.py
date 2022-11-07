@@ -88,7 +88,7 @@ class Rabbit_Handler:
         #load json content
         content = await self.unpack(message)
 
-        logging.info("RabbitMQ RECEIVED request: %s", str(content))
+        logging.info("RabbitMQ RECEIVED message: %s", str(content))
 
         #pass content to csms
         response = await self.handle_request(content)
