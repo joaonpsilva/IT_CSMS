@@ -12,9 +12,15 @@ PASSLIB_CONTEXT = CryptContext(
     schemes=["pbkdf2_sha512"],
     deprecated="auto",
 )
-        
 
 Base = declarative_base()
+
+"""class Table_Factory:
+
+    session = None
+
+    def get_or_Create(table_class, **kwargs):
+"""
 
 class CustomBase(Base):
     __abstract__ = True
@@ -56,9 +62,8 @@ evse_idTokens = Table(
 
 class Modem(Base):
     __tablename__ = "Modem"
-    id = Column(Integer, primary_key=True)
-    iccid = Column(String(20))
-    imsi = Column(String(20))
+    iccid = Column(String(20), primary_key=True, default="NULL")
+    imsi = Column(String(20), primary_key=True, default="NULL")
 
 
 class Charge_Point(CustomBase):
@@ -70,7 +75,11 @@ class Charge_Point(CustomBase):
     serial_number = Column(String(25))
     firmware_version = Column(String(50))
 
-    _modem_id = Column(Integer, ForeignKey("Modem.id"))
+    _modem_iccid = Column(String(20))
+    _modem_imsi = Column(String(20))
+    __table_args__ = (ForeignKeyConstraint(["_modem_iccid", "_modem_imsi"],
+                                            [ "Modem.iccid", "Modem.imsi"]),
+                        {})
     modem = relationship("Modem", backref="charge_point")
 
     def __init__(self, password=None, **kwargs):
