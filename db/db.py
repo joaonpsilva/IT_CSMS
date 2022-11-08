@@ -9,6 +9,7 @@ from sqlalchemy.sql import exists
 import db_Tables
 from sqlalchemy.orm.util import identity_key
 from ocpp.v201 import enums
+from datetime import datetime
 
 
 
@@ -203,28 +204,26 @@ class DataBase:
         
         #If message contains idtoken
         if "id_token" in content:
-            
-            idToken = self.session.query(db_Tables.IdToken).get(content["id_token"]["id_token"])
 
-            #pass transaction info to transaction object (DB structure different than message stucture)
-            
+            q = self.session.query(db_Tables.IdToken).filter(db_Tables.IdToken.id_token==content["id_token"]["id_token"])
+            exists = self.session.query(q.exists()).scalar()
+                
             #if for some reason, this idtoken is not good, dont use it to store in db
-            if idToken is not None:
-                content["transaction_info"]["id_token"] = content["id_token"]
-            content.pop("id_token")
+            if not exists:
+                content.pop("id_token")
+
 
         if "evse" in content:
-            content["transaction_info"]["evse"] = content["evse"]
-            content["transaction_info"]["evse"]["cp_id"] = cp_id
-            content.pop("evse")
-            
-            if "connector_id" in content["transaction_info"]["evse"]:
-                content["transaction_info"]["connector_id"] = content["transaction_info"]["evse"]["connector_id"]
-                content["transaction_info"]["evse"].pop("connector_id")
+            content["evse"]["cp_id"] = cp_id
+            if "connector_id" in content["evse"]:
+                content["connector"] = content.pop("evse")
+        else:
+            content["cp_id"] = cp_id
         
         #introduce message in DB
-        transaction_message = db_Tables.Transaction_Message(**content)
-        self.session.merge(transaction_message)
+        print(content)
+        transaction_event = db_Tables.Transaction_Event(**content)
+        self.session.merge(transaction_event)
 
 
 if __name__ == '__main__':

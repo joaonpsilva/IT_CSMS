@@ -135,7 +135,9 @@ class Connector(Base):
     evse = relationship("EVSE", backref="connector")
 
 
-    def __init__(self,**kwargs):
+    def __init__(self,id=None,**kwargs):
+        if id:
+            kwargs["evse_id"] = id
         kwargs["evse"] = EVSE(cp_id=kwargs["cp_id"], evse_id = kwargs["evse_id"])
         super().__init__(**kwargs)
 
@@ -157,8 +159,7 @@ class MeterValue(CustomBase):
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                     [ "EVSE.cp_id", "EVSE.evse_id"]),
                     ForeignKeyConstraint(["transaction_id", "seq_no"],
-                                    [ "Transaction_Message.transaction_id", "Transaction_Message.seq_no"]),
-                    {})
+                                    [ "Transaction_Event.transaction_id", "Transaction_Event.seq_no"]),{})
 
 
 class SignedMeterValue(Base):
@@ -251,25 +252,10 @@ class Transaction(CustomBase):
     stopped_reason = Column(Enum(enums.ReasonType))
     remote_start_id = Column(Integer)
 
-    """it is now possible and allowed to send IdTokenType in more than 1 TransactionEventRequest.
-    The CSMS has to be able to handle/process multiple IdTokenType per transaction. It is up to the
-    CSO how they use this information (for billing purposes)??????? PAG 125"""
-
-    _id_token = Column(String(36), ForeignKey("IdToken.id_token"))
-    id_token = relationship("IdToken", backref="transaction", uselist=False)
-    
-    #EVSE
-    connector_id = Column(Integer) #not used in foreign key constraint
-    cp_id = Column(String(20))
-    evse_id = Column(Integer)
-    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
-                                            [ "EVSE.cp_id", "EVSE.evse_id"]),
-                        {})
-    evse = relationship("EVSE", backref="transaction", uselist=False)
     
 
-class Transaction_Message(CustomBase):
-    __tablename__ = "Transaction_Message"
+class Transaction_Event(CustomBase):
+    __tablename__ = "Transaction_Event"
 
     event_type = Column(Enum(enums.TransactionEventType))
     timestamp = Column(DateTime)
@@ -280,15 +266,42 @@ class Transaction_Message(CustomBase):
     reservation_id = Column(Integer)
     seq_no = Column(Integer, primary_key = True)
 
-    transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"), primary_key = True)
-    transaction_info = relationship("Transaction", backref="transaction_message",uselist=False)
+    #Id_Token
+    _id_token = Column(String(36), ForeignKey("IdToken.id_token"))
+    id_token = relationship("IdToken", backref="transaction_event", uselist=False)
 
-    meter_value = relationship("MeterValue", backref="transaction_message", uselist=False)
+    #CP, EVSE, Connector
+    cp_id = Column(String(20), ForeignKey("Charge_point.cp_id"))
+    connector_id = Column(Integer)
+    evse_id = Column(Integer)
+
+    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
+                                [ "EVSE.cp_id", "EVSE.evse_id"]),
+                ForeignKeyConstraint(["cp_id", "evse_id", "connector_id"],
+                                [ "Connector.cp_id", "Connector.evse_id", "Connector.connector_id"]),{})
+
+    charge_point = relationship("Charge_Point", backref="transaction", uselist=False)
+    evse = relationship("EVSE", backref=backref("transaction", overlaps="charge_point,transaction"), uselist=False, overlaps="charge_point,transaction")
+    connector = relationship("Connector", backref=backref("transaction", overlaps="charge_point,evse,transaction"), uselist=False, overlaps="charge_point,evse,transaction")
+
+
+    #Transaction
+    transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"), primary_key = True)
+    transaction_info = relationship("Transaction", backref="transaction_event",uselist=False)
+
+    #Meter value
+    meter_value = relationship("MeterValue", backref="transaction_event", uselist=False)
 
 
 
 
 def create_Tables(engine):
+    #for tbl in reversed(Base.metadata.sorted_tables):
+    #    try:
+    #        engine.execute(tbl.delete())
+    #    except:
+    #        pass
+
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 
