@@ -1,0 +1,11 @@
+cp validation
+
+idtoken authorization
+
+Transaction id podem ser iguais de cp para cp?
+
+transaction ocorre toda no mesmo evse
+
+store all idtoken - evse permissions
+
+billing? total cost transaction
