@@ -160,7 +160,7 @@ class DataBase:
 
             allowed_evse = id_token_info.get_allowed_evse_for_cp(cp_id)                
             #check if not allowed for whole cp
-            if len(allowed_evse) != 0 and len(allowed_evse) != len(self.session.query(db_Tables.Charge_Point).get({"cp_id" : cp_id})):
+            if len(allowed_evse) != len(self.session.query(db_Tables.Charge_Point).get(cp_id).evse):
                 result["evse_id"] = allowed_evse
             
 
@@ -168,7 +168,7 @@ class DataBase:
 
             if id_token_info.cache_expiry_date_time != None and id_token_info.cache_expiry_date_time < datetime.utcnow().isoformat():
                 result["status"] = enums.AuthorizationStatusType.expired
-            elif evse_id is not None and "evse_id" in result and evse_id not in result["evse_id"]:
+            elif len(allowed_evse) == 0 or (evse_id is not None and evse_id not in allowed_evse):
                 #in authorize request, cant know this because dont know the evse
                 result["status"] = enums.AuthorizationStatusType.not_at_this_location
             else: 

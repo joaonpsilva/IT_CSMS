@@ -311,17 +311,22 @@ def insert_Hard_Coded(db):
     objects.append(Charge_Point(cp_id = "CP_1", password="passcp1"))
     objects.append(Charge_Point(cp_id = "CP_2", password="passcp2"))
 
+    evse = EVSE(cp_id = "CP_1", evse_id = 1)
+    objects.append(evse)
+
     id_Token = IdToken(id_token = "123456789", type=enums.IdTokenType.iso14443)
     group_id_token = GroupIdToken(id_token = "group123456789", type=enums.IdTokenType.iso14443)
     
     objects.append(id_Token)
     objects.append(group_id_token)
-    objects.append(IdTokenInfo(
+    info = IdTokenInfo(
             id_token=id_Token, 
             language_1="PT", 
-            group_id_token=group_id_token
+            group_id_token=group_id_token,
             #cache_expiry_date_time = datetime.utcnow().isoformat()
-            ))
+            )
+    info.evse.append(evse)
+    objects.append(info)
 
     db.session.add_all(objects)
     db.session.commit()
