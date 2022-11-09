@@ -12,6 +12,16 @@ logging.basicConfig(level=logging.INFO)
 class ChargePoint(cp):
 
     broker = None
+    remoteStartId = 0
+
+    def read_variables():
+        #TODO read variables (remoteStartId) from file
+        pass
+
+    def new_remoteStartId():
+        ChargePoint.remoteStartId += 1
+        return ChargePoint.remoteStartId
+
 
     def __init__(self, id, connection, response_timeout=30):
         super().__init__(id, connection, response_timeout)
@@ -22,10 +32,23 @@ class ChargePoint(cp):
             "SET_VARIABLES" : self.setVariables,
             "REQUEST_START_TRANSACTION" : self.requestStartTransaction
         }
+
     
     async def send_CP_Message(self, method, payload):
         """Funtion will use the mapping defined in method_mapping to call the correct function"""
         return await self.method_mapping[method](payload)
+
+    
+    def get_authorization_relevant_info(self, payload):
+        content = {"id_token" : payload["id_token"]}
+
+        if "evse_id" in payload:
+            content["evse_id"] = payload["evse_id"]
+        elif "evse" in payload:
+            content["evse_id"] = payload["evse"]["id"]
+        
+        return content
+
 
 
 
@@ -49,8 +72,32 @@ class ChargePoint(cp):
     
 
     async def requestStartTransaction(self, payload):
+        
+        content = self.get_authorization_relevant_info(payload)
+
+        message = self.build_message("Authorize_IdToken", content)
+        response = await ChargePoint.broker.send_request_wait_response(message)
+        if response["CONTENT"]["id_token_info"]["status"] != enums.AuthorizationStatusType.accepted:
+            return "No Permission"
+
+
+        #creating an id for the request
+        payload["remote_start_id"] = ChargePoint.new_remoteStartId()
 
         request = call.RequestStartTransactionPayload(**payload)
+
+        response = await self.call(request)
+        #returning the created id
+        response.remote_start_id = payload["remote_start_id"]
+
+        return response
+
+    async def checkTransactionStatus(self, payload=None, idToken=None):
+
+        if idToken is not None:
+            payload["idToken"] = idToken
+        
+        request = call.GetTransactionStatusPayload(**payload)
         return await self.call(request)
 
 
@@ -119,10 +166,13 @@ class ChargePoint(cp):
         transactionEventPayload = call_result.TransactionEventPayload()
 
         if "id_token" in kwargs:
-            content = {key : kwargs[key] for key in ["id_token", "evse"] if key in kwargs}
+            content = self.get_authorization_relevant_info(kwargs)    
             message = self.build_message("Authorize_IdToken", content)
             response = await ChargePoint.broker.send_request_wait_response(message)
             transactionEventPayload = call_result.TransactionEventPayload(**response["CONTENT"])
+        
+        #TODO on last message check if all messages received
+        #TODO billing
 
         return transactionEventPayload
     
