@@ -145,8 +145,13 @@ class DataBase:
         Builds an idTokenInfo based on id token
         """
 
+        #no auth required
+        if idToken["type"] == enums.IdTokenType.no_authorization:
+            return {"status" : enums.AuthorizationStatusType.accepted}
+
+
         try:
-            idToken = self.session.query(db_Tables.IdToken).get(idToken)
+            idToken = self.session.query(db_Tables.IdToken).get(idToken["id_token"])
         except:
             return {"status" : enums.AuthorizationStatusType.invalid}
 
@@ -186,7 +191,7 @@ class DataBase:
         """cannot deal with certificates yet"""
         #validate idtoken
         id_token_info = self.build_idToken_Info(
-            content['id_token']["id_token"],
+            content['id_token'],
             cp_id,
             content['evse']['id'] if 'evse' in content else None)
         
