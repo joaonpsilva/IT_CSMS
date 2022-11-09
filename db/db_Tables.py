@@ -314,6 +314,9 @@ def insert_Hard_Coded(db):
     evse = EVSE(cp_id = "CP_1", evse_id = 1)
     objects.append(evse)
 
+    #start button
+    objects.append(IdToken(id_token = "", type=enums.IdTokenType.no_authorization))
+
     id_Token = IdToken(id_token = "123456789", type=enums.IdTokenType.iso14443)
     group_id_token = GroupIdToken(id_token = "group123456789", type=enums.IdTokenType.iso14443)
     
