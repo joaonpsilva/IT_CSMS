@@ -217,6 +217,10 @@ class ChargePoint(cp):
         return call_result.RequestStartTransactionPayload(
             status=enums.RequestStartStopStatusType.accepted
         )
+    
+    @on('GetTransactionStatus')
+    def on_GetTransactionStatus(self, **kwargs):
+        return call_result.GetTransactionStatusPayload(messages_in_queue=False)
 
 
 

@@ -151,14 +151,15 @@ class DataBase:
 
 
         try:
-            idToken = self.session.query(db_Tables.IdToken).get(idToken["id_token"])
+            idToken_fromDb = self.session.query(db_Tables.IdToken).get(idToken["id_token"])
+            assert(idToken_fromDb.type == idToken["type"])
         except:
             return {"status" : enums.AuthorizationStatusType.invalid}
 
-        if idToken is not None:
+        if idToken_fromDb is not None:
 
             #get id token info
-            id_token_info = idToken.id_token_info 
+            id_token_info = idToken_fromDb.id_token_info 
             
             #add available information
             result = id_token_info.get_dict_obj()
@@ -193,7 +194,7 @@ class DataBase:
         id_token_info = self.build_idToken_Info(
             content['id_token'],
             cp_id,
-            content['evse']['id'] if 'evse' in content else None)
+            content['evse_id'] if 'evse_id' in content else None)
         
 
         response = {

@@ -250,7 +250,7 @@ class Transaction(CustomBase):
     charging_state = Column(Enum(enums.ChargingStateType))
     time_spent_charging = Column(Integer)
     stopped_reason = Column(Enum(enums.ReasonType))
-    remote_start_id = Column(Integer)
+    remote_start_id = Column(Integer, unique=True)
 
     
 
