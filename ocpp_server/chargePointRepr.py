@@ -41,7 +41,7 @@ class ChargePoint(cp):
         return await self.method_mapping[method](payload)
 
     
-    def get_authorization_relevant_info(self, payload):
+    async def get_authorization_relevant_info(self, payload):
         content = {"id_token" : payload["id_token"]}
 
         if "evse_id" in payload:
@@ -49,7 +49,10 @@ class ChargePoint(cp):
         elif "evse" in payload:
             content["evse_id"] = payload["evse"]["id"]
         
-        return content
+        message = self.build_message("Authorize_IdToken", content)
+        response = await ChargePoint.broker.send_request_wait_response(message)
+        
+        return response["CONTENT"]["id_token_info"]
 
 
 
@@ -75,11 +78,9 @@ class ChargePoint(cp):
 
     async def requestStartTransaction(self, payload):
         
-        content = self.get_authorization_relevant_info(payload)
+        id_token_info = await self.get_authorization_relevant_info(payload)
 
-        message = self.build_message("Authorize_IdToken", content)
-        response = await ChargePoint.broker.send_request_wait_response(message)
-        if response["CONTENT"]["id_token_info"]["status"] != enums.AuthorizationStatusType.accepted:
+        if id_token_info["status"] != enums.AuthorizationStatusType.accepted:
             return "No Permission"
 
 
@@ -181,19 +182,26 @@ class ChargePoint(cp):
         
         message = self.build_message("TransactionEvent", kwargs)
         await ChargePoint.broker.send_to_DB(message)
-        transactionEventPayload = call_result.TransactionEventPayload()
+
+        transaction_response = call_result.TransactionEventPayload()
 
         if "id_token" in kwargs:
-            content = self.get_authorization_relevant_info(kwargs)    
-            message = self.build_message("Authorize_IdToken", content)
-            response = await ChargePoint.broker.send_request_wait_response(message)
-            transactionEventPayload = call_result.TransactionEventPayload(**response["CONTENT"])
+            transaction_response.id_token_info = await self.get_authorization_relevant_info(kwargs)
         
-        #TODO on last message check if all messages received
-        #TODO billing
+        if kwargs["event_type"] == enums.TransactionEventType.ended:
+            #verify that all messages have been received
+            transaction_id =  kwargs["transaction_info"]["transaction_id"]
+            message = self.build_message("VERIFY_RECEIVED_ALL_TRANSACTION", {"transaction_id" : transaction_id})
+            response = await ChargePoint.broker.send_request_wait_response(message)
 
-        return transactionEventPayload
-    
+            if response["CONTENT"]["status"] == "MISSING_MESSAGES":
+                self.checkTransactionStatus(transaction_id=transaction_id)
+                #block waiting for transaction
+            elif response["CONTENT"]["status"] == "OK":
+                #Payment (show total cost)
+                pass
+
+        return transaction_response
 
     @on('Heartbeat')
     async def on_Heartbeat(self):

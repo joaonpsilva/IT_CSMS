@@ -59,7 +59,8 @@ class DataBase:
             "MeterValues" : self.MeterValues,
             "Authorize_IdToken" : self.Authorize_IdToken,
             "TransactionEvent" : self.TransactionEvent,
-            "VERIFY_PASSWORD" : self.verify_password
+            "VERIFY_PASSWORD" : self.verify_password,
+            "VERIFY_RECEIVED_ALL_TRANSACTION" : self.verify_received_all_transaction
 
         }
 
@@ -90,25 +91,26 @@ class DataBase:
     
     def get_dict_obj(self, obj):
         return { attr:value for attr, value in obj.__dict__.items() if not attr.startswith("_") and value is not None }
+    
+    def build_response(self, method, content, cp_id):
+        message = {
+            "METHOD" : method + "_RESPONSE",
+            "CP_ID" : cp_id,
+            "CONTENT" : content
+        }
+        return message
 
 
 
-    def verify_password(self, cp_id, content):
+    def verify_password(self, cp_id, content, method = "VERIFY_PASSWORD"):
         charge_point = self.session.query(db_Tables.Charge_Point).get(cp_id)
 
         result = False
         if charge_point is not None:
             result = charge_point.verify_password(content["password"])
-        
-        response = {
-            "METHOD" : "VERIFY_PASSWORD",
-            "CP_ID" : cp_id,
-            "CONTENT" : {
-                "APPROVED" : result
-            }
-        }
 
-        return response
+        return self.build_response(method, {"APPROVED" : result}, cp_id)
+
 
 
     def BootNotification(self, cp_id, content):
@@ -188,23 +190,38 @@ class DataBase:
     
             
 
-    def Authorize_IdToken(self, cp_id, content):
+    def Authorize_IdToken(self, cp_id, content, method="Authorize_IdToken"):
         """cannot deal with certificates yet"""
         #validate idtoken
         id_token_info = self.build_idToken_Info(
             content['id_token'],
             cp_id,
             content['evse_id'] if 'evse_id' in content else None)
+
+        return self.build_response(method, {"id_token_info" : id_token_info}, cp_id)
+    
+
+    def verify_received_all_transaction(self, cp_id, content, method="VERIFY_RECEIVED_ALL_TRANSACTION"):
+        
+        response = {"status" : "OK"}
+        try:
+            assert("transaction_id" in content)
+            
+            transaction = self.session.query(db_Tables.Transaction).get(content["transaction_id"])
+            assert(transaction is not None)
+
+            transaction_events = sorted(transaction.transaction_event, key=lambda t : t.seq_no)
+            assert(transaction_events[0].event_type == enums.TransactionEventType.started)
+
+            if transaction_events[-1].event_type != enums.TransactionEventType.ended or\
+                transaction_events[-1].seq_no - transaction_events[0].seq_no > len(transaction_events)-1:
+                response["status"] = "MISSING_MESSAGES"
+        except:
+            response["status"] = "ERROR"
+
+        return self.build_response(method, response, cp_id)
         
 
-        response = {
-            "METHOD" : "Authorize_IdTokenResponse",
-            "CP_ID" : cp_id,
-            "CONTENT" : {"id_token_info" : id_token_info}
-        }
-
-        return response
-    
 
     def TransactionEvent(self, cp_id, content):
         
@@ -227,7 +244,6 @@ class DataBase:
             content["cp_id"] = cp_id
         
         #introduce message in DB
-        print(content)
         transaction_event = db_Tables.Transaction_Event(**content)
         self.session.merge(transaction_event)
 
