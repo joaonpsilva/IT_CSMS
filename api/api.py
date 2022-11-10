@@ -50,7 +50,7 @@ async def RequestStartTransaction(CP_Id: str, payload: payloads.RequestStartTran
 
 @app.post("/RequestStopTransaction/{CP_Id}")
 async def RequestStopTransaction(CP_Id: str, transaction_id: str):
-    #TODO request stop transaction without cp id inpuy?
+    #TODO request stop transaction without cp id input?
     # request stop transaction with remote start id
 
     message = {
@@ -75,6 +75,7 @@ async def TriggerMessage(CP_Id: str, payload: payloads.TriggerMessage_Payload):
 
 @app.get("/GetTransactionStatus/{CP_Id}")
 async def GetTransactionStatus(CP_Id: str, transactionId: str = None ):
+    #TODO request stop transaction without cp id input?
     message = {
         "CS_ID" : CP_Id,
         "METHOD" : "GET_TRANSACTION_STATUS",
