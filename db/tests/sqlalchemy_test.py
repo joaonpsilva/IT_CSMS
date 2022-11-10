@@ -29,16 +29,23 @@ Base.metadata.create_all(engine)
 
 
 #INSERIR
-d={"name":"Joao"}
-joao = Owner(id = 9, **d)
+joao = Owner(id = 9, name="Joao")
 session.add(joao)
 
-
 nina = Pet(name="Nina", owner=joao)
-session.add(nina)
-
-session.commit()
 
 print(nina.owner.name)
 print(joao.pets[0].name)
+
+session.add(nina)
+session.commit()
+
+o = Owner(id = 9, name="Joao")
+nina = Pet(name="Nina", owner=o)
+
+session.merge(nina)
+session.commit()
+
+
+
 
