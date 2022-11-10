@@ -30,7 +30,8 @@ class ChargePoint(cp):
             "GET_VARIABLES" : self.getVariables,
             "GET_TRANSACTION_STATUS" : self.getTransactionStatus,
             "SET_VARIABLES" : self.setVariables,
-            "REQUEST_START_TRANSACTION" : self.requestStartTransaction
+            "REQUEST_START_TRANSACTION" : self.requestStartTransaction,
+            "REQUEST_STOP_TRANSACTION" : self.requestStopTransaction
         }
 
     
@@ -91,6 +92,11 @@ class ChargePoint(cp):
         response.remote_start_id = payload["remote_start_id"]
 
         return response
+    
+    async def requestStopTransaction(self, payload):
+
+        request = call.RequestStopTransactionPayload(**payload)
+        return await self.call(request)
 
     async def checkTransactionStatus(self, payload=None, idToken=None):
 
