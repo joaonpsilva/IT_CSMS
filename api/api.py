@@ -52,7 +52,7 @@ async def RequestStartTransaction(CP_Id: str, payload: payloads.RequestStartTran
 async def RequestStopTransaction(CP_Id: str, transaction_id: str):
     #TODO request stop transaction without cp id inpuy?
     # request stop transaction with remote start id
-    
+
     message = {
         "CS_ID" : CP_Id,
         "METHOD" : "REQUEST_STOP_TRANSACTION",
@@ -61,6 +61,17 @@ async def RequestStopTransaction(CP_Id: str, transaction_id: str):
 
     response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
     return response
+
+@app.post("/TriggerMessage/{CP_Id}")
+async def TriggerMessage(CP_Id: str, payload: payloads.TriggerMessage_Payload):
+    message = {
+        "CS_ID" : CP_Id,
+        "METHOD" : "TRIGGER_MESSAGE",
+        "PAYLOAD" : payload
+    }
+
+    response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
+    return response  
 
 @app.get("/GetTransactionStatus/{CP_Id}")
 async def GetTransactionStatus(CP_Id: str, transactionId: str = None ):

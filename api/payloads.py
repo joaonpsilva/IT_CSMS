@@ -14,3 +14,8 @@ class RequestStartTransaction_Payload:
     evse_id: Optional[int] = None
     group_id_token: Optional[datatypes.IdTokenType] = None
     charging_profile: Optional[datatypes.ChargingProfileType] = None
+
+@dataclass
+class TriggerMessage_Payload:
+    requested_message: enums.MessageTriggerType
+    evse: Optional[datatypes.EVSEType] = None

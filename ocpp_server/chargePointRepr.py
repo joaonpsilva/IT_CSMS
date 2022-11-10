@@ -31,7 +31,8 @@ class ChargePoint(cp):
             "GET_TRANSACTION_STATUS" : self.getTransactionStatus,
             "SET_VARIABLES" : self.setVariables,
             "REQUEST_START_TRANSACTION" : self.requestStartTransaction,
-            "REQUEST_STOP_TRANSACTION" : self.requestStopTransaction
+            "REQUEST_STOP_TRANSACTION" : self.requestStopTransaction,
+            "TRIGGER_MESSAGE" : self.trigger_message
         }
 
     
@@ -96,6 +97,17 @@ class ChargePoint(cp):
     async def requestStopTransaction(self, payload):
 
         request = call.RequestStopTransactionPayload(**payload)
+        return await self.call(request)
+    
+
+    async def trigger_message(self, payload):
+        if payload["requested_message"] == enums.MessageTriggerType.status_notification and ("evse" in payload and payload["evse"]):
+            try:
+                assert(payload["evse"]["connector_id"] != None)
+            except:
+                return "Connector ID is required for status_notification"
+
+        request = call.TriggerMessagePayload(**payload)
         return await self.call(request)
 
     async def checkTransactionStatus(self, payload=None, idToken=None):
