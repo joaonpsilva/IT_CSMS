@@ -62,8 +62,14 @@ evse_idTokens = Table(
 
 class Modem(Base):
     __tablename__ = "Modem"
-    iccid = Column(String(20), primary_key=True, default="NULL")
-    imsi = Column(String(20), primary_key=True, default="NULL")
+    iccid = Column(String(20), primary_key=True)
+    imsi = Column(String(20), primary_key=True)
+
+    def __init__(self, iccid="NULL", imsi="NULL", **kwargs):
+        kwargs["iccid"] = iccid
+        kwargs["imsi"] = imsi
+
+        super().__init__(**kwargs)
 
 
 class Charge_Point(CustomBase):
