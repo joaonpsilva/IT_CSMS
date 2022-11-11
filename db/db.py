@@ -224,6 +224,8 @@ class DataBase:
 
 
     def TransactionEvent(self, cp_id, content):
+
+        #TODO check if is oldest message for transaction, if not, dont update transaction info
         
         #If message contains idtoken
         if "id_token" in content:

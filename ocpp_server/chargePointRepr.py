@@ -1,8 +1,9 @@
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
-
 from ocpp.routing import on
+
 from datetime import datetime
+import asyncio
 
 import logging
 
@@ -35,6 +36,9 @@ class ChargePoint(cp):
             "TRIGGER_MESSAGE" : self.trigger_message
         }
 
+        self.loop = asyncio.get_running_loop()
+        self.waiting_transactions = {}
+
     
     async def send_CP_Message(self, method, payload):
         """Funtion will use the mapping defined in method_mapping to call the correct function"""
@@ -54,6 +58,36 @@ class ChargePoint(cp):
         
         return response["CONTENT"]["id_token_info"]
 
+
+    async def guarantee_transaction_integrity(self, transaction_id):
+        message = self.build_message("VERIFY_RECEIVED_ALL_TRANSACTION", {"transaction_id" : transaction_id})
+
+        #if a message comes in for this transaction i want to know
+        future = self.loop.create_future()
+        self.waiting_transactions[transaction_id] = future
+
+        while True:
+            response = await ChargePoint.broker.send_request_wait_response(message)
+
+            if response["CONTENT"]["status"] == "ERROR":
+                logging.info("DB could not identify transaction")
+
+            if response["CONTENT"]["status"] == "OK":
+                break
+
+            #if missing messages ask cp to send
+            transaction_status = await self.checkTransactionStatus(transaction_id=transaction_id)
+            print("RECEIVED STATUS")
+                
+            try:
+                await asyncio.wait_for(future, timeout=5)
+            except asyncio.TimeoutError:
+                #maybe delete entry in future map?
+                logging.info("No getting all messages for for transaction %s", transaction_id)
+                return False
+        
+        return True
+                
 
 
 
@@ -111,10 +145,10 @@ class ChargePoint(cp):
         request = call.TriggerMessagePayload(**payload)
         return await self.call(request)
 
-    async def checkTransactionStatus(self, payload=None, idToken=None):
+    async def checkTransactionStatus(self, payload={}, transaction_id=None):
 
-        if idToken is not None:
-            payload["idToken"] = idToken
+        if transaction_id is not None:
+            payload["transaction_id"] = transaction_id
         
         request = call.GetTransactionStatusPayload(**payload)
         return await self.call(request)
@@ -176,12 +210,17 @@ class ChargePoint(cp):
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         return call_result.AuthorizePayload(**response["CONTENT"])
-    
+        
     @on('TransactionEvent')
     async def on_TransactionEvent(self, **kwargs):
         
         message = self.build_message("TransactionEvent", kwargs)
         await ChargePoint.broker.send_to_DB(message)
+
+        transaction_id =  kwargs["transaction_info"]["transaction_id"]            
+        if transaction_id in self.waiting_transactions:
+            future = self.waiting_transactions.pop(transaction_id)
+            future.set_result(True)
 
         transaction_response = call_result.TransactionEventPayload()
 
@@ -190,16 +229,12 @@ class ChargePoint(cp):
         
         if kwargs["event_type"] == enums.TransactionEventType.ended:
             #verify that all messages have been received
-            transaction_id =  kwargs["transaction_info"]["transaction_id"]
-            message = self.build_message("VERIFY_RECEIVED_ALL_TRANSACTION", {"transaction_id" : transaction_id})
-            response = await ChargePoint.broker.send_request_wait_response(message)
+            await self.guarantee_transaction_integrity(transaction_id)
+            
 
-            if response["CONTENT"]["status"] == "MISSING_MESSAGES":
-                self.checkTransactionStatus(transaction_id=transaction_id)
-                #block waiting for transaction
-            elif response["CONTENT"]["status"] == "OK":
-                #Payment (show total cost)
-                pass
+            #Payment (show total cost)
+        
+        
 
         return transaction_response
 

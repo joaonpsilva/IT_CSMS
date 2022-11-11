@@ -5,6 +5,8 @@ from ocpp.routing import after,on
 import sys
 from datetime import datetime
 from aioconsole import ainput
+import string
+import random
 
 from ocpp.v201 import call, call_result, enums, datatypes
 from ocpp.v201 import ChargePoint as cp
@@ -13,6 +15,12 @@ logging.basicConfig(level=logging.INFO)
 
 
 class ChargePoint(cp):
+
+    def __init__(self, cp_id, ws):
+        super().__init__(cp_id, ws)
+        self.messages_in_queue=False
+        self.flag = None
+
 
     async def cold_Boot(self):
 
@@ -87,8 +95,38 @@ class ChargePoint(cp):
         response = await self.call(request)
         return response.id_token_info['status'] == "Accepted"
     
+
+    async def wait_to_send_message(self, transaction_id):
+
+        self.flag = asyncio.get_running_loop().create_future()
+        try:
+            await asyncio.wait_for(self.flag, timeout=5)
+        except asyncio.TimeoutError:
+            pass
+        
+        await asyncio.sleep(2)
+
+        print("flag")
+        request = call.TransactionEventPayload(
+            event_type=enums.TransactionEventType.updated,
+            timestamp=datetime.utcnow().isoformat(),
+            trigger_reason=enums.TriggerReasonType.authorized,
+            seq_no=2,
+            id_token=datatypes.IdTokenType(
+                id_token="123456789",
+                type=enums.IdTokenType.iso14443
+            ),
+            transaction_info=datatypes.TransactionType(
+                transaction_id=transaction_id,
+                charging_state=enums.ChargingStateType.charging
+            )
+        )
+        response = await self.call(request)
+
     
-    async def startTransaction_CablePluginFirst(self):
+    async def unsorted_transaction(self):
+
+        transaction_id = ''.join(random.choice(string.ascii_letters) for i in range(10))
 
         request = call.StatusNotificationPayload(
             timestamp=datetime.utcnow().isoformat(),
@@ -105,7 +143,61 @@ class ChargePoint(cp):
             trigger_reason=enums.TriggerReasonType.cable_plugged_in,
             seq_no=1,
             transaction_info=datatypes.TransactionType(
-                transaction_id="AB1234",
+                transaction_id=transaction_id,
+                charging_state=enums.ChargingStateType.ev_connected
+            ),
+            evse=datatypes.EVSEType(id=1, connector_id=1)
+            
+        )
+        response = await self.call(request)
+
+        if await self.authorizeRequest():
+            logging.info("User authorization successful")
+        else:
+            logging.info("User authorization unsuccessful")
+            return 
+
+
+        request = call.TransactionEventPayload(
+            event_type=enums.TransactionEventType.ended,
+            timestamp=datetime.utcnow().isoformat(),
+            trigger_reason=enums.TriggerReasonType.ev_departed,
+            seq_no=3,
+            id_token=datatypes.IdTokenType(
+                id_token="123456789",
+                type=enums.IdTokenType.iso14443
+            ),
+            transaction_info=datatypes.TransactionType(
+                transaction_id=transaction_id,
+                charging_state=enums.ChargingStateType.idle
+            )
+        )
+        
+        self.messages_in_queue=True
+
+        await asyncio.gather(self.wait_to_send_message(transaction_id), self.call(request) )
+    
+    
+    async def startTransaction_CablePluginFirst(self):
+
+        transaction_id = ''.join(random.choice(string.ascii_letters) for i in range(10))
+
+        request = call.StatusNotificationPayload(
+            timestamp=datetime.utcnow().isoformat(),
+            connector_status=enums.ConnectorStatusType.occupied,
+            evse_id=1,
+            connector_id=1
+        )
+        response = await self.call(request)
+
+
+        request = call.TransactionEventPayload(
+            event_type=enums.TransactionEventType.started,
+            timestamp=datetime.utcnow().isoformat(),
+            trigger_reason=enums.TriggerReasonType.cable_plugged_in,
+            seq_no=1,
+            transaction_info=datatypes.TransactionType(
+                transaction_id=transaction_id,
                 charging_state=enums.ChargingStateType.ev_connected
             ),
             evse=datatypes.EVSEType(id=1, connector_id=1)
@@ -129,7 +221,7 @@ class ChargePoint(cp):
                 type=enums.IdTokenType.iso14443
             ),
             transaction_info=datatypes.TransactionType(
-                transaction_id="AB1234",
+                transaction_id=transaction_id,
                 charging_state=enums.ChargingStateType.charging
             )
         )
@@ -148,7 +240,7 @@ class ChargePoint(cp):
                 type=enums.IdTokenType.iso14443
             ),
             transaction_info=datatypes.TransactionType(
-                transaction_id="AB1234",
+                transaction_id=transaction_id,
                 charging_state=enums.ChargingStateType.idle
             )
         )
@@ -234,7 +326,12 @@ class ChargePoint(cp):
     
     @on('GetTransactionStatus')
     def on_GetTransactionStatus(self, **kwargs):
-        return call_result.GetTransactionStatusPayload(messages_in_queue=False)
+        b = self.messages_in_queue
+        if self.messages_in_queue:
+            self.messages_in_queue = False
+
+        self.flag.set_result(True)
+        return call_result.GetTransactionStatusPayload(messages_in_queue=b)
 
 
 
@@ -245,13 +342,15 @@ async def get_input(cp):
     command_map={
         "meter_values":cp.meterValuesRequest,
         "authorize" : cp.authorizeRequest,
-        "start_cable" : cp.startTransaction_CablePluginFirst
+        "start_cable" : cp.startTransaction_CablePluginFirst,
+        "start_unsorted" : cp.unsorted_transaction
     }
 
     while True:
         command = await ainput("")
         if command in command_map:
             await command_map[command]()
+            logging.info("FINISHED %s", command)
 
 
 async def main(cp_id):
