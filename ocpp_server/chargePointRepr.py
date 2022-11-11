@@ -1,6 +1,6 @@
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
-from ocpp.routing import on
+from ocpp.routing import on, after
 
 from datetime import datetime
 import asyncio
@@ -36,13 +36,11 @@ class ChargePoint(cp):
             "TRIGGER_MESSAGE" : self.trigger_message
         }
 
-        self.loop = asyncio.get_running_loop()
-        self.waiting_transactions = {}
-
+        self.out_of_order_transaction = set([])
     
     async def send_CP_Message(self, method, payload):
         """Funtion will use the mapping defined in method_mapping to call the correct function"""
-        return await self.method_mapping[method](payload)
+        return await self.method_mapping[method](payload=payload)
 
     
     async def get_authorization_relevant_info(self, payload):
@@ -60,33 +58,16 @@ class ChargePoint(cp):
 
 
     async def guarantee_transaction_integrity(self, transaction_id):
+
         message = self.build_message("VERIFY_RECEIVED_ALL_TRANSACTION", {"transaction_id" : transaction_id})
+        response = await ChargePoint.broker.send_request_wait_response(message)
 
-        #if a message comes in for this transaction i want to know
-        future = self.loop.create_future()
-        self.waiting_transactions[transaction_id] = future
-
-        while True:
-            response = await ChargePoint.broker.send_request_wait_response(message)
-
-            if response["CONTENT"]["status"] == "ERROR":
-                logging.info("DB could not identify transaction")
-
-            if response["CONTENT"]["status"] == "OK":
-                break
-
-            #if missing messages ask cp to send
-            transaction_status = await self.checkTransactionStatus(transaction_id=transaction_id)
-            print("RECEIVED STATUS")
-                
-            try:
-                await asyncio.wait_for(future, timeout=5)
-            except asyncio.TimeoutError:
-                #maybe delete entry in future map?
-                logging.info("No getting all messages for for transaction %s", transaction_id)
-                return False
+        if response["CONTENT"]["status"] == "OK":
+            return True
+        elif response["CONTENT"]["status"] == "ERROR":
+            logging.info("DB could not identify transaction")
         
-        return True
+        return False
                 
 
 
@@ -101,12 +82,6 @@ class ChargePoint(cp):
     
     async def setVariables(self, payload):
         request = call.SetVariablesPayload(set_variable_data=payload['set_variable_data'])
-        return await self.call(request)
-
-    
-    async def getTransactionStatus(self, payload={'transaction_id' : None}):
-
-        request = call.GetTransactionStatusPayload(**payload)
         return await self.call(request)
     
 
@@ -145,7 +120,7 @@ class ChargePoint(cp):
         request = call.TriggerMessagePayload(**payload)
         return await self.call(request)
 
-    async def checkTransactionStatus(self, payload={}, transaction_id=None):
+    async def getTransactionStatus(self, payload={}, transaction_id=None):
 
         if transaction_id is not None:
             payload["transaction_id"] = transaction_id
@@ -217,26 +192,35 @@ class ChargePoint(cp):
         message = self.build_message("TransactionEvent", kwargs)
         await ChargePoint.broker.send_to_DB(message)
 
-        transaction_id =  kwargs["transaction_info"]["transaction_id"]            
-        if transaction_id in self.waiting_transactions:
-            future = self.waiting_transactions.pop(transaction_id)
-            future.set_result(True)
-
         transaction_response = call_result.TransactionEventPayload()
 
         if "id_token" in kwargs:
             transaction_response.id_token_info = await self.get_authorization_relevant_info(kwargs)
         
         if kwargs["event_type"] == enums.TransactionEventType.ended:
-            #verify that all messages have been received
-            await self.guarantee_transaction_integrity(transaction_id)
-            
-
             #Payment (show total cost)
+            pass
         
-        
-
         return transaction_response
+    
+    @after('TransactionEvent')
+    async def after_TransactionEvent(self, **kwargs):
+        transaction_id =  kwargs["transaction_info"]["transaction_id"]
+
+        if kwargs["event_type"] == enums.TransactionEventType.ended or transaction_id in self.out_of_order_transaction:
+            #verify that all messages have been received
+            transaction_status = await self.getTransactionStatus(transaction_id=transaction_id)
+            if transaction_status.messages_in_queue == True:
+                #CP still holding messages
+                self.out_of_order_transaction.add(transaction_id)
+            else:
+                #verify in db if we have all messages
+                all_messages_received = await self.guarantee_transaction_integrity(transaction_id)
+                if not all_messages_received:
+                    logging.info("Messages lost for transaction %s", transaction_id)
+
+
+
 
     @on('Heartbeat')
     async def on_Heartbeat(self):

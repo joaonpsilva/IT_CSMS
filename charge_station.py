@@ -19,7 +19,6 @@ class ChargePoint(cp):
     def __init__(self, cp_id, ws):
         super().__init__(cp_id, ws)
         self.messages_in_queue=False
-        self.flag = None
 
 
     async def cold_Boot(self):
@@ -96,32 +95,6 @@ class ChargePoint(cp):
         return response.id_token_info['status'] == "Accepted"
     
 
-    async def wait_to_send_message(self, transaction_id):
-
-        self.flag = asyncio.get_running_loop().create_future()
-        try:
-            await asyncio.wait_for(self.flag, timeout=5)
-        except asyncio.TimeoutError:
-            pass
-        
-        await asyncio.sleep(2)
-
-        print("flag")
-        request = call.TransactionEventPayload(
-            event_type=enums.TransactionEventType.updated,
-            timestamp=datetime.utcnow().isoformat(),
-            trigger_reason=enums.TriggerReasonType.authorized,
-            seq_no=2,
-            id_token=datatypes.IdTokenType(
-                id_token="123456789",
-                type=enums.IdTokenType.iso14443
-            ),
-            transaction_info=datatypes.TransactionType(
-                transaction_id=transaction_id,
-                charging_state=enums.ChargingStateType.charging
-            )
-        )
-        response = await self.call(request)
 
     
     async def unsorted_transaction(self):
@@ -175,7 +148,7 @@ class ChargePoint(cp):
         
         self.messages_in_queue=True
 
-        await asyncio.gather(self.wait_to_send_message(transaction_id), self.call(request) )
+        response = await self.call(request)
     
     
     async def startTransaction_CablePluginFirst(self):
@@ -326,12 +299,30 @@ class ChargePoint(cp):
     
     @on('GetTransactionStatus')
     def on_GetTransactionStatus(self, **kwargs):
-        b = self.messages_in_queue
+        
+        return call_result.GetTransactionStatusPayload(messages_in_queue=self.messages_in_queue)
+    
+    @after("GetTransactionStatus")
+    async def wait_to_send_message(self, transaction_id):
+
         if self.messages_in_queue:
             self.messages_in_queue = False
 
-        self.flag.set_result(True)
-        return call_result.GetTransactionStatusPayload(messages_in_queue=b)
+            request = call.TransactionEventPayload(
+                event_type=enums.TransactionEventType.updated,
+                timestamp=datetime.utcnow().isoformat(),
+                trigger_reason=enums.TriggerReasonType.authorized,
+                seq_no=2,
+                id_token=datatypes.IdTokenType(
+                    id_token="123456789",
+                    type=enums.IdTokenType.iso14443
+                ),
+                transaction_info=datatypes.TransactionType(
+                    transaction_id=transaction_id,
+                    charging_state=enums.ChargingStateType.charging
+                )
+            )
+            response = await self.call(request)
 
 
 
