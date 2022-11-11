@@ -224,27 +224,32 @@ class DataBase:
 
 
     def TransactionEvent(self, cp_id, content):
-
-        #TODO check if is oldest message for transaction, if not, dont update transaction info
         
         #If message contains idtoken
         if "id_token" in content:
+            #if for some reason, this idtoken is not good, dont use it to store in db
 
             q = self.session.query(db_Tables.IdToken).filter(db_Tables.IdToken.id_token==content["id_token"]["id_token"])
             exists = self.session.query(q.exists()).scalar()
-                
-            #if for some reason, this idtoken is not good, dont use it to store in db
             if not exists:
                 content.pop("id_token")
 
-
+        #introduce cp_id in message, decide if is EVSE or connector
         if "evse" in content:
             content["evse"]["cp_id"] = cp_id
             if "connector_id" in content["evse"]:
                 content["connector"] = content.pop("evse")
         else:
-            content["cp_id"] = cp_id
-        
+            content["cp_id"] = cp_id 
+
+        #check if there is a more recent event. (Dont update transaction)
+        transaction = self.session.query(db_Tables.Transaction).get(content["transaction_info"]["transaction_id"])
+        if transaction is not None:
+            higher_seq_no = max([event.seq_no for event in transaction.transaction_event])
+            if higher_seq_no > content["seq_no"]:
+                #this event is old
+                content["transaction_info"] = {"transaction_id" : content["transaction_info"]["transaction_id"]}
+ 
         #introduce message in DB
         transaction_event = db_Tables.Transaction_Event(**content)
         self.session.merge(transaction_event)
