@@ -9,3 +9,5 @@ transaction ocorre toda no mesmo evse
 store all idtoken - evse permissions
 
 billing? total cost transaction
+
+api 100% transaprent, alguns parametros query (transaction_id), os dois modos
