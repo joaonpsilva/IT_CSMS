@@ -51,7 +51,8 @@ class ChargePoint(cp):
         elif "evse" in payload:
             content["evse_id"] = payload["evse"]["id"]
         
-        message = self.build_message("Authorize_IdToken", content)
+        message = ChargePoint.broker.build_message("Authorize_IdToken", self.id, content)
+
         response = await ChargePoint.broker.send_request_wait_response(message)
         
         return response["CONTENT"]["id_token_info"]
@@ -59,7 +60,8 @@ class ChargePoint(cp):
 
     async def guarantee_transaction_integrity(self, transaction_id):
 
-        message = self.build_message("VERIFY_RECEIVED_ALL_TRANSACTION", {"transaction_id" : transaction_id})
+        message = ChargePoint.broker.build_message("VERIFY_RECEIVED_ALL_TRANSACTION", self.id, {"transaction_id" : transaction_id})
+
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if response["CONTENT"]["status"] == "OK":
@@ -127,25 +129,19 @@ class ChargePoint(cp):
         
         request = call.GetTransactionStatusPayload(**payload)
         return await self.call(request)
+    
+    async def SetChargingProfile(self, payload):
+        request = call.SetChargingProfilePayload(**payload)
+        return await self.call(request)
 
 
 
 #######################Funtions staring from the CP Initiative
 
-    def build_message(self, method, content):
-        message = {
-            "METHOD" : method,
-            "CP_ID" : self.id,
-            "CONTENT" : content
-        }
-
-        return message
-
-
     @on('BootNotification')
     async def on_BootNotification(self, **kwargs):
 
-        message = self.build_message("BootNotification", kwargs)
+        message = ChargePoint.broker.build_message("BootNotification", self.id, kwargs)
 
         #inform db that new cp has connected
         await ChargePoint.broker.send_to_DB(message)
@@ -159,7 +155,7 @@ class ChargePoint(cp):
     @on('StatusNotification')
     async def on_StatusNotification(self, **kwargs):
 
-        message = self.build_message("StatusNotification", kwargs)
+        message = ChargePoint.broker.build_message("StatusNotification", self.id, kwargs)
 
         #inform db that new cp has connected
         await ChargePoint.broker.send_to_DB(message)
@@ -170,7 +166,7 @@ class ChargePoint(cp):
     @on('MeterValues')
     async def on_MeterValues(self, **kwargs):
 
-        message = self.build_message("MeterValues", kwargs)
+        message = ChargePoint.broker.build_message("MeterValues", self.id, kwargs)
 
         #inform db that new cp has connected
         await ChargePoint.broker.send_to_DB(message)
@@ -181,7 +177,8 @@ class ChargePoint(cp):
     @on('Authorize')
     async def on_Authorize(self, **kwargs):
 
-        message = self.build_message("Authorize_IdToken", kwargs)
+        message = ChargePoint.broker.build_message("Authorize_IdToken", self.id, kwargs)
+
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         return call_result.AuthorizePayload(**response["CONTENT"])
@@ -189,7 +186,8 @@ class ChargePoint(cp):
     @on('TransactionEvent')
     async def on_TransactionEvent(self, **kwargs):
         
-        message = self.build_message("TransactionEvent", kwargs)
+        message = ChargePoint.broker.build_message("TransactionEvent", self.id, kwargs)
+
         await ChargePoint.broker.send_to_DB(message)
 
         transaction_response = call_result.TransactionEventPayload()

@@ -149,3 +149,12 @@ class Rabbit_Handler:
             ),
             routing_key=routing_key, #send to all DBs
         )
+    
+    def build_message(self, method, cp_id, content):
+        message = {
+            "METHOD" : method,
+            "CP_ID" : cp_id,
+            "CONTENT" : content
+        }
+
+        return message

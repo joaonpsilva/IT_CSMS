@@ -31,10 +31,10 @@ class CSMS:
     async def handle_api_request(self, request) -> None:
         """Funtions that handles requests from the api to comunicate with CPs"""
 
-        cp_id = request['CS_ID']
+        cp_id = request['CP_ID']
 
         response = await self.connected_CPs[str(cp_id)].send_CP_Message(
-                request["METHOD"], request["PAYLOAD"])
+                request["METHOD"], request["CONTENT"])
 
         return response
 

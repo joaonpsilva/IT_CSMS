@@ -91,15 +91,6 @@ class DataBase:
     
     def get_dict_obj(self, obj):
         return { attr:value for attr, value in obj.__dict__.items() if not attr.startswith("_") and value is not None }
-    
-    def build_response(self, method, content, cp_id):
-        message = {
-            "METHOD" : method + "_RESPONSE",
-            "CP_ID" : cp_id,
-            "CONTENT" : content
-        }
-        return message
-
 
 
     def verify_password(self, cp_id, content, method = "VERIFY_PASSWORD"):
@@ -110,7 +101,7 @@ class DataBase:
         if charge_point is not None:
             result = charge_point.verify_password(content["password"])
 
-        return self.build_response(method, {"APPROVED" : result}, cp_id)
+        return self.broker.build_message(method + "_RESPONSE", cp_id, {"APPROVED" : result})
 
 
 
@@ -199,7 +190,8 @@ class DataBase:
             cp_id,
             content['evse_id'] if 'evse_id' in content else None)
 
-        return self.build_response(method, {"id_token_info" : id_token_info}, cp_id)
+        return self.broker.build_message(method + "_RESPONSE", cp_id, {"id_token_info" : id_token_info})
+
     
 
     def verify_received_all_transaction(self, cp_id, content, method="VERIFY_RECEIVED_ALL_TRANSACTION"):
@@ -220,7 +212,8 @@ class DataBase:
         except:
             response["status"] = "ERROR"
 
-        return self.build_response(method, response, cp_id)
+        return self.broker.build_message(method + "_RESPONSE", cp_id, response)
+
         
 
 
