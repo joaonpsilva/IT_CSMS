@@ -103,6 +103,7 @@ class DataBase:
 
 
     def verify_password(self, cp_id, content, method = "VERIFY_PASSWORD"):
+        #TODO assert not already online
         charge_point = self.session.query(db_Tables.Charge_Point).get(cp_id)
 
         result = False

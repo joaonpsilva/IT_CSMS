@@ -315,7 +315,7 @@ def create_Tables(engine):
 def insert_Hard_Coded(db):
     objects = []
     objects.append(Charge_Point(cp_id = "CP_1", password="passcp1"))
-    objects.append(Charge_Point(cp_id = "CP_2", password="passcp2"))
+    objects.append(Charge_Point(cp_id = "CP_2", password="passcp1"))
 
     evse = EVSE(cp_id = "CP_1", evse_id = 1)
     objects.append(evse)
