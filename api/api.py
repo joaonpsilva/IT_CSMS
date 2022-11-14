@@ -15,7 +15,7 @@ broker = None
 @app.post("/SetChargingProfile/{CP_Id}")
 async def SetChargingProfile(CP_Id: str, payload: payloads.SetChargingProfilePayload):
     
-    message = broker.build_message("SetChargingProfile", CP_Id, payload)
+    message = broker.build_message("SET_CHARGING_PROFILE", CP_Id, payload)
 
 
     response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")

@@ -323,6 +323,10 @@ class ChargePoint(cp):
                 )
             )
             response = await self.call(request)
+    
+    @on("SetChargingProfile")
+    async def on_SetChargingProfile(self, evse_id, charging_profile):
+        return call_result.SetChargingProfilePayload(status=enums.ChargingProfileStatus.accepted)
 
 
 

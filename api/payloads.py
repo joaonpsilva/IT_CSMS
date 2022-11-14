@@ -19,3 +19,8 @@ class RequestStartTransaction_Payload:
 class TriggerMessage_Payload:
     requested_message: enums.MessageTriggerType
     evse: Optional[datatypes.EVSEType] = None
+
+@dataclass
+class SetChargingProfilePayload:
+    evse_id: int
+    charging_profile: datatypes.ChargingProfileType

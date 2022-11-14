@@ -33,7 +33,8 @@ class ChargePoint(cp):
             "SET_VARIABLES" : self.setVariables,
             "REQUEST_START_TRANSACTION" : self.requestStartTransaction,
             "REQUEST_STOP_TRANSACTION" : self.requestStopTransaction,
-            "TRIGGER_MESSAGE" : self.trigger_message
+            "TRIGGER_MESSAGE" : self.triggerMessage,
+            "SET_CHARGING_PROFILE" : self.setChargingProfile
         }
 
         self.out_of_order_transaction = set([])
@@ -112,7 +113,7 @@ class ChargePoint(cp):
         return await self.call(request)
     
 
-    async def trigger_message(self, payload):
+    async def triggerMessage(self, payload):
         if payload["requested_message"] == enums.MessageTriggerType.status_notification and ("evse" in payload and payload["evse"]):
             try:
                 assert(payload["evse"]["connector_id"] != None)
@@ -130,7 +131,7 @@ class ChargePoint(cp):
         request = call.GetTransactionStatusPayload(**payload)
         return await self.call(request)
     
-    async def SetChargingProfile(self, payload):
+    async def setChargingProfile(self, payload):
         request = call.SetChargingProfilePayload(**payload)
         return await self.call(request)
 
