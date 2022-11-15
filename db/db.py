@@ -247,6 +247,28 @@ class DataBase:
         #introduce message in DB
         transaction_event = db_Tables.Transaction_Event(**content)
         self.session.merge(transaction_event)
+    
+
+    def charging_profile(self, cp_id, content):
+        
+        evse_id = content["evse_id"]
+        charging_profile = content["charging_profile"]
+
+        evse = self.session.query(db_Tables.EVSE).get(content["evse_id"], cp_id)
+
+
+        for profile in evse.charging_profile:
+            #stack, puorpose
+            #dates overlap
+            pass
+
+
+
+
+
+        
+         
+
 
 
 if __name__ == '__main__':

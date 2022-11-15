@@ -1,5 +1,5 @@
 from xmlrpc.client import Boolean
-from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean
+from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship, backref
 from ocpp.v201 import enums
 from passlib.context import CryptContext
@@ -55,6 +55,16 @@ evse_idTokens = Table(
     Column('cp_id', String(20)),
     Column('evse_id', Integer),
     Column('id_token', String(36), ForeignKey('IdTokenInfo._id_token')),
+    ForeignKeyConstraint(("cp_id", "evse_id"),
+                        ("EVSE.cp_id", "EVSE.evse_id"))
+)
+
+evse_chargeProfiles = Table(
+    'evse_chargeProfiles',
+    Base.metadata,
+    Column('cp_id', String(20)),
+    Column('evse_id', Integer),
+    Column('id', String(36), ForeignKey('ChargingProfile.id')),
     ForeignKeyConstraint(("cp_id", "evse_id"),
                         ("EVSE.cp_id", "EVSE.evse_id"))
 )
@@ -119,6 +129,8 @@ class EVSE(Base):
 
     cp_id = Column(String(20), ForeignKey("Charge_point.cp_id"), primary_key=True)
     charge_point = relationship("Charge_Point", backref="evse")
+
+    
 
     def __init__(self, id = None, **kwargs):
         if id:
@@ -249,7 +261,6 @@ class IdTokenInfo(CustomBase):
 
 
 
-
 class Transaction(CustomBase):
     __tablename__ = "Transaction"
     transaction_id = Column(String(36), primary_key=True)
@@ -297,6 +308,65 @@ class Transaction_Event(CustomBase):
 
     #Meter value
     meter_value = relationship("MeterValue", backref="transaction_event", uselist=False)
+
+
+
+class ChargingProfile(CustomBase):
+    __tablename__ = "ChargingProfile"
+
+    id = Column(Integer, primary_key = True)
+    stack_level = Column(Integer)
+    charging_profile_purpose = Column(Enum(enums.ChargingProfilePurposeType))
+    charging_profile_kind = Column(Enum(enums.ChargingProfileKindType))
+    recurrency_kind = Column(Enum(enums.RecurrencyKindType))
+    valid_from = Column(DateTime)
+    valid_to = Column(DateTime)
+
+    transaction_id = Column(String(36), ForeignKey('Transaction.transaction_id'))
+    transaction_info = relationship("Transaction", backref="charging_profile",uselist=False)
+
+    charging_schedule = relationship("ChargingSchedule")
+
+    evse = relationship('EVSE', secondary=evse_chargeProfiles, backref='charging_profile')
+
+
+    #__table_args__ = (
+    #    UniqueConstraint(stack_level, charging_profile_purpose),
+    #)
+
+
+
+"""do i need this?"""
+class ChargingSchedule(CustomBase):
+    __tablename__ = "ChargingSchedule"
+
+    id = Column(Integer, primary_key = True)
+    start_schedule = Column(DateTime)
+    duration = Column(Integer)
+    charging_rate_unit = Column(Enum(enums.ChargingRateUnitType))
+    min_charging_rate = Column(Float)
+
+    _charging_profile = Column(Integer, ForeignKey("ChargingProfile.id"))
+
+    charging_schedule_period = relationship("ChargingSchedulePeriod")
+
+
+class ChargingSchedulePeriod(Base):
+    __tablename__ = "ChargingSchedulePeriod"
+
+    id = Column(Integer, primary_key = True)
+    start_period = Column(Integer)
+    limit = Column(Float)
+    number_phases = Column(Integer)
+    phases_to_use = Column(Integer)
+
+    _charging_schedule = Column(Integer, ForeignKey("ChargingSchedule.id"))
+
+
+
+
+
+
 
 
 

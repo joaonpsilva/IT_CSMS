@@ -130,8 +130,16 @@ class ChargePoint(cp):
         
         request = call.GetTransactionStatusPayload(**payload)
         return await self.call(request)
+        
     
     async def setChargingProfile(self, payload):
+
+        #K01.FR.03
+        if payload["charging_profile"]["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
+            assert(payload["charging_profile"]["transaction_id"] != None)
+        
+        
+        
         request = call.SetChargingProfilePayload(**payload)
         return await self.call(request)
 
