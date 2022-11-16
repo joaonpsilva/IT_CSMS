@@ -60,7 +60,9 @@ class DataBase:
             "Authorize_IdToken" : self.Authorize_IdToken,
             "TransactionEvent" : self.TransactionEvent,
             "VERIFY_PASSWORD" : self.verify_password,
-            "VERIFY_RECEIVED_ALL_TRANSACTION" : self.verify_received_all_transaction
+            "VERIFY_RECEIVED_ALL_TRANSACTION" : self.verify_received_all_transaction,
+            "VERIFY_CHARGING_PROFILE_CONFLICTS" : self.verify_charging_profile_conflicts,
+            "SetChargingProfile" : self.setChargingProfile
 
         }
 
@@ -132,6 +134,28 @@ class DataBase:
 
             meter_value = db_Tables.MeterValue(**meter_value_dict)
             self.session.add(meter_value)
+    
+
+    def setChargingProfile(self, cp_id, content):
+
+        try:
+            self.session.query(db_Tables.ChargingProfile).filter(db_Tables.ChargingProfile.id==content["charging_profile"]["id"]).delete()
+        except:
+            pass
+
+        if content["evse_id"] == 0:
+            evses = self.session.query(db_Tables.EVSE).filter(db_Tables.EVSE.cp_id==cp_id)
+        else:
+            evses = [self.session.query(db_Tables.EVSE).get((content["evse_id"], cp_id))]
+
+        #charging_profile.evse = evses
+        charging_profile = db_Tables.ChargingProfile(**content["charging_profile"])
+        print("AAAAAAAAAAAAAAAAA", charging_profile.id)
+        print("AAAAAAAAAAAAAAAAA", charging_profile.charging_schedule[0].id)
+
+
+        self.session.add(charging_profile)
+
 
     
     def build_idToken_Info(self, idToken, cp_id, evse_id = None):
@@ -248,19 +272,50 @@ class DataBase:
         transaction_event = db_Tables.Transaction_Event(**content)
         self.session.merge(transaction_event)
     
+    def dates_overlap(self, valid_from1, valid_to1, valid_from2, valid_to2):
+        if valid_to1 is None and valid_to2 is None:
+            return True
+        if valid_to1 is None:
+            valid_to1 = valid_to2
+        if valid_to2 is None:
+            valid_to2 = valid_to1
+        if valid_from1 is None:
+            valid_from1 = datetime.now()
+        if valid_from2 is None:
+            valid_from2 = datetime.now()
 
-    def charging_profile(self, cp_id, content):
+        if valid_from1 <= valid_to2 and valid_to1 >= valid_from2:
+            return True
         
-        evse_id = content["evse_id"]
-        charging_profile = content["charging_profile"]
+        return False
+    
 
-        evse = self.session.query(db_Tables.EVSE).get(content["evse_id"], cp_id)
+    def verify_charging_profile_conflicts(self, cp_id, content, method="VERIFY_CHARGING_PROFILE_CONFLICTS"):
+
+        charging_profile = db_Tables.ChargingProfile(**content["charging_profile"])
+        
+        if content["evse_id"] == 0:
+            evses = self.session.query(db_Tables.EVSE).filter(db_Tables.EVSE.cp_id==cp_id)
+        else:
+            evses = [self.session.query(db_Tables.EVSE).get((content["evse_id"], cp_id))]
+
+        conflict_ids = []
+        for evse in evses:
+
+            for evse_profile in evse.charging_profile:
+                if evse_profile.id != charging_profile.id and \
+                    evse_profile.stack_level == charging_profile.stack_level and \
+                    evse_profile.charging_profile_purpose == charging_profile.charging_profile_purpose and \
+                    (
+                        self.dates_overlap(evse_profile.valid_from, evse_profile.valid_to, charging_profile.valid_from, charging_profile.valid_to) 
+                    ):
+
+                    conflict_ids.append(evse_profile.id)
+        
+        return self.broker.build_message(method + "_RESPONSE", cp_id, {"conflict_ids" : conflict_ids})
+    
 
 
-        for profile in evse.charging_profile:
-            #stack, puorpose
-            #dates overlap
-            pass
 
 
 

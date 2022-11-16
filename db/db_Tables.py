@@ -64,7 +64,7 @@ evse_chargeProfiles = Table(
     Base.metadata,
     Column('cp_id', String(20)),
     Column('evse_id', Integer),
-    Column('id', String(36), ForeignKey('ChargingProfile.id')),
+    Column('id', Integer, ForeignKey('ChargingProfile.id')),
     ForeignKeyConstraint(("cp_id", "evse_id"),
                         ("EVSE.cp_id", "EVSE.evse_id"))
 )
@@ -325,14 +325,9 @@ class ChargingProfile(CustomBase):
     transaction_id = Column(String(36), ForeignKey('Transaction.transaction_id'))
     transaction_info = relationship("Transaction", backref="charging_profile",uselist=False)
 
-    charging_schedule = relationship("ChargingSchedule")
+    charging_schedule = relationship("ChargingSchedule", backref="charging_profile")
 
     evse = relationship('EVSE', secondary=evse_chargeProfiles, backref='charging_profile')
-
-
-    #__table_args__ = (
-    #    UniqueConstraint(stack_level, charging_profile_purpose),
-    #)
 
 
 
@@ -348,7 +343,8 @@ class ChargingSchedule(CustomBase):
 
     _charging_profile = Column(Integer, ForeignKey("ChargingProfile.id"))
 
-    charging_schedule_period = relationship("ChargingSchedulePeriod")
+    charging_schedule_period = relationship("ChargingSchedulePeriod", backref="charging_schedule")
+    sales_tariff = relationship("SalesTariff", uselist=False, backref="charging_schedule")
 
 
 class ChargingSchedulePeriod(Base):
@@ -358,9 +354,25 @@ class ChargingSchedulePeriod(Base):
     start_period = Column(Integer)
     limit = Column(Float)
     number_phases = Column(Integer)
-    phases_to_use = Column(Integer)
+    phase_to_use = Column(Integer)
 
     _charging_schedule = Column(Integer, ForeignKey("ChargingSchedule.id"))
+
+
+class SalesTariff(Base):
+    __tablename__ = "SalesTariff"
+    id = Column(Integer, primary_key = True)
+    content = Column(String(1000))
+
+    _charging_schedule = Column(Integer, ForeignKey("ChargingSchedule.id"))
+
+    def __init__(self, id , **kwargs):
+        content = str(kwargs)
+        kwargs = {"id":id, "content":content}
+        super().__init__(**kwargs)
+
+
+
 
 
 

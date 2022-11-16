@@ -137,11 +137,24 @@ class ChargePoint(cp):
         #K01.FR.03
         if payload["charging_profile"]["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
             assert(payload["charging_profile"]["transaction_id"] != None)
-        
-        
+
+        #K01.FR.06
+        else:
+            relevant = {"evse_id": payload["evse_id"]}
+            relevant["charging_profile"] = {key: value for key, value in payload["charging_profile"].items() if key in ["id", "stack_level", "charging_profile_purpose", "valid_from", "valid_to"]}
+            message = ChargePoint.broker.build_message("VERIFY_CHARGING_PROFILE_CONFLICTS", self.id, relevant)
+            response = await ChargePoint.broker.send_request_wait_response(message)
+            assert(len(response["CONTENT"]["conflict_ids"]) == 0)
         
         request = call.SetChargingProfilePayload(**payload)
-        return await self.call(request)
+        response = await self.call(request)
+
+        if response.status == enums.ChargingProfileStatus.accepted:
+            message = ChargePoint.broker.build_message("SetChargingProfile", self.id, payload)
+            await ChargePoint.broker.send_to_DB(message)
+        
+        return response
+
 
 
 
@@ -150,9 +163,8 @@ class ChargePoint(cp):
     @on('BootNotification')
     async def on_BootNotification(self, **kwargs):
 
-        message = ChargePoint.broker.build_message("BootNotification", self.id, kwargs)
-
         #inform db that new cp has connected
+        message = ChargePoint.broker.build_message("BootNotification", self.id, kwargs)
         await ChargePoint.broker.send_to_DB(message)
 
         return call_result.BootNotificationPayload(
@@ -164,9 +176,8 @@ class ChargePoint(cp):
     @on('StatusNotification')
     async def on_StatusNotification(self, **kwargs):
 
-        message = ChargePoint.broker.build_message("StatusNotification", self.id, kwargs)
-
         #inform db that new cp has connected
+        message = ChargePoint.broker.build_message("StatusNotification", self.id, kwargs)
         await ChargePoint.broker.send_to_DB(message)
         
         return call_result.StatusNotificationPayload()
