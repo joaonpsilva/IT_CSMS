@@ -137,7 +137,7 @@ class DataBase:
     
 
     def setChargingProfile(self, cp_id, content):
-
+        #TODO delete charging profiles
         try:
             self.session.query(db_Tables.ChargingProfile).filter(db_Tables.ChargingProfile.id==content["charging_profile"]["id"]).delete()
         except:

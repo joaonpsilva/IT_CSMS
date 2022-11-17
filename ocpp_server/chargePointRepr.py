@@ -92,18 +92,25 @@ class ChargePoint(cp):
         
         id_token_info = await self.get_authorization_relevant_info(payload)
 
+        #Authorization
         if id_token_info["status"] != enums.AuthorizationStatusType.accepted:
             return "No Permission"
 
+        if "charging_profile" in payload and payload["charging_profile"] is not None:
+            #TODO send to DB?
+            if payload["charging_profile"]["charging_profile_purpose"] != enums.ChargingProfilePurposeType.tx_profile:
+                return "charging profile needs to be TxProfile"
+
 
         #creating an id for the request
-        payload["remote_start_id"] = ChargePoint.new_remoteStartId()
+        if "remote_start_id" not in payload or payload["remote_start_id"] is None:
+            payload["remote_start_id"] = ChargePoint.new_remoteStartId()
 
         request = call.RequestStartTransactionPayload(**payload)
 
         response = await self.call(request)
         #returning the created id
-        response.remote_start_id = payload["remote_start_id"]
+        #response.remote_start_id = payload["remote_start_id"]
 
         return response
     
@@ -133,6 +140,8 @@ class ChargePoint(cp):
         
     
     async def setChargingProfile(self, payload):
+        #TODO revisit document
+        #K01.FR.34, K01.FR.35, K01.FR.38, K01.FR.18, K01.FR.19, K01.FR.20
 
         #DB bug
         if payload["charging_profile"]["id"] == 0:
