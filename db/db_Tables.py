@@ -375,14 +375,6 @@ class SalesTariff(Base):
 
 
 
-
-
-
-
-
-
-
-
 def create_Tables(engine):
     #for tbl in reversed(Base.metadata.sorted_tables):
     #    try:

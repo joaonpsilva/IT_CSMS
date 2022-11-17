@@ -144,16 +144,13 @@ class DataBase:
             pass
 
         if content["evse_id"] == 0:
-            evses = self.session.query(db_Tables.EVSE).filter(db_Tables.EVSE.cp_id==cp_id)
+            evses = self.session.query(db_Tables.EVSE).filter(db_Tables.EVSE.cp_id==cp_id).all()
         else:
             evses = [self.session.query(db_Tables.EVSE).get((content["evse_id"], cp_id))]
+        
 
-        #charging_profile.evse = evses
         charging_profile = db_Tables.ChargingProfile(**content["charging_profile"])
-        print("AAAAAAAAAAAAAAAAA", charging_profile.id)
-        print("AAAAAAAAAAAAAAAAA", charging_profile.charging_schedule[0].id)
-
-
+        charging_profile.evse = evses
         self.session.add(charging_profile)
 
 
@@ -314,15 +311,6 @@ class DataBase:
         
         return self.broker.build_message(method + "_RESPONSE", cp_id, {"conflict_ids" : conflict_ids})
     
-
-
-
-
-
-
-
-        
-         
 
 
 

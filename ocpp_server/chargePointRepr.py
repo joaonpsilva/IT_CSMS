@@ -134,18 +134,36 @@ class ChargePoint(cp):
     
     async def setChargingProfile(self, payload):
 
-        #K01.FR.03
-        if payload["charging_profile"]["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
-            assert(payload["charging_profile"]["transaction_id"] != None)
+        #DB bug
+        if payload["charging_profile"]["id"] == 0:
+            return "ID cannot be 0"
+        for schedule in payload["charging_profile"]["charging_schedule"]:
+            if schedule["id"] == 0:
+                return "ID cannot be 0"
 
-        #K01.FR.06
+
+        if payload["charging_profile"]["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
+            #K01.FR.03
+            if "transaction_id" not in payload["charging_profile"] or payload["charging_profile"]["transaction_id"] is None:
+                return "tx_profile needs tansaction id"
+            
+            #K01.FR.16
+            if payload["evse_id"] == 0:
+                return "TxProfile SHALL only be be used with evseId >0."
+            
         else:
-            relevant = {"evse_id": payload["evse_id"]}
-            relevant["charging_profile"] = {key: value for key, value in payload["charging_profile"].items() if key in ["id", "stack_level", "charging_profile_purpose", "valid_from", "valid_to"]}
-            message = ChargePoint.broker.build_message("VERIFY_CHARGING_PROFILE_CONFLICTS", self.id, relevant)
-            response = await ChargePoint.broker.send_request_wait_response(message)
-            assert(len(response["CONTENT"]["conflict_ids"]) == 0)
+            if "transaction_id" in payload["charging_profile"] and payload["charging_profile"]["transaction_id"] is not None:
+                return "only tx_profile can have tansaction id"
+
+        #K01.FR.06, K01.FR.39
+        relevant = {"evse_id": payload["evse_id"]}
+        relevant["charging_profile"] = {key: value for key, value in payload["charging_profile"].items() if key in ["id", "stack_level", "charging_profile_purpose", "valid_from", "valid_to"]}
+        message = ChargePoint.broker.build_message("VERIFY_CHARGING_PROFILE_CONFLICTS", self.id, relevant)
+        response = await ChargePoint.broker.send_request_wait_response(message)
+        if len(response["CONTENT"]["conflict_ids"]) != 0:
+            return "profile conflicts with existing profile"
         
+
         request = call.SetChargingProfilePayload(**payload)
         response = await self.call(request)
 

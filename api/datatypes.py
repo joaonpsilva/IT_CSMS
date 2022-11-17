@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 
 from ocpp.v201 import enums
-
+import datetime
 
 @dataclass
 class ACChargingParametersType:
@@ -199,7 +199,7 @@ class ChargingScheduleType:
     id: int
     charging_rate_unit: enums.ChargingRateUnitType
     charging_schedule_period: List[ChargingSchedulePeriodType]
-    start_schedule: Optional[str] = None
+    start_schedule: Optional[datetime.datetime] = None
     duration: Optional[int] = None
     min_charging_rate: Optional[float] = None
     sales_tariff: Optional[SalesTariffType] = None
@@ -219,8 +219,8 @@ class ChargingProfileType:
     charging_profile_purpose: enums.ChargingProfilePurposeType
     charging_profile_kind: enums.ChargingProfileKindType
     charging_schedule: List[ChargingScheduleType]
-    valid_from: Optional[str] = None
-    valid_to: Optional[str] = None
+    valid_from: Optional[datetime.datetime] = None
+    valid_to: Optional[datetime.datetime] = None
     transaction_id: Optional[str] = None
     recurrency_kind: Optional[enums.RecurrencyKindType] = None
 
