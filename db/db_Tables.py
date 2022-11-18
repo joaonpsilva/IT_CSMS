@@ -175,9 +175,9 @@ class MeterValue(CustomBase):
     transaction_id = Column(String(36))
 
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
-                                    [ "EVSE.cp_id", "EVSE.evse_id"]),
+                                    ["EVSE.cp_id", "EVSE.evse_id"]),
                     ForeignKeyConstraint(["transaction_id", "seq_no"],
-                                    [ "Transaction_Event.transaction_id", "Transaction_Event.seq_no"]),{})
+                                    ["Transaction_Event.transaction_id", "Transaction_Event.seq_no"]),{})
 
 
 class SignedMeterValue(Base):

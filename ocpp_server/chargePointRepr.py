@@ -90,27 +90,33 @@ class ChargePoint(cp):
 
     async def requestStartTransaction(self, payload):
         
-        id_token_info = await self.get_authorization_relevant_info(payload)
 
-        #Authorization
-        if id_token_info["status"] != enums.AuthorizationStatusType.accepted:
-            return "No Permission"
+        if "evse_id" in payload and payload["evse_id"] is not None and payload["evse_id"] <= 0:
+            return "evse id must be > 0"
 
         if "charging_profile" in payload and payload["charging_profile"] is not None:
-            #TODO send to DB?
+            #F01.FR.08
             if payload["charging_profile"]["charging_profile_purpose"] != enums.ChargingProfilePurposeType.tx_profile:
                 return "charging profile needs to be TxProfile"
-
+            #F01.FR.11
+            if "transaction_id" in payload["charging_profile"] and payload["charging_profile"]["transaction_id"] is not None:
+                return "Transaction id shall not be set"
 
         #creating an id for the request
         if "remote_start_id" not in payload or payload["remote_start_id"] is None:
             payload["remote_start_id"] = ChargePoint.new_remoteStartId()
 
         request = call.RequestStartTransactionPayload(**payload)
-
         response = await self.call(request)
-        #returning the created id
-        #response.remote_start_id = payload["remote_start_id"]
+
+        #Send to db??????????
+        if "charging_profile" in payload and payload["charging_profile"] is not None and \
+            "evse_id" in payload and payload["evse_id"] is not None and \
+            response["status"] == enums.RequestStartStopStatusType.accepted:
+            
+            m = {"evse_id": payload["evse_id"], "charging_profile":payload["charging_profile"]}
+            message = ChargePoint.broker.build_message("SetChargingProfile", self.id, payload)
+            await ChargePoint.broker.send_to_DB(message)
 
         return response
     
