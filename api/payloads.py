@@ -39,3 +39,9 @@ class GetChargingProfilesPayload:
     request_id: int
     charging_profile: datatypes.ChargingProfileCriterionType
     evse_id: Optional[int] = None
+
+
+@dataclass
+class ClearChargingProfilePayload:
+    charging_profile_id: Optional[int] = None
+    charging_profile_criteria: Optional[datatypes.ClearChargingProfileType] = None

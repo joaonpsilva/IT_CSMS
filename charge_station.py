@@ -376,6 +376,12 @@ class ChargePoint(cp):
             charging_profile = [charge_profile]
         )
         response = await self.call(request)
+    
+    @on("ClearChargingProfile")
+    async def on_ClearChargingProfileRequest(self, **kwargs):
+        return call_result.ClearChargingProfilePayload(status=enums.ClearChargingProfileStatusType.accepted)
+    
+
 
 
 

@@ -36,7 +36,8 @@ class ChargePoint(cp):
             "TRIGGER_MESSAGE" : self.triggerMessage,
             "SET_CHARGING_PROFILE" : self.setChargingProfile,
             "GET_COMPOSITE_SCHEDULE" : self.getCompositeSchedule,
-            "GET_CHARGING_PROFILES" : self.getChargingProfiles
+            "GET_CHARGING_PROFILES" : self.getChargingProfiles,
+            "CLEAR_CHARGING_PROFILE": self.clearChargingProfile
         }
 
         self.loop = asyncio.get_running_loop()
@@ -224,6 +225,19 @@ class ChargePoint(cp):
             self.multiple_response_requests.pop(payload["request_id"])
 
         return response
+    
+
+    async def clearChargingProfile(self, payload):
+
+        #K10.FR.02
+        if list(payload.values()) == [None, None] or\
+            (payload["charging_profile_id"] is None and\
+             list(payload["charging_profile_criteria"].values()) == [None, None, None]):
+
+            return "Specify at least 1 field"
+
+        request = call.ClearChargingProfilePayload(**payload)
+        return await self.call(request)
 
 
 

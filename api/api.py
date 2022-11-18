@@ -88,6 +88,15 @@ async def GetChargingProfiles(CP_Id: str, payload: payloads.GetChargingProfilesP
     return response
 
 
+@app.post("/ClearChargingProfile/{CP_Id}")
+async def ClearChargingProfile(CP_Id: str, payload: payloads.ClearChargingProfilePayload):
+
+    message = broker.build_message("CLEAR_CHARGING_PROFILE", CP_Id, payload)
+
+    response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
+    return response
+
+
 @app.get("/GetTransactionStatus/{CP_Id}")
 async def GetTransactionStatus(CP_Id: str, transactionId: str = None ):
     #TODO request stop transaction without cp id input?
