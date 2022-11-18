@@ -117,8 +117,8 @@ class ChargingProfileCriterionType:
 
     charging_profile_purpose: Optional[enums.ChargingProfilePurposeType] = None
     stack_level: Optional[int] = None
-    charging_profile_id: Optional[int] = None
-    charging_limit_source: Optional[enums.ChargingLimitSourceType] = None
+    charging_profile_id: Optional[List[int]] = None
+    charging_limit_source: Optional[List[enums.ChargingLimitSourceType]] = None
 
 
 @dataclass

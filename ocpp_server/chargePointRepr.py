@@ -4,7 +4,7 @@ from ocpp.routing import on, after
 
 from datetime import datetime
 import asyncio
-
+from dataclasses import asdict
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -35,10 +35,14 @@ class ChargePoint(cp):
             "REQUEST_STOP_TRANSACTION" : self.requestStopTransaction,
             "TRIGGER_MESSAGE" : self.triggerMessage,
             "SET_CHARGING_PROFILE" : self.setChargingProfile,
-            "GET_COMPOSITE_SCHEDULE" : self.getCompositeSchedule
+            "GET_COMPOSITE_SCHEDULE" : self.getCompositeSchedule,
+            "GET_CHARGING_PROFILES" : self.getChargingProfiles
         }
 
+        self.loop = asyncio.get_running_loop()
+
         self.out_of_order_transaction = set([])
+        self.multiple_response_requests = {}
     
     async def send_CP_Message(self, method, payload):
         """Funtion will use the mapping defined in method_mapping to call the correct function"""
@@ -191,10 +195,32 @@ class ChargePoint(cp):
         
         return response
     
+
+
     async def getCompositeSchedule(self, payload):
 
         request = call.GetCompositeSchedulePayload(**payload)
         return await self.call(request)
+
+
+    
+    async def getChargingProfiles(self, payload):
+
+        request = call.GetChargingProfilesPayload(**payload)
+        response = await self.call(request)
+
+        if response.status == enums.GetChargingProfileStatusType.accepted:
+            future = self.loop.create_future()
+            self.multiple_response_requests[payload["request_id"]] = {"ready" : future, "data": []}
+
+            await asyncio.wait_for(future, timeout=5)
+            
+            response = asdict(response)
+            response["data"] = self.multiple_response_requests[payload["request_id"]]["data"]
+            self.multiple_response_requests.pop(payload["request_id"])
+
+        return response
+
 
 
 
@@ -271,12 +297,26 @@ class ChargePoint(cp):
             transaction_status = await self.getTransactionStatus(transaction_id=transaction_id)
             if transaction_status.messages_in_queue == True:
                 #CP still holding messages
+                #TODO pop from out_of_order_transaction
                 self.out_of_order_transaction.add(transaction_id)
             else:
                 #verify in db if we have all messages
                 all_messages_received = await self.guarantee_transaction_integrity(transaction_id)
                 if not all_messages_received:
                     logging.info("Messages lost for transaction %s", transaction_id)
+    
+    @on("ReportChargingProfiles")
+    async def on_reportChargingProfiles(self, **kwargs):
+        if kwargs["request_id"] in self.multiple_response_requests:
+            
+            self.multiple_response_requests[kwargs["request_id"]]["data"].append(kwargs)
+
+            #last message
+            if "tbc" not in kwargs or kwargs["tbc"] is None or kwargs["tbc"]==False:
+                self.multiple_response_requests[kwargs["request_id"]]["ready"].set_result(True)
+        
+        return call_result.ReportChargingProfilesPayload()
+
 
 
 

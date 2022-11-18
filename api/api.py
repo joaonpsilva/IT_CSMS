@@ -69,10 +69,20 @@ async def TriggerMessage(CP_Id: str, payload: payloads.TriggerMessage_Payload):
 
 
 @app.post("/GetCompositeSchedule/{CP_Id}")
-async def TriggerMessage(CP_Id: str, payload: payloads.GetCompositeSchedulePayload):
+async def GetCompositeSchedule(CP_Id: str, payload: payloads.GetCompositeSchedulePayload):
     #TODO make a get 
 
     message = broker.build_message("GET_COMPOSITE_SCHEDULE", CP_Id, payload)
+
+    response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
+    return response
+
+
+@app.post("/GetChargingProfiles/{CP_Id}")
+async def GetChargingProfiles(CP_Id: str, payload: payloads.GetChargingProfilesPayload):
+    #TODO make a get 
+
+    message = broker.build_message("GET_CHARGING_PROFILES", CP_Id, payload)
 
     response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
     return response

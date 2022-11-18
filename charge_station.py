@@ -332,6 +332,51 @@ class ChargePoint(cp):
     async def on_GetCompositeSchedule(self, duration, evse_id, **kwargs):
         return call_result.GetCompositeSchedulePayload(status=enums.GenericStatusType.accepted)
 
+    @on("GetChargingProfiles")
+    async def on_GetChargingProfiles(self, request_id, charging_profile, **kwargs):
+        return call_result.GetChargingProfilesPayload(status=enums.GenericStatusType.accepted)
+
+    @after("GetChargingProfiles")
+    async def after_GetChargingProfiles(self, request_id, charging_profile, **kwargs):
+
+        charge_profile = {
+                        "id": 0,
+                        "stack_level": 0,
+                        "charging_profile_purpose": "ChargingStationExternalConstraints",
+                        "charging_profile_kind": "Absolute",
+                        "charging_schedule": [
+                        {
+                            "id": 0,
+                            "charging_rate_unit": "W",
+                            "charging_schedule_period": [
+                            {
+                                "start_period": 0,
+                                "limit": 0,
+                                "number_phases": 0,
+                                "phase_to_use": 0
+                                }]}]}
+
+        request = call.ReportChargingProfilesPayload(
+            request_id = request_id,
+            charging_limit_source = enums.ChargingLimitSourceType.cso,
+            tbc = True,
+            evse_id = 0,
+            charging_profile = [charge_profile]
+        )
+
+
+            
+        response = await self.call(request)
+
+        request = call.ReportChargingProfilesPayload(
+            request_id = request_id,
+            charging_limit_source = enums.ChargingLimitSourceType.cso,
+            tbc = False,
+            evse_id = 0,
+            charging_profile = [charge_profile]
+        )
+        response = await self.call(request)
+
 
 
 

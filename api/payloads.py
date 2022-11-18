@@ -32,3 +32,10 @@ class GetCompositeSchedulePayload:
     duration: int
     evse_id: int
     charging_rate_unit: Optional[enums.ChargingRateUnitType] = None
+
+
+@dataclass
+class GetChargingProfilesPayload:
+    request_id: int
+    charging_profile: datatypes.ChargingProfileCriterionType
+    evse_id: Optional[int] = None
