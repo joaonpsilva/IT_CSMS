@@ -206,6 +206,10 @@ class ChargePoint(cp):
     
     async def getChargingProfiles(self, payload):
 
+        #K09.FR.03
+        if list(payload["charging_profile"].values()) == [None, None, None, None]:
+            return "Specify at least 1 field"
+
         request = call.GetChargingProfilesPayload(**payload)
         response = await self.call(request)
 
