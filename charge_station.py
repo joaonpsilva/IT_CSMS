@@ -328,6 +328,9 @@ class ChargePoint(cp):
     async def on_SetChargingProfile(self, evse_id, charging_profile):
         return call_result.SetChargingProfilePayload(status=enums.ChargingProfileStatus.accepted)
 
+    @on("GetCompositeSchedule")
+    async def on_GetCompositeSchedule(self, duration, evse_id, **kwargs):
+        return call_result.GetCompositeSchedulePayload(status=enums.GenericStatusType.accepted)
 
 
 

@@ -25,3 +25,10 @@ class TriggerMessage_Payload:
 class SetChargingProfilePayload:
     evse_id: int
     charging_profile: datatypes.ChargingProfileType
+
+
+@dataclass
+class GetCompositeSchedulePayload:
+    duration: int
+    evse_id: int
+    charging_rate_unit: Optional[enums.ChargingRateUnitType] = None

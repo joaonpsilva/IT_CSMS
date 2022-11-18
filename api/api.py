@@ -67,6 +67,17 @@ async def TriggerMessage(CP_Id: str, payload: payloads.TriggerMessage_Payload):
     response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
     return response  
 
+
+@app.post("/GetCompositeSchedule/{CP_Id}")
+async def TriggerMessage(CP_Id: str, payload: payloads.GetCompositeSchedulePayload):
+    #TODO make a get 
+
+    message = broker.build_message("GET_COMPOSITE_SCHEDULE", CP_Id, payload)
+
+    response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
+    return response
+
+
 @app.get("/GetTransactionStatus/{CP_Id}")
 async def GetTransactionStatus(CP_Id: str, transactionId: str = None ):
     #TODO request stop transaction without cp id input?

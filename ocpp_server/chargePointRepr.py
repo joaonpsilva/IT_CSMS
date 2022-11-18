@@ -34,7 +34,8 @@ class ChargePoint(cp):
             "REQUEST_START_TRANSACTION" : self.requestStartTransaction,
             "REQUEST_STOP_TRANSACTION" : self.requestStopTransaction,
             "TRIGGER_MESSAGE" : self.triggerMessage,
-            "SET_CHARGING_PROFILE" : self.setChargingProfile
+            "SET_CHARGING_PROFILE" : self.setChargingProfile,
+            "GET_COMPOSITE_SCHEDULE" : self.getCompositeSchedule
         }
 
         self.out_of_order_transaction = set([])
@@ -113,6 +114,8 @@ class ChargePoint(cp):
         if "charging_profile" in payload and payload["charging_profile"] is not None and \
             "evse_id" in payload and payload["evse_id"] is not None and \
             response["status"] == enums.RequestStartStopStatusType.accepted:
+
+            payload["charging_profile"]["transaction_id"] = response["transaction_id"] if response["transaction_id"] is not None else payload["remote_start_id"]
             
             m = {"evse_id": payload["evse_id"], "charging_profile":payload["charging_profile"]}
             message = ChargePoint.broker.build_message("SetChargingProfile", self.id, payload)
@@ -187,6 +190,11 @@ class ChargePoint(cp):
             await ChargePoint.broker.send_to_DB(message)
         
         return response
+    
+    async def getCompositeSchedule(self, payload):
+
+        request = call.GetCompositeSchedulePayload(**payload)
+        return await self.call(request)
 
 
 
