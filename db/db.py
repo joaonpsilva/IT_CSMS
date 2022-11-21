@@ -6,29 +6,29 @@ import logging
 from sqlalchemy import create_engine, update
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import exists
-import db_Tables
+from db_Tables import *
 from sqlalchemy.orm.util import identity_key
 from ocpp.v201 import enums
 from datetime import datetime
 
-
+import dateutil.parser
 
 logging.basicConfig(level=logging.INFO)
 
 
 #UPDATE example
 """stmt = (
-    update(db_Tables.Charge_Point).
-    where(db_Tables.Charge_Point.cp_id == cp_id).
+    update(Charge_Point).
+    where(Charge_Point.cp_id == cp_id).
     values(**charge_point_InMessage)
 )
 
 self.session.execute(stmt)"""
 
 #CHECK if exists
-"""q = self.session.query(db_Tables.EVSE)\
-    .filter(db_Tables.EVSE.evse_id==content["evse_id"])\
-    .filter(db_Tables.EVSE.cp_id==cp_id)
+"""q = self.session.query(EVSE)\
+    .filter(EVSE.evse_id==content["evse_id"])\
+    .filter(EVSE.cp_id==cp_id)
 
 exists = self.session.query(q.exists()).scalar()
 """
@@ -46,10 +46,10 @@ class DataBase:
         self.session = Session()
 
         #Create SQL tables
-        db_Tables.create_Tables(self.engine)
+        create_Tables(self.engine)
 
         #Insert some CPs (testing)
-        db_Tables.insert_Hard_Coded(self)
+        insert_Hard_Coded(self)
 
 
         #map incoming messages to methods
@@ -62,7 +62,8 @@ class DataBase:
             "VERIFY_PASSWORD" : self.verify_password,
             "VERIFY_RECEIVED_ALL_TRANSACTION" : self.verify_received_all_transaction,
             "VERIFY_CHARGING_PROFILE_CONFLICTS" : self.verify_charging_profile_conflicts,
-            "SetChargingProfile" : self.setChargingProfile
+            "SetChargingProfile" : self.setChargingProfile,
+            "clearChargingProfile" : self.delete_charging_profile
 
         }
 
@@ -97,7 +98,7 @@ class DataBase:
 
     def verify_password(self, cp_id, content, method = "VERIFY_PASSWORD"):
         #TODO assert not already online
-        charge_point = self.session.query(db_Tables.Charge_Point).get(cp_id)
+        charge_point = self.session.query(Charge_Point).get(cp_id)
 
         result = False
         if charge_point is not None:
@@ -112,14 +113,14 @@ class DataBase:
         charge_point_InMessage = content["charging_station"]
         charge_point_InMessage["cp_id"] = cp_id
 
-        cp = db_Tables.Charge_Point(**charge_point_InMessage)
+        cp = Charge_Point(**charge_point_InMessage)
         self.session.merge(cp)
 
 
     def StatusNotification(self, cp_id, content):
 
         content["cp_id"] = cp_id
-        connector = db_Tables.Connector(**content)
+        connector = Connector(**content)
         self.session.merge(connector)
         
 
@@ -132,24 +133,24 @@ class DataBase:
             meter_value_dict["cp_id"] = cp_id
             meter_value_dict["evse_id"] = evse_id
 
-            meter_value = db_Tables.MeterValue(**meter_value_dict)
+            meter_value = MeterValue(**meter_value_dict)
             self.session.add(meter_value)
     
 
     def setChargingProfile(self, cp_id, content):
         #TODO delete charging profiles
         try:
-            self.session.query(db_Tables.ChargingProfile).filter(db_Tables.ChargingProfile.id==content["charging_profile"]["id"]).delete()
+            self.session.query(ChargingProfile).filter(ChargingProfile.id==content["charging_profile"]["id"]).delete()
         except:
             pass
 
         if content["evse_id"] == 0:
-            evses = self.session.query(db_Tables.EVSE).filter(db_Tables.EVSE.cp_id==cp_id).all()
+            evses = self.session.query(EVSE).filter(EVSE.cp_id==cp_id).all()
         else:
-            evses = [self.session.query(db_Tables.EVSE).get((content["evse_id"], cp_id))]
+            evses = [self.session.query(EVSE).get((content["evse_id"], cp_id))]
         
 
-        charging_profile = db_Tables.ChargingProfile(**content["charging_profile"])
+        charging_profile = ChargingProfile(**content["charging_profile"])
         charging_profile.evse = evses
         self.session.add(charging_profile)
 
@@ -166,7 +167,7 @@ class DataBase:
 
 
         try:
-            idToken_fromDb = self.session.query(db_Tables.IdToken).get(idToken["id_token"])
+            idToken_fromDb = self.session.query(IdToken).get(idToken["id_token"])
             assert(idToken_fromDb.type == idToken["type"])
         except:
             return {"status" : enums.AuthorizationStatusType.invalid}
@@ -181,7 +182,7 @@ class DataBase:
 
             allowed_evse = id_token_info.get_allowed_evse_for_cp(cp_id)                
             #check if not allowed for whole cp
-            if len(allowed_evse) != len(self.session.query(db_Tables.Charge_Point).get(cp_id).evse):
+            if len(allowed_evse) != len(self.session.query(Charge_Point).get(cp_id).evse):
                 result["evse_id"] = allowed_evse
             
 
@@ -221,7 +222,7 @@ class DataBase:
         try:
             assert("transaction_id" in content)
             
-            transaction = self.session.query(db_Tables.Transaction).get(content["transaction_id"])
+            transaction = self.session.query(Transaction).get(content["transaction_id"])
             assert(transaction is not None)
 
             transaction_events = sorted(transaction.transaction_event, key=lambda t : t.seq_no)
@@ -235,7 +236,6 @@ class DataBase:
 
         return self.broker.build_message(method + "_RESPONSE", cp_id, response)
 
-        
 
 
     def TransactionEvent(self, cp_id, content):
@@ -244,7 +244,7 @@ class DataBase:
         if "id_token" in content:
             #if for some reason, this idtoken is not good, dont use it to store in db
 
-            q = self.session.query(db_Tables.IdToken).filter(db_Tables.IdToken.id_token==content["id_token"]["id_token"])
+            q = self.session.query(IdToken).filter(IdToken.id_token==content["id_token"]["id_token"])
             exists = self.session.query(q.exists()).scalar()
             if not exists:
                 content.pop("id_token")
@@ -258,28 +258,63 @@ class DataBase:
             content["cp_id"] = cp_id 
 
         #check if there is a more recent event. (Dont update transaction)
-        transaction = self.session.query(db_Tables.Transaction).get(content["transaction_info"]["transaction_id"])
+        transaction = self.session.query(Transaction).get(content["transaction_info"]["transaction_id"])
         if transaction is not None:
             higher_seq_no = max([event.seq_no for event in transaction.transaction_event])
             if higher_seq_no > content["seq_no"]:
                 #this event is old
-                content["transaction_info"] = {"transaction_id" : content["transaction_info"]["transaction_id"]}
+                existing_transaction = transaction.get_dict_obj()
+                content["transaction_info"] = {key: value for key, value in content["transaction_info"].items() if key not in existing_transaction or key == "transaction_id"}
  
         #introduce message in DB
-        transaction_event = db_Tables.Transaction_Event(**content)
+        transaction_event = Transaction_Event(**content)
+
+        #delete txprofiles
+        if transaction_event.event_type == enums.TransactionEventType.ended:
+            criteria = {"charging_profile_citeria": {"charging_profile_purpose" : enums.ChargingProfilePurposeType.tx_profile}}
+            self.delete_charging_profile(cp_id, criteria)
+
+        if transaction_event.event_type == enums.TransactionEventType.started:
+            if transaction_event.transaction_info.remote_start_id is not None:
+                stmt = (
+                    update(ChargingProfile).
+                    where(ChargingProfile.transaction_id == transaction_event.transaction_info.remote_start_id).
+                    values(transaction_id=transaction_event.transaction_info.transaction_id)
+                )
+                self.session.execute(stmt)
+
         self.session.merge(transaction_event)
     
+
+    def delete_charging_profile(self, cp_id, content):
+        try:
+            if "charging_profile_id" in content and content["charging_profile_id"] is not None:
+                    self.session.query(ChargingProfile).filter(ChargingProfile.id==content["charging_profile_id"]).delete()
+            else:
+                criteria = content["charging_profile_citeria"]
+                query = self.session.query(ChargingProfile, evse_chargeProfiles)
+                
+                if "evse_id" in criteria and criteria["evse_id"] is None:
+                    query = query.filter(evse_chargeProfiles.evse_id==criteria["evse_id"]).filter(evse_chargeProfiles.cp_id==cp_id)
+                if "charging_profile_purpose" in criteria and criteria["charging_profile_purpose"] is None:
+                    query = query.filter(ChargingProfile.charging_profile_purpose == criteria["charging_profile_purpose"])
+                if "stack_level" in criteria and criteria["stack_level"] is None:
+                    query = query.filter(ChargingProfile.stack_level == criteria["stack_level"])
+                
+                query.delete()
+
+        except:
+            logging.info("ERROR DELETING CHARGING PROFILES")
+
+
+    
     def dates_overlap(self, valid_from1, valid_to1, valid_from2, valid_to2):
-        if valid_to1 is None and valid_to2 is None:
-            return True
-        if valid_to1 is None:
-            valid_to1 = valid_to2
-        if valid_to2 is None:
-            valid_to2 = valid_to1
-        if valid_from1 is None:
-            valid_from1 = datetime.now()
-        if valid_from2 is None:
-            valid_from2 = datetime.now()
+
+        valid_from1 = valid_from1 if valid_from1 is not None else datetime.now()
+        valid_from2 = dateutil.parser.parse(valid_from2) if valid_from2 is not None else datetime.now()
+
+        valid_to1 = valid_to1 if valid_to1 is not None else datetime.max
+        valid_to2 = dateutil.parser.parse(valid_to2) if valid_to2 is not None else datetime.max
 
         if valid_from1 <= valid_to2 and valid_to1 >= valid_from2:
             return True
@@ -289,25 +324,35 @@ class DataBase:
 
     def verify_charging_profile_conflicts(self, cp_id, content, method="VERIFY_CHARGING_PROFILE_CONFLICTS"):
 
-        charging_profile = db_Tables.ChargingProfile(**content["charging_profile"])
-        
-        if content["evse_id"] == 0:
-            evses = self.session.query(db_Tables.EVSE).filter(db_Tables.EVSE.cp_id==cp_id)
-        else:
-            evses = [self.session.query(db_Tables.EVSE).get((content["evse_id"], cp_id))]
+        charging_profile = ChargingProfile(**content["charging_profile"])
 
         conflict_ids = []
-        for evse in evses:
+        
+        if charging_profile.charging_profile_purpose == enums.ChargingProfilePurposeType.tx_profile:
+            transaction_profiles = self.session.query(ChargingProfile).filter(ChargingProfile.transaction_id==charging_profile.transaction_id)
 
-            for evse_profile in evse.charging_profile:
-                if evse_profile.id != charging_profile.id and \
-                    evse_profile.stack_level == charging_profile.stack_level and \
-                    evse_profile.charging_profile_purpose == charging_profile.charging_profile_purpose and \
-                    (
-                        self.dates_overlap(evse_profile.valid_from, evse_profile.valid_to, charging_profile.valid_from, charging_profile.valid_to) 
-                    ):
+            for transaction_profile in transaction_profiles:
+                if transaction_profile.id != charging_profile.id and \
+                    transaction_profile.stack_level == charging_profile.stack_level:
+                    conflict_ids.append(transaction_profile.id)
 
-                    conflict_ids.append(evse_profile.id)
+        else:
+            #Other than txprofile
+            if content["evse_id"] == 0:
+                evses = self.session.query(EVSE).filter(EVSE.cp_id==cp_id)
+            else:
+                evses = [self.session.query(EVSE).get((content["evse_id"], cp_id))]
+
+            for evse in evses:
+                for evse_profile in evse.charging_profile:
+                    if evse_profile.id != charging_profile.id and \
+                        evse_profile.stack_level == charging_profile.stack_level and \
+                        evse_profile.charging_profile_purpose == charging_profile.charging_profile_purpose and \
+                        (
+                            self.dates_overlap(evse_profile.valid_from, evse_profile.valid_to, charging_profile.valid_from, charging_profile.valid_to) 
+                        ):
+
+                        conflict_ids.append(evse_profile.id)
         
         return self.broker.build_message(method + "_RESPONSE", cp_id, {"conflict_ids" : conflict_ids})
     

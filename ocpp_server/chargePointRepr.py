@@ -59,7 +59,6 @@ class ChargePoint(cp):
             content["evse_id"] = payload["evse"]["id"]
         
         message = ChargePoint.broker.build_message("Authorize_IdToken", self.id, content)
-
         response = await ChargePoint.broker.send_request_wait_response(message)
         
         return response["CONTENT"]["id_token_info"]
@@ -95,34 +94,35 @@ class ChargePoint(cp):
     
 
     async def requestStartTransaction(self, payload):
+
+        payload = call.RequestStartTransactionPayload(**payload)
         
 
-        if "evse_id" in payload and payload["evse_id"] is not None and payload["evse_id"] <= 0:
+        if payload.evse_id is not None and payload.evse_id <= 0:
             return "evse id must be > 0"
 
-        if "charging_profile" in payload and payload["charging_profile"] is not None:
+        if payload.charging_profile is not None:
             #F01.FR.08
-            if payload["charging_profile"]["charging_profile_purpose"] != enums.ChargingProfilePurposeType.tx_profile:
+            if payload.charging_profile["charging_profile_purpose"] != enums.ChargingProfilePurposeType.tx_profile:
                 return "charging profile needs to be TxProfile"
             #F01.FR.11
-            if "transaction_id" in payload["charging_profile"] and payload["charging_profile"]["transaction_id"] is not None:
+            if "transaction_id" in payload.charging_profile and payload.charging_profile["transaction_id"] is not None:
                 return "Transaction id shall not be set"
 
         #creating an id for the request
-        if "remote_start_id" not in payload or payload["remote_start_id"] is None:
-            payload["remote_start_id"] = ChargePoint.new_remoteStartId()
+        if payload.remote_start_id is None:
+            payload.remote_start_id = ChargePoint.new_remoteStartId()
 
-        request = call.RequestStartTransactionPayload(**payload)
-        response = await self.call(request)
+        response = await self.call(payload)
 
         #Send to db??????????
-        if "charging_profile" in payload and payload["charging_profile"] is not None and \
-            "evse_id" in payload and payload["evse_id"] is not None and \
+        if payload.charging_profile is not None and \
+            payload.evse_id is not None and \
             response["status"] == enums.RequestStartStopStatusType.accepted:
 
-            payload["charging_profile"]["transaction_id"] = response["transaction_id"] if response["transaction_id"] is not None else payload["remote_start_id"]
+            payload.charging_profile["transaction_id"] = response["transaction_id"] if response["transaction_id"] is not None else payload.remote_start_id
             
-            m = {"evse_id": payload["evse_id"], "charging_profile":payload["charging_profile"]}
+            m = {"evse_id": payload.evse_id, "charging_profile":payload.charging_profile}
             message = ChargePoint.broker.build_message("SetChargingProfile", self.id, payload)
             await ChargePoint.broker.send_to_DB(message)
 
@@ -135,14 +135,15 @@ class ChargePoint(cp):
     
 
     async def triggerMessage(self, payload):
-        if payload["requested_message"] == enums.MessageTriggerType.status_notification and ("evse" in payload and payload["evse"]):
+        payload = call.TriggerMessagePayload(**payload)
+
+        if payload.requested_message == enums.MessageTriggerType.status_notification and payload.evse:
             try:
-                assert(payload["evse"]["connector_id"] != None)
+                assert(payload.evse["connector_id"] != None)
             except:
                 return "Connector ID is required for status_notification"
 
-        request = call.TriggerMessagePayload(**payload)
-        return await self.call(request)
+        return await self.call(payload)
 
     async def getTransactionStatus(self, payload={}, transaction_id=None):
 
@@ -235,6 +236,10 @@ class ChargePoint(cp):
              list(payload["charging_profile_criteria"].values()) == [None, None, None]):
 
             return "Specify at least 1 field"
+
+
+        message = ChargePoint.broker.build_message("clearChargingProfile", self.id, payload)
+        await ChargePoint.broker.send_to_DB(message)
 
         request = call.ClearChargingProfilePayload(**payload)
         return await self.call(request)

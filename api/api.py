@@ -1,5 +1,5 @@
 import uvicorn
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Response, status
 from api_Rabbit_Handler import API_Rabbit_Handler
 from pydantic import BaseModel
 from typing import Dict, List, Optional
@@ -12,12 +12,11 @@ app = FastAPI()
 broker = None
 
 
-@app.post("/SetChargingProfile/{CP_Id}")
-async def SetChargingProfile(CP_Id: str, payload: payloads.SetChargingProfilePayload):
+@app.post("/SetChargingProfile/{CP_Id}", status_code=200)
+async def SetChargingProfile(CP_Id: str, payload: payloads.SetChargingProfilePayload, r: Response):
     
     message = broker.build_message("SET_CHARGING_PROFILE", CP_Id, payload)
-
-
+    r.status_code = status.HTTP_201_CREATED
     response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
     return response
 
