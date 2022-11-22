@@ -135,25 +135,6 @@ class DataBase:
 
             meter_value = MeterValue(**meter_value_dict)
             self.session.add(meter_value)
-    
-
-    def setChargingProfile(self, cp_id, content):
-        #TODO delete charging profiles
-        try:
-            self.session.query(ChargingProfile).filter(ChargingProfile.id==content["charging_profile"]["id"]).delete()
-        except:
-            pass
-
-        if content["evse_id"] == 0:
-            evses = self.session.query(EVSE).filter(EVSE.cp_id==cp_id).all()
-        else:
-            evses = [self.session.query(EVSE).get((content["evse_id"], cp_id))]
-        
-
-        charging_profile = ChargingProfile(**content["charging_profile"])
-        charging_profile.evse = evses
-        self.session.add(charging_profile)
-
 
     
     def build_idToken_Info(self, idToken, cp_id, evse_id = None):
@@ -268,43 +249,48 @@ class DataBase:
  
         #introduce message in DB
         transaction_event = Transaction_Event(**content)
-
-        #delete txprofiles
-        if transaction_event.event_type == enums.TransactionEventType.ended:
-            criteria = {"charging_profile_citeria": {"charging_profile_purpose" : enums.ChargingProfilePurposeType.tx_profile}}
-            self.delete_charging_profile(cp_id, criteria)
-
-        if transaction_event.event_type == enums.TransactionEventType.started:
-            if transaction_event.transaction_info.remote_start_id is not None:
-                stmt = (
-                    update(ChargingProfile).
-                    where(ChargingProfile.transaction_id == transaction_event.transaction_info.remote_start_id).
-                    values(transaction_id=transaction_event.transaction_info.transaction_id)
-                )
-                self.session.execute(stmt)
-
         self.session.merge(transaction_event)
     
 
-    def delete_charging_profile(self, cp_id, content):
-        try:
-            if "charging_profile_id" in content and content["charging_profile_id"] is not None:
-                    self.session.query(ChargingProfile).filter(ChargingProfile.id==content["charging_profile_id"]).delete()
-            else:
-                criteria = content["charging_profile_citeria"]
-                query = self.session.query(ChargingProfile, evse_chargeProfiles)
-                
-                if "evse_id" in criteria and criteria["evse_id"] is None:
-                    query = query.filter(evse_chargeProfiles.evse_id==criteria["evse_id"]).filter(evse_chargeProfiles.cp_id==cp_id)
-                if "charging_profile_purpose" in criteria and criteria["charging_profile_purpose"] is None:
-                    query = query.filter(ChargingProfile.charging_profile_purpose == criteria["charging_profile_purpose"])
-                if "stack_level" in criteria and criteria["stack_level"] is None:
-                    query = query.filter(ChargingProfile.stack_level == criteria["stack_level"])
-                
-                query.delete()
+    def setChargingProfile(self, cp_id, content):
+        
+        self.session.query(ChargingProfile).filter(ChargingProfile.id==content["charging_profile"]["id"]).delete()
+        # for schedule in content["charging_profile"]["charging_schedule"]:
+        #     self.session.query(ChargingSchedule).filter(ChargingSchedule.id==schedule["id"]).delete()
 
-        except:
-            logging.info("ERROR DELETING CHARGING PROFILES")
+        content["charging_profile"].pop("charging_schedule")
+        charging_profile = ChargingProfile(**content["charging_profile"])
+
+        if content["evse_id"] is not None:
+            if content["evse_id"] == 0:
+                evses = self.session.query(EVSE).filter(EVSE.cp_id==cp_id).all()
+            else:
+                evses = [self.session.query(EVSE).get((content["evse_id"], cp_id))]
+            
+            charging_profile.evse = evses
+
+        self.session.add(charging_profile)
+    
+
+    def delete_charging_profile(self, cp_id, content):
+        #NOT WORKING
+        pass
+        #try:
+        # if "charging_profile_id" in content and content["charging_profile_id"] is not None:
+        #     self.session.query(ChargingProfile).filter(ChargingProfile.id==content["charging_profile_id"]).delete()
+        # else:
+        #     criteria = content["charging_profile_criteria"]
+        #     query = self.session.query(ChargingProfile, evse_chargeProfiles)
+            
+        #     if "evse_id" in criteria and criteria["evse_id"] is None:
+        #         query.filter(evse_chargeProfiles.evse_id==criteria["evse_id"]).filter(evse_chargeProfiles.cp_id==cp_id)
+        #     if "charging_profile_purpose" in criteria and criteria["charging_profile_purpose"] is None:
+        #         query.filter(ChargingProfile.charging_profile_purpose == criteria["charging_profile_purpose"])
+        #     if "stack_level" in criteria and criteria["stack_level"] is None:
+        #         query.filter(ChargingProfile.stack_level == criteria["stack_level"])
+        #     query.delete()
+        #except:
+        #    logging.info("ERROR DELETING CHARGING PROFILES")
 
 
     
@@ -339,7 +325,7 @@ class DataBase:
         else:
             #Other than txprofile
             if content["evse_id"] == 0:
-                evses = self.session.query(EVSE).filter(EVSE.cp_id==cp_id)
+                evses = self.session.query(EVSE).filter(EVSE.cp_id==cp_id).all()
             else:
                 evses = [self.session.query(EVSE).get((content["evse_id"], cp_id))]
 

@@ -44,6 +44,7 @@ class ChargePoint(cp):
 
         self.out_of_order_transaction = set([])
         self.multiple_response_requests = {}
+        self.wait_start_transaction = {}
     
     async def send_CP_Message(self, method, payload):
         """Funtion will use the mapping defined in method_mapping to call the correct function"""
@@ -115,15 +116,21 @@ class ChargePoint(cp):
 
         response = await self.call(payload)
 
-        #Send to db??????????
-        if payload.charging_profile is not None and \
-            payload.evse_id is not None and \
-            response["status"] == enums.RequestStartStopStatusType.accepted:
+        if response["status"] != enums.RequestStartStopStatusType.accepted:
+            return response
 
-            payload.charging_profile["transaction_id"] = response["transaction_id"] if response["transaction_id"] is not None else payload.remote_start_id
+        if response.transaction_id is not None:
+            future = self.loop.create_future()
+            self.wait_start_transaction[payload.remote_start_id] = future
+            response.transaction_id = await asyncio.wait_for(future, timeout=5)
+
+        #Send to db
+        if payload.charging_profile is not None:
+            
+            payload.charging_profile["transaction_id"] = response.transaction_id
             
             m = {"evse_id": payload.evse_id, "charging_profile":payload.charging_profile}
-            message = ChargePoint.broker.build_message("SetChargingProfile", self.id, payload)
+            message = ChargePoint.broker.build_message("SetChargingProfile", self.id, m)
             await ChargePoint.broker.send_to_DB(message)
 
         return response
@@ -297,7 +304,6 @@ class ChargePoint(cp):
     async def on_TransactionEvent(self, **kwargs):
         
         message = ChargePoint.broker.build_message("TransactionEvent", self.id, kwargs)
-
         await ChargePoint.broker.send_to_DB(message)
 
         transaction_response = call_result.TransactionEventPayload()
@@ -305,9 +311,18 @@ class ChargePoint(cp):
         if "id_token" in kwargs:
             transaction_response.id_token_info = await self.get_authorization_relevant_info(kwargs)
         
+        if kwargs["trigger_reason"] == enums.TriggerReasonType.remote_start:
+
+            #Transaction was started remotely, signal the transaction id
+            if kwargs["transaction_info"]["remote_start_id"] is not None:
+                #get the future with key = correlationid
+                future = self.wait_start_transaction.pop(kwargs["transaction_info"]["remote_start_id"])
+                future.set_result(kwargs["transaction_info"]["transaction_id"])
+
         if kwargs["event_type"] == enums.TransactionEventType.ended:
             #Payment (show total cost)
             pass
+
         
         return transaction_response
     

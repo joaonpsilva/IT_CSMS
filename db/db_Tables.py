@@ -343,8 +343,8 @@ class ChargingSchedule(CustomBase):
 
     _charging_profile = Column(Integer, ForeignKey("ChargingProfile.id"))
 
-    charging_schedule_period = relationship("ChargingSchedulePeriod", backref="charging_schedule")
-    sales_tariff = relationship("SalesTariff", uselist=False, backref="charging_schedule")
+    charging_schedule_period = relationship("ChargingSchedulePeriod", cascade="all,delete", backref="charging_schedule")
+    sales_tariff = relationship("SalesTariff", cascade="all,delete", uselist=False, backref="charging_schedule")
 
 
 class ChargingSchedulePeriod(Base):

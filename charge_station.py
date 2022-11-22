@@ -282,6 +282,26 @@ class ChargePoint(cp):
         return call_result.RequestStartTransactionPayload(
             status=enums.RequestStartStopStatusType.accepted
         )
+    @after('RequestStartTransaction')
+    async def after_RequestStartTransaction(self, id_token, remote_start_id, **kwargs):
+        transaction_id = ''.join(random.choice(string.ascii_letters) for i in range(10))
+
+        request = call.TransactionEventPayload(
+            event_type=enums.TransactionEventType.started,
+            timestamp=datetime.utcnow().isoformat(),
+            trigger_reason=enums.TriggerReasonType.remote_start,
+            seq_no=1,
+            transaction_info=datatypes.TransactionType(
+                transaction_id=transaction_id,
+                charging_state=enums.ChargingStateType.ev_connected,
+                remote_start_id=remote_start_id
+            ),
+            evse=datatypes.EVSEType(id=1, connector_id=1)
+            
+        )
+        response = await self.call(request)
+
+        
     
     @on('RequestStopTransaction')
     def on_RequestStopTransaction(self, transaction_id, **kwargs):
