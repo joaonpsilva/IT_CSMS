@@ -64,7 +64,7 @@ evse_chargeProfiles = Table(
     Base.metadata,
     Column('cp_id', String(20)),
     Column('evse_id', Integer),
-    Column('id', Integer, ForeignKey('ChargingProfile.id')),
+    Column('id', Integer, ForeignKey('ChargingProfile.id', ondelete="CASCADE")),
     ForeignKeyConstraint(("cp_id", "evse_id"),
                         ("EVSE.cp_id", "EVSE.evse_id"))
 )
@@ -325,7 +325,7 @@ class ChargingProfile(CustomBase):
     transaction_id = Column(String(36), ForeignKey('Transaction.transaction_id'))
     transaction_info = relationship("Transaction", backref="charging_profile",uselist=False)
 
-    charging_schedule = relationship("ChargingSchedule", backref="charging_profile")
+    charging_schedule = relationship("ChargingSchedule", cascade="all,delete", backref="charging_profile")
 
     evse = relationship('EVSE', secondary=evse_chargeProfiles, backref='charging_profile')
 
@@ -392,7 +392,9 @@ def insert_Hard_Coded(db):
     objects.append(Charge_Point(cp_id = "CP_2", password="passcp1"))
 
     evse = EVSE(cp_id = "CP_1", evse_id = 1)
+    evse2 = EVSE(cp_id = "CP_1", evse_id = 2)
     objects.append(evse)
+    objects.append(evse2)
 
     #start button
     objects.append(IdToken(id_token = "", type=enums.IdTokenType.no_authorization))

@@ -6,6 +6,7 @@ from datetime import datetime
 import asyncio
 from dataclasses import asdict
 import logging
+import dateutil.parser
 
 logging.basicConfig(level=logging.INFO)
 
@@ -159,6 +160,58 @@ class ChargePoint(cp):
         
         request = call.GetTransactionStatusPayload(**payload)
         return await self.call(request)
+    
+
+    def dates_overlap(self, valid_from1, valid_to1, valid_from2, valid_to2):
+
+        valid_from1 = dateutil.parser.parse(valid_from1) if valid_from1 is not None else datetime.now()
+        valid_from2 = dateutil.parser.parse(valid_from2) if valid_from2 is not None else datetime.now()
+        valid_to1 = dateutil.parser.parse(valid_to1) if valid_to1 is not None else datetime.max
+        valid_to2 = dateutil.parser.parse(valid_to2) if valid_to2 is not None else datetime.max
+
+        if valid_from1 <= valid_to2 and valid_to1 >= valid_from2:
+            return True
+        
+        return False
+    
+    async def charging_profile_assert_no_conflicts(self, payload):
+        #check for conflicts in other charging profiles
+        #K01.FR.06, K01.FR.39
+        #relevant = {"evse_id": payload["evse_id"]}
+        #relevant["charging_profile"] = {key: value for key, value in payload["charging_profile"].items() if key in ["id", "stack_level", "charging_profile_purpose", "valid_from", "valid_to"]}
+        #message = ChargePoint.broker.build_message("VERIFY_CHARGING_PROFILE_CONFLICTS", self.id, relevant)
+        #response = await ChargePoint.broker.send_request_wait_response(message)
+        #if len(response["CONTENT"]["conflict_ids"]) != 0:
+        #    return "profile conflicts with existing profile"
+
+        charging_profile = datatypes.ChargingProfileType(**payload["charging_profile"])
+
+        request = {
+            "request_id": 1, 
+            "evse_id" : payload["evse_id"],
+            "charging_profile" : {
+                "charging_profile_purpose":charging_profile.charging_profile_purpose,
+                "stack_level":charging_profile.stack_level
+            }
+        }
+        result = await self.getChargingProfiles(request)
+
+        if result["status"] == enums.GetChargingProfileStatusType.accepted:
+            for report in result["data"]:
+                for report_charging_profile in report["charging_profile"]:
+                    report_charging_profile = datatypes.ChargingProfileType(**report_charging_profile)
+
+                    if report_charging_profile.id == charging_profile.id:
+                        continue
+
+                    if charging_profile.charging_profile_purpose==enums.ChargingProfilePurposeType.tx_profile:
+                        if charging_profile.transaction_id == report_charging_profile.transaction_id:
+                            return False
+                    
+                    if self.dates_overlap(charging_profile.valid_from, charging_profile.valid_to, report_charging_profile.valid_from, report_charging_profile.valid_to):
+                        return False
+                    
+        return True
         
     
     async def setChargingProfile(self, payload):
@@ -186,18 +239,15 @@ class ChargePoint(cp):
             if "transaction_id" in payload["charging_profile"] and payload["charging_profile"]["transaction_id"] is not None:
                 return "only tx_profile can have tansaction id"
 
-        #K01.FR.06, K01.FR.39
-        relevant = {"evse_id": payload["evse_id"]}
-        relevant["charging_profile"] = {key: value for key, value in payload["charging_profile"].items() if key in ["id", "stack_level", "charging_profile_purpose", "valid_from", "valid_to"]}
-        message = ChargePoint.broker.build_message("VERIFY_CHARGING_PROFILE_CONFLICTS", self.id, relevant)
-        response = await ChargePoint.broker.send_request_wait_response(message)
-        if len(response["CONTENT"]["conflict_ids"]) != 0:
-            return "profile conflicts with existing profile"
         
+        if not await self.charging_profile_assert_no_conflicts(payload):
+            return "Conflict with existing charging profile"
 
+        #send message to the cp
         request = call.SetChargingProfilePayload(**payload)
         response = await self.call(request)
 
+        #send profile to the db
         if response.status == enums.ChargingProfileStatus.accepted:
             message = ChargePoint.broker.build_message("SetChargingProfile", self.id, payload)
             await ChargePoint.broker.send_to_DB(message)
@@ -215,20 +265,22 @@ class ChargePoint(cp):
     
     async def getChargingProfiles(self, payload):
 
+        request = call.GetChargingProfilesPayload(**payload)
+
         #K09.FR.03
-        if list(payload["charging_profile"].values()) == [None, None, None, None]:
+        if request.evse_id is None and (request.charging_profile is None or all(v is None for v in request.charging_profile.values())):
             return "Specify at least 1 field"
 
         request = call.GetChargingProfilesPayload(**payload)
         response = await self.call(request)
+        response = asdict(response)
 
-        if response.status == enums.GetChargingProfileStatusType.accepted:
+        if response["status"] == enums.GetChargingProfileStatusType.accepted:
             future = self.loop.create_future()
             self.multiple_response_requests[payload["request_id"]] = {"ready" : future, "data": []}
 
             await asyncio.wait_for(future, timeout=5)
             
-            response = asdict(response)
             response["data"] = self.multiple_response_requests[payload["request_id"]]["data"]
             self.multiple_response_requests.pop(payload["request_id"])
 
@@ -250,8 +302,6 @@ class ChargePoint(cp):
 
         request = call.ClearChargingProfilePayload(**payload)
         return await self.call(request)
-
-
 
 
 
