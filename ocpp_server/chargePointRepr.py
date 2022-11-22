@@ -15,6 +15,7 @@ class ChargePoint(cp):
 
     broker = None
     remoteStartId = 0
+    request_Id = 0
 
     def read_variables():
         #TODO read variables (remoteStartId) from file
@@ -23,7 +24,10 @@ class ChargePoint(cp):
     def new_remoteStartId():
         ChargePoint.remoteStartId += 1
         return ChargePoint.remoteStartId
-
+    
+    def new_requestId():
+        ChargePoint.request_Id += 1
+        return ChargePoint.request_Id
 
     def __init__(self, id, connection, response_timeout=30):
         super().__init__(id, connection, response_timeout)
@@ -193,7 +197,6 @@ class ChargePoint(cp):
         charging_profile = datatypes.ChargingProfileType(**payload["charging_profile"])
 
         request = {
-            "request_id": 1, 
             "evse_id" : payload["evse_id"],
             "charging_profile" : {
                 "charging_profile_purpose":charging_profile.charging_profile_purpose,
@@ -270,6 +273,30 @@ class ChargePoint(cp):
 
         request = call.GetCompositeSchedulePayload(**payload)
         return self.api_response("OK", await self.call(request))
+    
+
+    async def async_request(self, request):
+        if request.request_id is None: 
+            request.request_id = ChargePoint.new_requestId()
+
+        response = await self.call(request)
+        response = asdict(response)
+
+        if response["status"] == "Accepted":
+            future = self.loop.create_future()
+            self.multiple_response_requests[request.request_id] = {"ready" : future, "data": []}
+
+            await asyncio.wait_for(future, timeout=5)
+            
+            response["data"] = self.multiple_response_requests[request.request_id]["data"]
+            self.multiple_response_requests.pop(request.request_id)
+        
+        return response
+
+
+    async def getBaseReport(self, payload):
+        request = call.GetBaseReportPayload(**payload)
+        return self.api_response("OK", await self.async_request(request))
 
     
     async def getChargingProfiles(self, payload):
@@ -280,20 +307,7 @@ class ChargePoint(cp):
         if request.evse_id is None and (request.charging_profile is None or all(v is None for v in request.charging_profile.values())):
             return self.api_response("VAL_ERROR", "Specify at least 1 field")
 
-        request = call.GetChargingProfilesPayload(**payload)
-        response = await self.call(request)
-        response = asdict(response)
-
-        if response["status"] == enums.GetChargingProfileStatusType.accepted:
-            future = self.loop.create_future()
-            self.multiple_response_requests[payload["request_id"]] = {"ready" : future, "data": []}
-
-            await asyncio.wait_for(future, timeout=5)
-            
-            response["data"] = self.multiple_response_requests[payload["request_id"]]["data"]
-            self.multiple_response_requests.pop(payload["request_id"])
-
-        return self.api_response("OK", response)
+        return self.api_response("OK", await self.async_request(request))
 
     
     async def clearChargingProfile(self, payload):
