@@ -72,7 +72,7 @@ class Rabbit_Handler:
 
         #get the future with key = correlationid
         future: asyncio.Future = self.futures.pop(message.correlation_id)
-        
+
         #set a result to that future
         future.set_result(json.loads(message.body.decode()))
 
@@ -137,7 +137,7 @@ class Rabbit_Handler:
             return await asyncio.wait_for(future, timeout=5)
         except asyncio.TimeoutError:
             #maybe delete entry in future map?
-            return "ERROR"
+            return {"STATUS":"ERROR"}
     
     
     async def send_to_DB(self, message, routing_key="store"):
