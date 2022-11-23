@@ -325,8 +325,6 @@ class ChargePoint(cp):
         return self.api_response("OK", await self.call(request))
 
 
-
-
 #######################Funtions staring from the CP Initiative
 
     @on('BootNotification')
@@ -356,10 +354,7 @@ class ChargePoint(cp):
     async def on_MeterValues(self, **kwargs):
 
         message = ChargePoint.broker.build_message("MeterValues", self.id, kwargs)
-
-        #inform db that new cp has connected
         await ChargePoint.broker.send_to_DB(message)
-
         return call_result.MeterValuesPayload()
 
     
@@ -367,9 +362,7 @@ class ChargePoint(cp):
     async def on_Authorize(self, **kwargs):
 
         message = ChargePoint.broker.build_message("Authorize_IdToken", self.id, kwargs)
-
         response = await ChargePoint.broker.send_request_wait_response(message)
-
         return call_result.AuthorizePayload(**response["CONTENT"])
         
     @on('TransactionEvent')
@@ -404,7 +397,8 @@ class ChargePoint(cp):
 
         if kwargs["event_type"] == enums.TransactionEventType.ended or transaction_id in self.out_of_order_transaction:
             #verify that all messages have been received
-            transaction_status = await self.getTransactionStatus(transaction_id=transaction_id)
+            transaction_status = (await self.getTransactionStatus(transaction_id=transaction_id))["CONTENT"]
+            
             if transaction_status.messages_in_queue == True:
                 #CP still holding messages
                 #TODO pop from out_of_order_transaction
