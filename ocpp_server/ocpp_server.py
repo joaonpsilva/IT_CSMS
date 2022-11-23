@@ -1,10 +1,12 @@
 import websockets
 import logging
+from chargePointRepr import ChargePoint
+from csms_Rabbit_Handler import CSMS_Rabbit_Handler
+import asyncio
 
 logging.basicConfig(level=logging.INFO)
 
 def Basic_auth_with_broker(broker):
-
     class BasicAuth(websockets.BasicAuthWebSocketServerProtocol):
         def __init__(self, *args, **kwargs):
             super(BasicAuth, self).__init__(*args, **kwargs)
@@ -24,22 +26,33 @@ def Basic_auth_with_broker(broker):
             }
 
             response =  await self.broker.send_request_wait_response(message)
-
             return response["CONTENT"]['APPROVED']
-    
+
     return BasicAuth
 
 
 class OCPP_Server:
 
-    def __init__(self, callback_function, broker):
-        self.callback_funtion = callback_function
-        self.broker = broker
+    def __init__(self):
+        self.broker = None
+        self.connected_CPs = {}
     
+
+    async def run(self):
+        #broker handles the rabbit mq queues and communication between services
+        self.broker = CSMS_Rabbit_Handler(self.handle_api_request)
+        await self.broker.connect()
+
+        #set same broker for all charge point connections
+        ChargePoint.broker = self.broker
+        
+        #start server
+        await self.start_server()
+    
+
     async def start_server(self):
 
         BasicAuth_Custom_Handler = Basic_auth_with_broker(self.broker)
-        
         server = await websockets.serve(
             self.on_cp_connect,
             '0.0.0.0',
@@ -51,17 +64,16 @@ class OCPP_Server:
 
         await server.wait_closed()
 
-
-    async def on_cp_connect(self,websocket, path):
-        """ For every new charge point that connects, create a ChargePoint
-        instance and start listening for messages.
-        """
+    
+    async def verify_protocols(self, websocket):
         try:
             requested_protocols = websocket.request_headers[
                 'Sec-WebSocket-Protocol']
         except KeyError:
             logging.info("Client hasn't requested any Subprotocol. "
                     "Closing Connection")
+            return await websocket.close()
+
         if websocket.subprotocol:
             logging.info("Protocols Matched: %s", websocket.subprotocol)
         else:
@@ -74,4 +86,43 @@ class OCPP_Server:
                             requested_protocols)
             return await websocket.close()
 
-        await self.callback_funtion(websocket, path.strip('/'))
+
+    async def on_cp_connect(self,websocket, path):
+        """ For every new charge point that connects, create a ChargePoint
+        instance and start listening for messages.
+        """
+        charge_point_id = path.strip('/')
+
+        if charge_point_id in self.connected_CPs:
+            logging.warning("Id already taken | Closing connection")
+            return await websocket.close()
+        
+        self.verify_protocols(websocket)
+
+        #create new charge point object that will handle the comunication
+        cp = ChargePoint(charge_point_id, websocket)
+        #add to known connections
+        self.connected_CPs[charge_point_id] = cp
+        #start comunication
+
+        try:
+            await cp.start()
+        except websockets.exceptions.WebSocketException:
+            logging.warning("CP closed the connection")
+
+        #when cp ends remove from connections
+        self.connected_CPs.pop(charge_point_id)
+    
+
+    async def handle_api_request(self, request) -> None:
+        """Function that handles requests from the api to comunicate with CPs"""
+
+        cp_id = request['CP_ID']
+        response = await self.connected_CPs[str(cp_id)].send_CP_Message(
+                request["METHOD"], request["CONTENT"])
+
+        return response
+
+
+if __name__ == '__main__':
+    asyncio.run(OCPP_Server().run())
