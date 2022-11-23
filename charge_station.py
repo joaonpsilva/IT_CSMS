@@ -402,6 +402,51 @@ class ChargePoint(cp):
         return call_result.ClearChargingProfilePayload(status=enums.ClearChargingProfileStatusType.accepted)
     
 
+    @on("GetBaseReport")
+    async def on_GetBaseReport(self, request_id,**kwargs):
+        return call_result.GetBaseReportPayload(status=enums.GenericDeviceModelStatusType.accepted)
+    
+    @after("GetBaseReport")
+    async def after_GetBaseReport(self, request_id,**kwargs):
+
+        request = call.NotifyReportPayload(
+            request_id=request_id,
+            generated_at=datetime.utcnow().isoformat(),
+            tbc = True,
+            seq_no=0,
+            report_data=[datatypes.ReportDataType(
+                component=datatypes.ComponentType(
+                    name="AAAA"
+                ),
+                variable=datatypes.VariableType(
+                    name="AAA"
+                ),
+                variable_attribute=[datatypes.VariableAttributeType()]
+            )]
+        )
+        response = await self.call(request)
+
+        request = call.NotifyReportPayload(
+            request_id=request_id,
+            generated_at=datetime.utcnow().isoformat(),
+            tbc = False,
+            seq_no=1,
+            report_data=[datatypes.ReportDataType(
+                component=datatypes.ComponentType(
+                    name="BBBBB"
+                ),
+                variable=datatypes.VariableType(
+                    name="BBB"
+                ),
+                variable_attribute=[datatypes.VariableAttributeType()]
+            )]
+        )
+        response = await self.call(request)
+
+
+
+    
+
 
 
 

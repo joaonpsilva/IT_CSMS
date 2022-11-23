@@ -45,3 +45,8 @@ class GetChargingProfilesPayload:
 class ClearChargingProfilePayload:
     charging_profile_id: Optional[int] = None
     charging_profile_criteria: Optional[datatypes.ClearChargingProfileType] = None
+
+@dataclass
+class GetBaseReportPayload:
+    report_base: enums.ReportBaseType
+    request_id: Optional[int] = None

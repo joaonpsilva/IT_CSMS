@@ -92,6 +92,14 @@ async def ClearChargingProfile(CP_Id: str, payload: payloads.ClearChargingProfil
     return response
 
 
+@app.post("/GetBaseReport/{CP_Id}", status_code=200)
+async def GetBaseReport(CP_Id: str, payload: payloads.GetBaseReportPayload, r: Response):
+    response, stat = await send_ocpp_payload("GET_BASE_REPORT", CP_Id, payload)
+    r.status_code = stat
+    return response
+    #TODO make a get
+
+
 @app.get("/GetTransactionStatus/{CP_Id}", status_code=200)
 async def GetTransactionStatus(CP_Id: str,r: Response, transactionId: str = None):
     response, stat = await send_ocpp_payload("GET_TRANSACTION_STATUS", CP_Id, {"transaction_id" : transactionId})

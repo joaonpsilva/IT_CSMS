@@ -42,7 +42,8 @@ class ChargePoint(cp):
             "SET_CHARGING_PROFILE" : self.setChargingProfile,
             "GET_COMPOSITE_SCHEDULE" : self.getCompositeSchedule,
             "GET_CHARGING_PROFILES" : self.getChargingProfiles,
-            "CLEAR_CHARGING_PROFILE": self.clearChargingProfile
+            "CLEAR_CHARGING_PROFILE": self.clearChargingProfile,
+            "GET_BASE_REPORT" : self.getBaseReport
         }
 
         self.loop = asyncio.get_running_loop()
@@ -414,17 +415,26 @@ class ChargePoint(cp):
                 if not all_messages_received:
                     logging.info("Messages lost for transaction %s", transaction_id)
     
-    @on("ReportChargingProfiles")
-    async def on_reportChargingProfiles(self, **kwargs):
-        if kwargs["request_id"] in self.multiple_response_requests:
+
+    def received_message_async_request(self, message):
+        if message["request_id"] in self.multiple_response_requests:
             
-            self.multiple_response_requests[kwargs["request_id"]]["data"].append(kwargs)
+            self.multiple_response_requests[message["request_id"]]["data"].append(message)
 
             #last message
-            if "tbc" not in kwargs or kwargs["tbc"] is None or kwargs["tbc"]==False:
-                self.multiple_response_requests[kwargs["request_id"]]["ready"].set_result(True)
-        
+            if "tbc" not in message or message["tbc"] is None or message["tbc"]==False:
+                self.multiple_response_requests[message["request_id"]]["ready"].set_result(True)
+    
+    @on("ReportChargingProfiles")
+    async def on_reportChargingProfiles(self, **kwargs):
+        self.received_message_async_request(kwargs)        
         return call_result.ReportChargingProfilesPayload()
+    
+
+    @on("NotifyReport")
+    async def on_notifyReport(self, **kwargs):
+        self.received_message_async_request(kwargs)  
+        return call_result.NotifyReportPayload()
 
 
     @on('Heartbeat')
