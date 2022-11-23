@@ -31,6 +31,12 @@ async def SetChargingProfile(CP_Id: str, payload: payloads.SetChargingProfilePay
     r.status_code = stat
     return response
 
+@app.post("/ChangeAvailability/{CP_Id}", status_code=200)
+async def ChangeAvailability(CP_Id: str, payload: payloads.ChangeAvailabilityPayload, r: Response):
+    response, stat = await send_ocpp_payload("CHANGE_AVAILABILITY", CP_Id, payload)
+    r.status_code = stat
+    return response
+
 
 @app.post("/GetVariables/{CP_Id}", status_code=200)
 async def GetVariables(CP_Id: str, payload: List[datatypes.GetVariableDataType], r: Response):

@@ -43,7 +43,8 @@ class ChargePoint(cp):
             "GET_COMPOSITE_SCHEDULE" : self.getCompositeSchedule,
             "GET_CHARGING_PROFILES" : self.getChargingProfiles,
             "CLEAR_CHARGING_PROFILE": self.clearChargingProfile,
-            "GET_BASE_REPORT" : self.getBaseReport
+            "GET_BASE_REPORT" : self.getBaseReport,
+            "CHANGE_AVAILABILITY" : self.changeAvailability
         }
 
         self.loop = asyncio.get_running_loop()
@@ -322,6 +323,11 @@ class ChargePoint(cp):
         message = ChargePoint.broker.build_message("clearChargingProfile", self.id, payload)
         await ChargePoint.broker.send_to_DB(message)
 
+        return self.api_response("OK", await self.call(request))
+
+    
+    async def changeAvailability(self, payload):
+        request = call.ChangeAvailabilityPayload(**payload)
         return self.api_response("OK", await self.call(request))
 
 

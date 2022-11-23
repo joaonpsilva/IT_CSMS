@@ -50,3 +50,9 @@ class ClearChargingProfilePayload:
 class GetBaseReportPayload:
     report_base: enums.ReportBaseType
     request_id: Optional[int] = None
+
+
+@dataclass
+class ChangeAvailabilityPayload:
+    operational_status: enums.OperationalStatusType
+    evse: Optional[datatypes.EVSEType] = None

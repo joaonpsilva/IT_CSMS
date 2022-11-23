@@ -442,6 +442,32 @@ class ChargePoint(cp):
             )]
         )
         response = await self.call(request)
+    
+    @on("ChangeAvailability")
+    async def on_ChangeAvailability(self,operational_status, **kwargs):
+        return call_result.ChangeAvailabilityPayload(status=enums.ChangeAvailabilityStatusType.accepted)
+    
+
+    @after("ChangeAvailability")
+    async def after_ChangeAvailability(self, operational_status, **kwargs):
+
+        connector_status = enums.ConnectorStatusType.available
+        if operational_status == enums.OperationalStatusType.inoperative:
+            connector_status = enums.ConnectorStatusType.unavailable
+
+        connectors = [0, 1, 2]
+        if "evse" in kwargs and "connector_id" in kwargs["evse"]:
+            connectors = [kwargs["evse"]["connector_id"]]
+        
+        for i in connectors:
+            request = call.StatusNotificationPayload(
+                timestamp=datetime.utcnow().isoformat(),
+                connector_status=connector_status,
+                evse_id=1,
+                connector_id=i
+            )
+            response = await self.call(request)
+
 
 
 
