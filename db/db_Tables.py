@@ -31,12 +31,12 @@ class CustomBase(Base):
             if arg in self.__mapper__.relationships.keys():
                 rel = self.__mapper__.relationships[arg] 
 
-                if isinstance(kwargs[arg], rel.mapper.class_):
-                    continue
 
                 if rel.uselist:                    
-                    o = [rel.mapper.class_(**d_l) for d_l in kwargs[arg]]
+                    o = [rel.mapper.class_(**d_l) if not isinstance(d_l, rel.mapper.class_) else d_l for d_l in kwargs[arg]]
                 else:
+                    if isinstance(kwargs[arg], rel.mapper.class_):
+                        continue
                     o = rel.mapper.class_(**kwargs[arg])
                 
                 kwargs[arg] = o
@@ -127,8 +127,6 @@ class EVSE(Base):
     cp_id = Column(String(20), ForeignKey("Charge_point.cp_id"), primary_key=True)
     charge_point = relationship("Charge_Point", backref="evse")
 
-    
-
     def __init__(self, id = None, **kwargs):
         if id:
             kwargs["evse_id"] = id
@@ -148,15 +146,6 @@ class Connector(Base):
                                             [ "EVSE.cp_id", "EVSE.evse_id"]),
                         {})
     evse = relationship("EVSE", backref="connector")
-
-
-    def __init__(self,id=None,**kwargs):
-        if id:
-            kwargs["evse_id"] = id
-        kwargs["evse"] = EVSE(cp_id=kwargs["cp_id"], evse_id = kwargs["evse_id"])
-        super().__init__(**kwargs)
-
-
 
 
 class MeterValue(CustomBase):

@@ -119,8 +119,9 @@ class DataBase:
 
     def StatusNotification(self, cp_id, content):
 
-        content["cp_id"] = cp_id
-        connector = Connector(**content)
+        evse = EVSE(cp_id=cp_id, evse_id=content["evse_id"])
+
+        connector = Connector(cp_id=cp_id, **content, evse=evse)
         self.session.merge(connector)
         
 
@@ -234,6 +235,7 @@ class DataBase:
         if "evse" in content:
             content["evse"]["cp_id"] = cp_id
             if "connector_id" in content["evse"]:
+                content["evse"]["evse_id"] = content["evse"].pop("id")
                 content["connector"] = content.pop("evse")
         else:
             content["cp_id"] = cp_id 
