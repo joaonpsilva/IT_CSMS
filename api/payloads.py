@@ -56,3 +56,11 @@ class GetBaseReportPayload:
 class ChangeAvailabilityPayload:
     operational_status: enums.OperationalStatusType
     evse: Optional[datatypes.EVSEType] = None
+
+@dataclass
+class SetVariableMonitoringPayload:
+    set_monitoring_data: List[datatypes.SetMonitoringDataType]
+
+@dataclass
+class ClearVariableMonitoringPayload:
+    id: List[int]

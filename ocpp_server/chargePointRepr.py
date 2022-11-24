@@ -44,7 +44,9 @@ class ChargePoint(cp):
             "GET_CHARGING_PROFILES" : self.getChargingProfiles,
             "CLEAR_CHARGING_PROFILE": self.clearChargingProfile,
             "GET_BASE_REPORT" : self.getBaseReport,
-            "CHANGE_AVAILABILITY" : self.changeAvailability
+            "CHANGE_AVAILABILITY" : self.changeAvailability,
+            "SET_VARIABLE_MONITORING" : self.setVariableMonitoring,
+            "CLEAR_VARIABLE_MONITORING" : self.clearVariableMonitoring
         }
 
         self.loop = asyncio.get_running_loop()
@@ -328,6 +330,15 @@ class ChargePoint(cp):
     
     async def changeAvailability(self, payload):
         request = call.ChangeAvailabilityPayload(**payload)
+        return self.api_response("OK", await self.call(request))
+    
+
+    async def setVariableMonitoring(self, payload):
+        request = call.SetVariableMonitoringPayload(**payload)
+        return self.api_response("OK", await self.call(request))   
+    
+    async def clearVariableMonitoring(self, payload):
+        request = call.ClearVariableMonitoringPayload(**payload)
         return self.api_response("OK", await self.call(request))
 
 

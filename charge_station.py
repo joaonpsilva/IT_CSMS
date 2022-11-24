@@ -467,6 +467,41 @@ class ChargePoint(cp):
                 connector_id=i
             )
             response = await self.call(request)
+    
+    @on("SetVariableMonitoring")
+    async def on_SetVariableMonitoring(self, set_monitoring_data, **kwargs):
+
+        result = []
+        id = 0
+        for data in set_monitoring_data:
+            id+=1
+
+            result.append(datatypes.SetMonitoringResultType(
+                id=id,
+                status=enums.SetMonitoringStatusType.accepted,
+                type=data["type"],
+                severity=data["severity"],
+                component=data["component"],
+                variable=data["variable"]
+            ))
+
+        return call_result.SetVariableMonitoringPayload(set_monitoring_result=result)
+    
+
+
+    @on("ClearVariableMonitoring")
+    async def on_ClearVariableMonitoring(self, id, **kwargs):
+
+        result = []
+        for monitor_id in id:
+
+            result.append(datatypes.ClearMonitoringResultType(
+                status=enums.ClearMessageStatusType.accepted,
+                id=monitor_id,
+            ))
+
+        return call_result.ClearVariableMonitoringPayload(clear_monitoring_result=result)
+
 
 
 

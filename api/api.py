@@ -25,11 +25,7 @@ async def send_ocpp_payload(method, CP_Id, payload):
     return response, stat
 
 
-@app.post("/SetChargingProfile/{CP_Id}", status_code=200)
-async def SetChargingProfile(CP_Id: str, payload: payloads.SetChargingProfilePayload, r: Response):
-    response, stat = await send_ocpp_payload("SET_CHARGING_PROFILE", CP_Id, payload)
-    r.status_code = stat
-    return response
+
 
 @app.post("/ChangeAvailability/{CP_Id}", status_code=200)
 async def ChangeAvailability(CP_Id: str, payload: payloads.ChangeAvailabilityPayload, r: Response):
@@ -82,6 +78,11 @@ async def GetCompositeSchedule(CP_Id: str, payload: payloads.GetCompositeSchedul
     return response
     #TODO make a get 
 
+@app.post("/SetChargingProfile/{CP_Id}", status_code=200)
+async def SetChargingProfile(CP_Id: str, payload: payloads.SetChargingProfilePayload, r: Response):
+    response, stat = await send_ocpp_payload("SET_CHARGING_PROFILE", CP_Id, payload)
+    r.status_code = stat
+    return response
 
 @app.post("/GetChargingProfiles/{CP_Id}", status_code=200)
 async def GetChargingProfiles(CP_Id: str, payload: payloads.GetChargingProfilesPayload, r: Response):
@@ -104,6 +105,20 @@ async def GetBaseReport(CP_Id: str, payload: payloads.GetBaseReportPayload, r: R
     r.status_code = stat
     return response
     #TODO make a get
+
+
+@app.post("/ClearVariableMonitoring/{CP_Id}", status_code=200)
+async def ClearVariableMonitoring(CP_Id: str, payload: payloads.ClearVariableMonitoringPayload, r: Response):
+    response, stat = await send_ocpp_payload("CLEAR_VARIABLE_MONITORING", CP_Id, payload)
+    r.status_code = stat
+    return response
+
+
+@app.post("/SetVariableMonitoring/{CP_Id}", status_code=200)
+async def SetVariableMonitoring(CP_Id: str, payload: payloads.SetVariableMonitoringPayload, r: Response):
+    response, stat = await send_ocpp_payload("SET_VARIABLE_MONITORING", CP_Id, payload)
+    r.status_code = stat
+    return response
 
 
 @app.get("/GetTransactionStatus/{CP_Id}", status_code=200)
