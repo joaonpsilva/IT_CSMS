@@ -98,6 +98,27 @@ class ChargePoint(cp):
 
     async def getVariables(self, payload):
         """Funtion initiated by the csms to get variables"""
+        request = call.GetVariablesPayload(
+            get_variable_data=[datatypes.GetVariableDataType(
+                component=datatypes.ComponentType(
+                    name="DeviceDataCtrlr"
+                ),
+                variable=datatypes.VariableType(
+                    name="ItemsPerMessage",
+                    instance="ItemsPerMessage"
+                )
+            )]
+        )
+        result = (await self.call(request)).get_variable_result[0]
+
+        max_messages = None
+        if result['attribute_status'] == enums.GetVariableStatusType.accepted:
+            max_messages = int(result['attribute_value'])
+            print("RECEIVED ", max_messages)
+
+        if len(payload['get_variable_data']) > max_messages:
+            raise ValueError("maximum amount of messages is " + max_messages)
+
         request = call.GetVariablesPayload(get_variable_data=payload['get_variable_data'])
         return await self.call(request)
     

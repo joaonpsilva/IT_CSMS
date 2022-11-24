@@ -20,6 +20,12 @@ class ChargePoint(cp):
         super().__init__(cp_id, ws)
         self.messages_in_queue=False
 
+        self.variables = {
+            "DeviceDataCtrlr" : {
+                "ItemsPerMessage" : 10
+            }
+        }
+
 
     async def cold_Boot(self):
 
@@ -225,6 +231,7 @@ class ChargePoint(cp):
 
     @on('GetVariables')
     def on_get_variables(self,get_variable_data,**kwargs):
+        #TODO item not in dict
 
         logging.info("Received GetVariables")
 
@@ -234,15 +241,10 @@ class ChargePoint(cp):
             get_variable_result.append(
                 {
                     'attribute_status': enums.GetVariableStatusType.accepted, 
-                    'attribute_value' : 'ATRIBUTE_VALUE',
-                    'component' : {
-                        'name': var.get('component').get('name')
-                    },
-                    'variable' : {
-                        'name': var.get('variable').get('name')
-                    }
-                }
-                        
+                    'attribute_value' : str(self.variables[var['component']['name']][var['variable']['name']]),
+                    'component' : var['component'],
+                    'variable' : var['variable']
+                }       
             )
 
         return call_result.GetVariablesPayload(get_variable_result=get_variable_result)
