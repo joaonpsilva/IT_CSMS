@@ -75,6 +75,8 @@ class Modem(Base):
     iccid = Column(String(20), primary_key=True)
     imsi = Column(String(20), primary_key=True)
 
+    _cp_id = Column(String(20), ForeignKey("Charge_point.cp_id"))
+
     def __init__(self, iccid="NULL", imsi="NULL", **kwargs):
         kwargs["iccid"] = iccid
         kwargs["imsi"] = imsi
@@ -91,12 +93,7 @@ class Charge_Point(CustomBase):
     serial_number = Column(String(25))
     firmware_version = Column(String(50))
 
-    _modem_iccid = Column(String(20))
-    _modem_imsi = Column(String(20))
-    __table_args__ = (ForeignKeyConstraint(["_modem_iccid", "_modem_imsi"],
-                                            [ "Modem.iccid", "Modem.imsi"]),
-                        {})
-    modem = relationship("Modem", backref="charge_point")
+    modem = relationship("Modem", backref="charge_point", uselist=False)
 
     def __init__(self, password=None, **kwargs):
         
