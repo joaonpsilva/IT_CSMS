@@ -114,10 +114,8 @@ class ChargePoint(cp):
 
         payload = call.RequestStartTransactionPayload(**payload)
         
-
         if payload.evse_id is not None and payload.evse_id <= 0:
             return self.api_response("VAL_ERROR", "evse id must be > 0")
-
 
         if payload.charging_profile is not None:
             #F01.FR.08
@@ -125,7 +123,9 @@ class ChargePoint(cp):
                 return self.api_response("VAL_ERROR", "charging profile needs to be TxProfile")
             #F01.FR.11
             if "transaction_id" in payload.charging_profile and payload.charging_profile["transaction_id"] is not None:
-                return self.api_response("VAL_ERROR", "Transaction id shall not be set")                
+                return self.api_response("VAL_ERROR", "Transaction id shall not be set")   
+
+            self.verify_charging_profile_structure(payload)             
 
         #creating an id for the request
         if payload.remote_start_id is None:
@@ -133,9 +133,9 @@ class ChargePoint(cp):
 
         response = await self.call(payload)
 
-        if response["status"] == enums.RequestStartStopStatusType.accepted:
+        if response.status == enums.RequestStartStopStatusType.accepted:
 
-            if response.transaction_id is not None:
+            if response.transaction_id is None:
                 future = self.loop.create_future()
                 self.wait_start_transaction[payload.remote_start_id] = future
                 response.transaction_id = await asyncio.wait_for(future, timeout=5)
@@ -198,10 +198,11 @@ class ChargePoint(cp):
         #if len(response["CONTENT"]["conflict_ids"]) != 0:
         #    return "profile conflicts with existing profile"
 
-        charging_profile = datatypes.ChargingProfileType(**payload["charging_profile"])
+        charging_profile = datatypes.ChargingProfileType(**payload.charging_profile)
 
         request = {
-            "evse_id" : payload["evse_id"],
+            "request_id" : ChargePoint.new_requestId(),
+            "evse_id" : payload.evse_id,
             "charging_profile" : {
                 "charging_profile_purpose":charging_profile.charging_profile_purpose,
                 "stack_level":charging_profile.stack_level
@@ -228,41 +229,44 @@ class ChargePoint(cp):
                         return False
                     
         return True
+    
+    async def verify_charging_profile_structure(self, payload):
+        #DB bug
+        if payload.charging_profile["id"] == 0:
+            return self.api_response("VAL_ERROR", "ID cannot be 0")
+
+        for schedule in payload.charging_profile["charging_schedule"]:
+            if schedule["id"] == 0:
+                return self.api_response("VAL_ERROR", "ID cannot be 0")
+
+
+        if payload.charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
+            #K01.FR.03
+            if "transaction_id" not in payload.charging_profile or payload.charging_profile["transaction_id"] is None:
+                return self.api_response("VAL_ERROR", "tx_profile needs tansaction id")
+
+            
+            #K01.FR.16
+            if payload.evse_id == 0:
+                return self.api_response("VAL_ERROR", "TxProfile SHALL only be be used with evseId >0.")
+            
+        else:
+            if "transaction_id" in payload.charging_profile and payload.charging_profile["transaction_id"] is not None:
+                return self.api_response("VAL_ERROR", "only tx_profile can have tansaction id")
         
     
     async def setChargingProfile(self, payload):
         #TODO revisit document
         #K01.FR.34, K01.FR.35, K01.FR.38, K01.FR.18, K01.FR.19, K01.FR.20
 
-        #DB bug
-        if payload["charging_profile"]["id"] == 0:
-            return self.api_response("VAL_ERROR", "ID cannot be 0")
+        request = call.SetChargingProfilePayload(**payload)
 
-        for schedule in payload["charging_profile"]["charging_schedule"]:
-            if schedule["id"] == 0:
-                return self.api_response("VAL_ERROR", "ID cannot be 0")
+        self.verify_charging_profile_structure(payload)
 
-
-        if payload["charging_profile"]["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
-            #K01.FR.03
-            if "transaction_id" not in payload["charging_profile"] or payload["charging_profile"]["transaction_id"] is None:
-                return self.api_response("VAL_ERROR", "tx_profile needs tansaction id")
-
-            
-            #K01.FR.16
-            if payload["evse_id"] == 0:
-                return self.api_response("VAL_ERROR", "TxProfile SHALL only be be used with evseId >0.")
-            
-        else:
-            if "transaction_id" in payload["charging_profile"] and payload["charging_profile"]["transaction_id"] is not None:
-                return self.api_response("VAL_ERROR", "only tx_profile can have tansaction id")
-
-        
         if not await self.charging_profile_assert_no_conflicts(payload):
             return self.api_response("VAL_ERROR", "Conflict with existing charging profile")
 
         #send message to the cp
-        request = call.SetChargingProfilePayload(**payload)
         response = await self.call(request)
 
         #send profile to the db
