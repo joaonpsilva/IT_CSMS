@@ -60,11 +60,10 @@ class ChargePoint(cp):
     
     async def send_CP_Message(self, method, payload):
         """Funtion will use the mapping defined in method_mapping to call the correct function"""
-        #try:
-        return await self.method_mapping[method](payload=payload)
-        #except:
-        #    return self.api_response("ERROR", {})
-
+        try:
+            return self.api_response("OK", await self.method_mapping[method](payload=payload))
+        except ValueError as ve:
+            return self.api_response("VAL_ERROR", ve.args[0])
 
     
     async def get_authorization_relevant_info(self, payload):
@@ -84,7 +83,6 @@ class ChargePoint(cp):
     async def guarantee_transaction_integrity(self, transaction_id):
 
         message = ChargePoint.broker.build_message("VERIFY_RECEIVED_ALL_TRANSACTION", self.id, {"transaction_id" : transaction_id})
-
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if response["CONTENT"]["status"] == "OK":
@@ -95,19 +93,17 @@ class ChargePoint(cp):
         return False
                 
 
-
-
 #######################Functions starting from CSMS Initiative
 
 
     async def getVariables(self, payload):
         """Funtion initiated by the csms to get variables"""
         request = call.GetVariablesPayload(get_variable_data=payload['get_variable_data'])
-        return self.api_response("OK", await self.call(request))
+        return await self.call(request)
     
     async def setVariables(self, payload):
         request = call.SetVariablesPayload(set_variable_data=payload['set_variable_data'])
-        return self.api_response("OK", await self.call(request))
+        return await self.call(request)
     
 
     async def requestStartTransaction(self, payload):
@@ -115,17 +111,19 @@ class ChargePoint(cp):
         payload = call.RequestStartTransactionPayload(**payload)
         
         if payload.evse_id is not None and payload.evse_id <= 0:
-            return self.api_response("VAL_ERROR", "evse id must be > 0")
+            raise ValueError("evse id must be > 0")
 
         if payload.charging_profile is not None:
             #F01.FR.08
             if payload.charging_profile["charging_profile_purpose"] != enums.ChargingProfilePurposeType.tx_profile:
-                return self.api_response("VAL_ERROR", "charging profile needs to be TxProfile")
+                raise ValueError("charging profile needs to be TxProfile")
             #F01.FR.11
             if "transaction_id" in payload.charging_profile and payload.charging_profile["transaction_id"] is not None:
-                return self.api_response("VAL_ERROR", "Transaction id shall not be set")   
+                raise ValueError("Transaction id shall not be set")
 
-            self.verify_charging_profile_structure(payload)             
+            charge_profile_payload = call.SetChargingProfilePayload(evse_id=payload.evse_id, charging_profile=payload.charging_profile)
+            charge_profile_payload.charging_profile["transaction_id"] = "will_be_replaced"
+            self.verify_charging_profile_structure(charge_profile_payload)             
 
         #creating an id for the request
         if payload.remote_start_id is None:
@@ -149,22 +147,22 @@ class ChargePoint(cp):
                 message = ChargePoint.broker.build_message("SetChargingProfile", self.id, m)
                 await ChargePoint.broker.send_to_DB(message)
 
-        return self.api_response("OK", response)                
+        return response                
 
     
     async def requestStopTransaction(self, payload):
 
         request = call.RequestStopTransactionPayload(**payload)
-        return self.api_response("OK", await self.call(request))
+        return await self.call(request)
     
 
     async def triggerMessage(self, payload):
         request = call.TriggerMessagePayload(**payload)
 
         if request.requested_message == enums.MessageTriggerType.status_notification and request.evse["connector_id"] == None:
-            return self.api_response("VAL_ERROR", "Connector ID is required for status_notification")
+            raise ValueError("Connector ID is required for status_notification")
 
-        return self.api_response("OK", await self.call(request))
+        return await self.call(request)
 
 
     async def getTransactionStatus(self, payload={}, transaction_id=None):
@@ -173,7 +171,7 @@ class ChargePoint(cp):
             payload["transaction_id"] = transaction_id
         
         request = call.GetTransactionStatusPayload(**payload)
-        return self.api_response("OK", await self.call(request))
+        return await self.call(request)
 
     
     def dates_overlap(self, valid_from1, valid_to1, valid_from2, valid_to2):
@@ -210,11 +208,8 @@ class ChargePoint(cp):
         }
         result = await self.getChargingProfiles(request)
 
-        if result["STATUS"] != "OK":
-            return False
-
-        if result["CONTENT"]["status"] == enums.GetChargingProfileStatusType.accepted:
-            for report in result["CONTENT"]["data"]:
+        if result["status"] == enums.GetChargingProfileStatusType.accepted:
+            for report in result["data"]:
                 for report_charging_profile in report["charging_profile"]:
                     report_charging_profile = datatypes.ChargingProfileType(**report_charging_profile)
 
@@ -223,36 +218,34 @@ class ChargePoint(cp):
 
                     if charging_profile.charging_profile_purpose==enums.ChargingProfilePurposeType.tx_profile:
                         if charging_profile.transaction_id == report_charging_profile.transaction_id:
-                            return False
-                    
-                    if self.dates_overlap(charging_profile.valid_from, charging_profile.valid_to, report_charging_profile.valid_from, report_charging_profile.valid_to):
-                        return False
-                    
-        return True
+                            raise ValueError("Already exists conflicting Profile with different ID")
+
+                    else:
+                        if self.dates_overlap(charging_profile.valid_from, charging_profile.valid_to, report_charging_profile.valid_from, report_charging_profile.valid_to):
+                            raise ValueError("Already exists conflicting Profile with different ID")
+
     
-    async def verify_charging_profile_structure(self, payload):
+    def verify_charging_profile_structure(self, payload):
         #DB bug
         if payload.charging_profile["id"] == 0:
-            return self.api_response("VAL_ERROR", "ID cannot be 0")
+            raise ValueError("Charge profile ID cannot be 0")
 
         for schedule in payload.charging_profile["charging_schedule"]:
             if schedule["id"] == 0:
-                return self.api_response("VAL_ERROR", "ID cannot be 0")
-
+                raise ValueError("Charge Schedule ID cannot be 0")
 
         if payload.charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
             #K01.FR.03
             if "transaction_id" not in payload.charging_profile or payload.charging_profile["transaction_id"] is None:
-                return self.api_response("VAL_ERROR", "tx_profile needs tansaction id")
+                raise ValueError("Tx_profile needs tansaction id")
 
-            
             #K01.FR.16
             if payload.evse_id == 0:
-                return self.api_response("VAL_ERROR", "TxProfile SHALL only be be used with evseId >0.")
+                raise ValueError("TxProfile SHALL only be be used with evseId >0")
             
         else:
             if "transaction_id" in payload.charging_profile and payload.charging_profile["transaction_id"] is not None:
-                return self.api_response("VAL_ERROR", "only tx_profile can have tansaction id")
+                raise ValueError("Only tx_profile can have tansaction id")
         
     
     async def setChargingProfile(self, payload):
@@ -261,10 +254,8 @@ class ChargePoint(cp):
 
         request = call.SetChargingProfilePayload(**payload)
 
-        self.verify_charging_profile_structure(payload)
-
-        if not await self.charging_profile_assert_no_conflicts(payload):
-            return self.api_response("VAL_ERROR", "Conflict with existing charging profile")
+        self.verify_charging_profile_structure(request)
+        await self.charging_profile_assert_no_conflicts(request)
 
         #send message to the cp
         response = await self.call(request)
@@ -274,13 +265,13 @@ class ChargePoint(cp):
             message = ChargePoint.broker.build_message("SetChargingProfile", self.id, payload)
             await ChargePoint.broker.send_to_DB(message)
         
-        return self.api_response("OK", response)
+        return response
 
     
     async def getCompositeSchedule(self, payload):
 
         request = call.GetCompositeSchedulePayload(**payload)
-        return self.api_response("OK", await self.call(request))
+        return await self.call(request)
     
 
     async def async_request(self, request):
@@ -304,7 +295,7 @@ class ChargePoint(cp):
 
     async def getBaseReport(self, payload):
         request = call.GetBaseReportPayload(**payload)
-        return self.api_response("OK", await self.async_request(request))
+        return await self.async_request(request)
 
     
     async def getChargingProfiles(self, payload):
@@ -313,9 +304,9 @@ class ChargePoint(cp):
 
         #K09.FR.03
         if request.evse_id is None and (request.charging_profile is None or all(v is None for v in request.charging_profile.values())):
-            return self.api_response("VAL_ERROR", "Specify at least 1 field")
+            raise ValueError("Specify at least 1 field")
 
-        return self.api_response("OK", await self.async_request(request))
+        return await self.async_request(request)
 
     
     async def clearChargingProfile(self, payload):
@@ -324,26 +315,26 @@ class ChargePoint(cp):
         request = call.ClearChargingProfilePayload(**payload)
 
         if request.charging_profile_id is None and (request.charging_profile_criteria is None or all(v is None for v in request.charging_profile_criteria.values())):
-            return self.api_response("VAL_ERROR", "Specify at least 1 field")
-
+            raise ValueError("Specify at least 1 field")
+            
         message = ChargePoint.broker.build_message("clearChargingProfile", self.id, payload)
         await ChargePoint.broker.send_to_DB(message)
 
-        return self.api_response("OK", await self.call(request))
+        return await self.call(request)
 
     
     async def changeAvailability(self, payload):
         request = call.ChangeAvailabilityPayload(**payload)
-        return self.api_response("OK", await self.call(request))
+        return await self.call(request)
     
 
     async def setVariableMonitoring(self, payload):
         request = call.SetVariableMonitoringPayload(**payload)
-        return self.api_response("OK", await self.call(request))   
+        return await self.call(request) 
     
     async def clearVariableMonitoring(self, payload):
         request = call.ClearVariableMonitoringPayload(**payload)
-        return self.api_response("OK", await self.call(request))
+        return await self.call(request)
 
 
 #######################Funtions staring from the CP Initiative
@@ -418,7 +409,7 @@ class ChargePoint(cp):
 
         if kwargs["event_type"] == enums.TransactionEventType.ended or transaction_id in self.out_of_order_transaction:
             #verify that all messages have been received
-            transaction_status = (await self.getTransactionStatus(transaction_id=transaction_id))["CONTENT"]
+            transaction_status = await self.getTransactionStatus(transaction_id=transaction_id)
             
             if transaction_status.messages_in_queue == True:
                 #CP still holding messages
