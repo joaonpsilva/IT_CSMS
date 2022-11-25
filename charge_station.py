@@ -21,13 +21,10 @@ class ChargePoint(cp):
         self.messages_in_queue=False
 
         self.variables = {
-            "DeviceDataCtrlr" : {
-                "ItemsPerMessage" : {"Actual" : 10}
-            },
-            "MonitoringCtrlr" : {
-                "ItemsPerMessage" : {"Actual" : 10},
-                "BytesPerMessage" : {"Actual" : 1000}
-            }
+            "DeviceDataCtrlrItemsPerMessageGetVariablesActual" : 10,
+            "DeviceDataCtrlrItemsPerMessageSetVariablesActual" : 10,
+            "MonitoringCtrlrBytesPerMessageSetVariableMonitoringActual" : 1000,
+            "MonitoringCtrlrItemsPerMessageSetVariableMonitoringActual" : 10
         }
 
 
@@ -233,6 +230,13 @@ class ChargePoint(cp):
 
 ########################################
 
+    def total_name(self, *args):
+        s=""
+        for a in args:
+            if a is not None:
+                s += a
+        return s
+
     @on('GetVariables')
     def on_get_variables(self,get_variable_data,**kwargs):
 
@@ -246,11 +250,11 @@ class ChargePoint(cp):
 
             status = enums.GetVariableStatusType.unknown_variable
             value = None
-            if component['name'] in self.variables and variable['name'] in self.variables[component['name']] and \
-                type in self.variables[component['name']][variable['name']]:
 
+            total_name = self.total_name(component['name'], variable['name'], variable['instance'],type)
+            if total_name in self.variables:
                 status = enums.GetVariableStatusType.accepted
-                value = str(self.variables[component['name']][variable['name']][type])
+                value = str(self.variables[total_name])
 
             get_variable_result.append(
                 datatypes.GetVariableResultType(

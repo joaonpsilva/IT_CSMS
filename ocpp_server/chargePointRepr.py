@@ -67,6 +67,13 @@ class ChargePoint(cp):
                     instance="GetVariables"
                 )            
             },
+            "ItemsPerMessageSetVariables" : {
+                "component" : component_DeviceDataCtrlr,
+                "variable" : datatypes.VariableType(
+                    name="ItemsPerMessage",
+                    instance="SetVariables"
+                )            
+            },
             "BytesPerMessageSetVariableMonitoring" : {
                 "component" : component_MonitoringCtrlr,
                 "variable" : datatypes.VariableType(
@@ -191,17 +198,25 @@ class ChargePoint(cp):
 
     async def getVariables(self, payload):
         """Funtion initiated by the csms to get variables"""
+        request = call.GetVariablesPayload(**payload)
+
         max_get_messages = await self.get_max_get_messages()
         
-        if max_get_messages and len(payload['get_variable_data']) > max_get_messages:
-            raise ValueError("maximum amount of messages is " + max_get_messages)
+        if max_get_messages and len(request.get_variable_data) > max_get_messages:
+            raise ValueError("Maximum number of setVariable messages is {}, current is {}".format(max_get_messages, len(request.get_variable_data)))
 
-        request = call.GetVariablesPayload(**payload)
         return await self.call(request)
 
     
     async def setVariables(self, payload):
         request = call.SetVariablesPayload(set_variable_data=payload['set_variable_data'])
+
+        vars = await self.getVariablesByName(["ItemsPerMessageSetVariables"])
+
+        #B05.FR.11
+        if len(request.set_variable_data) > int(vars["ItemsPerMessageSetVariables"]):
+            raise ValueError("Maximum number of setVariable messages is {}, current is {}".format(vars["ItemsPerMessageSetVariables"], len(request.set_variable_data)))
+        
         return await self.call(request)
     
 
@@ -433,9 +448,9 @@ class ChargePoint(cp):
         request = call.SetVariableMonitoringPayload(**payload)
 
         if len(request.set_monitoring_data) > int(vars["ItemsPerMessageSetVariableMonitoring"]):
-            raise ValueError("Maximum number of set monitor messages is %s, current is %s", vars["ItemsPerMessageSetVariableMonitoring"], len(request.set_monitoring_data))
+            raise ValueError("Maximum number of set monitor messages is {}, current is {}".format(vars["ItemsPerMessageSetVariableMonitoring"], len(request.set_monitoring_data)))
         if getsizeof(request.set_monitoring_data) > int(vars["BytesPerMessageSetVariableMonitoring"]):
-            raise ValueError("Maximum number of bytes is %s, current is %s",vars["BytesPerMessageSetVariableMonitoring"], getsizeof(request.set_monitoring_data))
+            raise ValueError("Maximum number of bytes is {}, current is {}".format(vars["BytesPerMessageSetVariableMonitoring"], getsizeof(request.set_monitoring_data)))
 
         return await self.call(request) 
     
