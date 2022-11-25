@@ -23,6 +23,10 @@ class ChargePoint(cp):
         self.variables = {
             "DeviceDataCtrlr" : {
                 "ItemsPerMessage" : {"Actual" : 10}
+            },
+            "MonitoringCtrlr" : {
+                "ItemsPerMessage" : {"Actual" : 10},
+                "BytesPerMessage" : {"Actual" : 1000}
             }
         }
 
@@ -238,7 +242,7 @@ class ChargePoint(cp):
 
             variable = var['variable']
             component = var['component']
-            type = var['attribute_type']
+            type = var['attribute_type'] if 'attribute_type' in var else 'Actual'
 
             status = enums.GetVariableStatusType.unknown_variable
             value = None
