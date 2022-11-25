@@ -49,6 +49,19 @@ class ChargePoint(cp):
             "CLEAR_VARIABLE_MONITORING" : self.clearVariableMonitoring
         }
 
+        self.variables ={
+            "ItemsPerMessageGetVariables" : {
+                "component" : datatypes.ComponentType(
+                    name="DeviceDataCtrlr"
+                ),
+                "variable" : datatypes.VariableType(
+                    name="ItemsPerMessage",
+                    instance="GetVariables"
+                ),
+                "attribute_value" : {}
+            }
+        }
+
         self.loop = asyncio.get_running_loop()
 
         self.out_of_order_transaction = set([])
@@ -92,31 +105,37 @@ class ChargePoint(cp):
         
         return False
                 
+    async def checkGet_Variables(self, variable, type = enums.AttributeType.actual):
+
+        if variable in self.variables:
+            if type not in self.variables[variable]["attribute_value"]:
+                request = call.GetVariablesPayload(
+                    get_variable_data=[datatypes.GetVariableDataType(
+                        component=self.variables[variable]["component"],
+                        variable=self.variables[variable]["variable"],
+                        attribute_type=type
+                    )]
+                )
+                result = (await self.call(request)).get_variable_result[0]
+                if result['attribute_status'] == enums.GetVariableStatusType.accepted:
+                    self.variables[variable]["attribute_value"][type] = result['attribute_value']
+                else:
+                    self.variables[variable]["attribute_value"][type] = None
+
+            return self.variables[variable]["attribute_value"][type]
+
+
+
 
 #######################Functions starting from CSMS Initiative
 
 
     async def getVariables(self, payload):
         """Funtion initiated by the csms to get variables"""
-        request = call.GetVariablesPayload(
-            get_variable_data=[datatypes.GetVariableDataType(
-                component=datatypes.ComponentType(
-                    name="DeviceDataCtrlr"
-                ),
-                variable=datatypes.VariableType(
-                    name="ItemsPerMessage",
-                    instance="ItemsPerMessage"
-                )
-            )]
-        )
-        result = (await self.call(request)).get_variable_result[0]
+        
+        max_messages = await self.checkGet_Variables("ItemsPerMessageGetVariables")
 
-        max_messages = None
-        if result['attribute_status'] == enums.GetVariableStatusType.accepted:
-            max_messages = int(result['attribute_value'])
-            print("RECEIVED ", max_messages)
-
-        if len(payload['get_variable_data']) > max_messages:
+        if max_messages and len(payload['get_variable_data']) > int(max_messages):
             raise ValueError("maximum amount of messages is " + max_messages)
 
         request = call.GetVariablesPayload(get_variable_data=payload['get_variable_data'])

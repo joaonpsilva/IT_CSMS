@@ -22,7 +22,7 @@ class ChargePoint(cp):
 
         self.variables = {
             "DeviceDataCtrlr" : {
-                "ItemsPerMessage" : 10
+                "ItemsPerMessage" : {"Actual" : 10}
             }
         }
 
@@ -231,20 +231,31 @@ class ChargePoint(cp):
 
     @on('GetVariables')
     def on_get_variables(self,get_variable_data,**kwargs):
-        #TODO item not in dict
-
-        logging.info("Received GetVariables")
 
         get_variable_result=[]
 
         for var in get_variable_data:
+
+            variable = var['variable']
+            component = var['component']
+            type = var['attribute_type']
+
+            status = enums.GetVariableStatusType.unknown_variable
+            value = None
+            if component['name'] in self.variables and variable['name'] in self.variables[component['name']] and \
+                type in self.variables[component['name']][variable['name']]:
+
+                status = enums.GetVariableStatusType.accepted
+                value = str(self.variables[component['name']][variable['name']][type])
+
             get_variable_result.append(
-                {
-                    'attribute_status': enums.GetVariableStatusType.accepted, 
-                    'attribute_value' : str(self.variables[var['component']['name']][var['variable']['name']]),
-                    'component' : var['component'],
-                    'variable' : var['variable']
-                }       
+                datatypes.GetVariableResultType(
+                    attribute_status= status, 
+                    attribute_value = value,
+                    component=component,
+                    variable= variable,
+                    attribute_type=type
+                )   
             )
 
         return call_result.GetVariablesPayload(get_variable_result=get_variable_result)
