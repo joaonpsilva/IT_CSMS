@@ -49,21 +49,41 @@ class ChargePoint(cp):
             "CLEAR_VARIABLE_MONITORING" : self.clearVariableMonitoring
         }
 
+        
+        #Variables Cache
+        component_DeviceDataCtrlr = datatypes.ComponentType(
+            name="DeviceDataCtrlr"
+        )
+        component_MonitoringCtrlr = datatypes.ComponentType(
+            name="MonitoringCtrlr"
+        )
+
         self.variables ={
             "ItemsPerMessageGetVariables" : {
-                "component" : datatypes.ComponentType(
-                    name="DeviceDataCtrlr"
-                ),
+                "component" : component_DeviceDataCtrlr,
                 "variable" : datatypes.VariableType(
                     name="ItemsPerMessage",
                     instance="GetVariables"
-                ),
-                "attribute_value" : {}
+                )            
+            },
+            "BytesPerMessageSetVariableMonitoring" : {
+                "component" : component_MonitoringCtrlr,
+                "variable" : datatypes.VariableType(
+                    name="BytesPerMessage",
+                    instance="SetVariableMonitoring"
+                )
+            },
+            "ItemsPerMessageSetVariableMonitoring" : {
+                "component" : component_MonitoringCtrlr,
+                "variable" : datatypes.VariableType(
+                    name="ItemsPerMessage",
+                    instance="SetVariableMonitoring"
+                )
             }
         }
+        self.max_get_messages=None
 
         self.loop = asyncio.get_running_loop()
-
         self.out_of_order_transaction = set([])
         self.multiple_response_requests = {}
         self.wait_start_transaction = {}
@@ -104,42 +124,80 @@ class ChargePoint(cp):
             logging.info("DB could not identify transaction")
         
         return False
-                
-    async def checkGet_Variables(self, variable, type = enums.AttributeType.actual):
+    
 
-        if variable in self.variables:
-            if type not in self.variables[variable]["attribute_value"]:
-                request = call.GetVariablesPayload(
-                    get_variable_data=[datatypes.GetVariableDataType(
-                        component=self.variables[variable]["component"],
-                        variable=self.variables[variable]["variable"],
-                        attribute_type=type
-                    )]
+    async def get_max_get_messages(self):
+        if self.max_get_messages is None:
+            request = call.GetVariablesPayload(get_variable_data=[
+                datatypes.GetVariableDataType(
+                    component=self.variables["ItemsPerMessageGetVariables"]["component"],
+                    variable=self.variables["ItemsPerMessageGetVariables"]["variable"]
                 )
-                result = (await self.call(request)).get_variable_result[0]
-                if result['attribute_status'] == enums.GetVariableStatusType.accepted:
-                    self.variables[variable]["attribute_value"][type] = result['attribute_value']
-                else:
-                    self.variables[variable]["attribute_value"][type] = None
+            ])
+            self.max_get_messages = int((await self.call(request)).get_variable_result[0]["attribute_value"])
+            logging.info("Max number of getvariables supported is %d", self.max_get_messages)
 
-            return self.variables[variable]["attribute_value"][type]
+        return self.max_get_messages
 
 
+    async def getVariablesByName(self, variables):
+        """
+        getvariables by Name. Segment message and do multiple getvariablesRequests to respect cp limits
 
+        ARGS: List of var names (str) or tuple(name, enums.AttributeType)
+        
+        RETURNS dict with key name(str) or (name,enums.AttributeType) and value is what was returned in attribute_value
+
+        If variable was not known, it will not be in the return
+        """
+        max_get_messages = await self.get_max_get_messages()
+        requests = []
+        results = []
+
+        for variable in variables.copy():
+            
+            if isinstance(variable, tuple):
+                variable_name = variable[0]
+                type = variable[1]
+            else:
+                variable_name = variable
+                type = enums.AttributeType.actual
+            
+            if variable_name in self.variables:
+                requests.append(datatypes.GetVariableDataType(
+                    component=self.variables[variable_name]["component"],
+                    variable=self.variables[variable_name]["variable"],
+                    attribute_type=type
+                ))
+            else:
+                variables.remove(variable)
+
+            #max messages can put in get has been reached
+            if max_get_messages and len(requests) == max_get_messages:
+                results += (await self.getVariables({"get_variable_data":requests})).get_variable_result
+                requests=[]
+        
+        #may there still be some remaining request variables
+        if len(requests) > 0:
+            results += (await self.getVariables({"get_variable_data":requests})).get_variable_result
+
+        return {request: result['attribute_value'] for request, result in zip(variables, results) 
+            if result['attribute_status'] == enums.GetVariableStatusType.accepted}
+        
 
 #######################Functions starting from CSMS Initiative
 
 
     async def getVariables(self, payload):
         """Funtion initiated by the csms to get variables"""
+        max_get_messages = await self.get_max_get_messages()
         
-        max_messages = await self.checkGet_Variables("ItemsPerMessageGetVariables")
+        if max_get_messages and len(payload['get_variable_data']) > max_get_messages:
+            raise ValueError("maximum amount of messages is " + max_get_messages)
 
-        if max_messages and len(payload['get_variable_data']) > int(max_messages):
-            raise ValueError("maximum amount of messages is " + max_messages)
-
-        request = call.GetVariablesPayload(get_variable_data=payload['get_variable_data'])
+        request = call.GetVariablesPayload(**payload)
         return await self.call(request)
+
     
     async def setVariables(self, payload):
         request = call.SetVariablesPayload(set_variable_data=payload['set_variable_data'])
@@ -369,6 +427,10 @@ class ChargePoint(cp):
     
 
     async def setVariableMonitoring(self, payload):
+
+        vars = await self.getVariablesByName(["ItemsPerMessageSetVariableMonitoring", "BytesPerMessageSetVariableMonitoring"])
+        print(vars)
+
         request = call.SetVariableMonitoringPayload(**payload)
         return await self.call(request) 
     
