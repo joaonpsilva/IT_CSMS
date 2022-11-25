@@ -23,6 +23,10 @@ Base = declarative_base()
 """
 
 class CustomBase(Base):
+    """Base extender
+    In sqlalchemy we can init an obj and pass a relation throw passing another object in the init
+    This extender allows to also pass a dict with the correct fields for creating that object
+    """
     __abstract__ = True
 
     def __init__(self, **kwargs):
@@ -30,7 +34,6 @@ class CustomBase(Base):
         for arg in kwargs:
             if arg in self.__mapper__.relationships.keys():
                 rel = self.__mapper__.relationships[arg] 
-
 
                 if rel.uselist:                    
                     o = [rel.mapper.class_(**d_l) if not isinstance(d_l, rel.mapper.class_) else d_l for d_l in kwargs[arg]]
