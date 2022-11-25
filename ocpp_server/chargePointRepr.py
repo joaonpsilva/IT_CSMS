@@ -7,6 +7,7 @@ import asyncio
 from dataclasses import asdict
 import logging
 import dateutil.parser
+from sys import getsizeof
 
 logging.basicConfig(level=logging.INFO)
 
@@ -429,9 +430,13 @@ class ChargePoint(cp):
     async def setVariableMonitoring(self, payload):
 
         vars = await self.getVariablesByName(["ItemsPerMessageSetVariableMonitoring", "BytesPerMessageSetVariableMonitoring"])
-        print(vars)
-
         request = call.SetVariableMonitoringPayload(**payload)
+
+        if len(request.set_monitoring_data) > int(vars["ItemsPerMessageSetVariableMonitoring"]):
+            raise ValueError("Maximum number of set monitor messages is %s, current is %s", vars["ItemsPerMessageSetVariableMonitoring"], len(request.set_monitoring_data))
+        if getsizeof(request.set_monitoring_data) > int(vars["BytesPerMessageSetVariableMonitoring"]):
+            raise ValueError("Maximum number of bytes is %s, current is %s",vars["BytesPerMessageSetVariableMonitoring"], getsizeof(request.set_monitoring_data))
+
         return await self.call(request) 
     
     async def clearVariableMonitoring(self, payload):
