@@ -47,7 +47,8 @@ class ChargePoint(cp):
             "GET_BASE_REPORT" : self.getBaseReport,
             "CHANGE_AVAILABILITY" : self.changeAvailability,
             "SET_VARIABLE_MONITORING" : self.setVariableMonitoring,
-            "CLEAR_VARIABLE_MONITORING" : self.clearVariableMonitoring
+            "CLEAR_VARIABLE_MONITORING" : self.clearVariableMonitoring,
+            "RESET" : self.reset
         }
 
         
@@ -475,6 +476,11 @@ class ChargePoint(cp):
         if getsizeof(request.id) > int(vars["BytesPerMessageClearVariableMonitoring"]):
             raise ValueError("Maximum number of bytes is {}, current is {}".format(vars["BytesPerMessageClearVariableMonitoring"], getsizeof(request.id)))
 
+        return await self.call(request)
+    
+
+    async def reset(self,payload):
+        request = call.ResetPayload(**payload)
         return await self.call(request)
 
 

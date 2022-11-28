@@ -512,6 +512,11 @@ class ChargePoint(cp):
         return call_result.SetVariableMonitoringPayload(set_monitoring_result=result)
     
 
+    @on("Reset")
+    async def on_Reset(self, type, **kwargs):
+        return call_result.ResetPayload(status=enums.ResetStatusType.accepted)
+
+
 
     @on("ClearVariableMonitoring")
     async def on_ClearVariableMonitoring(self, id, **kwargs):

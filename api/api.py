@@ -121,6 +121,13 @@ async def SetVariableMonitoring(CP_Id: str, payload: payloads.SetVariableMonitor
     return response
 
 
+@app.post("/Reset/{CP_Id}", status_code=200)
+async def Reset(CP_Id: str, payload: payloads.ResetPayload, r: Response):
+    response, stat = await send_ocpp_payload("RESET", CP_Id, payload)
+    r.status_code = stat
+    return response
+
+
 @app.get("/GetTransactionStatus/{CP_Id}", status_code=200)
 async def GetTransactionStatus(CP_Id: str,r: Response, transactionId: str = None):
     response, stat = await send_ocpp_payload("GET_TRANSACTION_STATUS", CP_Id, {"transaction_id" : transactionId})

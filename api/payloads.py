@@ -64,3 +64,8 @@ class SetVariableMonitoringPayload:
 @dataclass
 class ClearVariableMonitoringPayload:
     id: List[int]
+
+@dataclass
+class ResetPayload:
+    type: enums.ResetType
+    evse_id: Optional[int] = None
