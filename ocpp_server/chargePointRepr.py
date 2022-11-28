@@ -583,6 +583,10 @@ class ChargePoint(cp):
         self.received_message_async_request(kwargs)  
         return call_result.NotifyReportPayload()
 
+    @on("NotifyEvent")
+    async def on_notifyEvent(self, **kwargs):
+        return call_result.NotifyEventPayload()
+
 
     @on('Heartbeat')
     async def on_Heartbeat(self):

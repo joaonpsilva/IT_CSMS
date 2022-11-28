@@ -1,5 +1,4 @@
-from xmlrpc.client import Boolean
-from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean, JSON
 from sqlalchemy.orm import declarative_base, relationship, backref
 from ocpp.v201 import enums
 from passlib.context import CryptContext
@@ -359,6 +358,25 @@ class SalesTariff(Base):
         content = str(kwargs)
         kwargs = {"id":id, "content":content}
         super().__init__(**kwargs)
+
+
+class EventData(Base):
+    __tablename__ = "EventData"
+    event_id = Column(Integer, primary_key = True)
+    timestamp = Column(DateTime)
+    trigger = Column(Enum(enums.EventTriggerType))
+    cause = Column(Integer, ForeignKey("EventData.event_id"))
+    actual_value = Column(String(2500)) 
+    tech_code = Column(String(50))
+    tech_info = Column(String(500))
+    cleared = Column(Boolean)
+    transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"))
+    variable_monitoring_id = Column(Integer)
+    event_notification_type = Column(Enum(enums.EventNotificationType))
+
+    component = Column(JSON)
+    variable = Column(JSON)
+
 
 
 

@@ -15,3 +15,5 @@ api 100% transaprent, alguns parametros query (transaction_id), os dois modos
 csms deve retornar a api oq? reposta ocpp ou resposta com conteudi util?
 
 como funciona getvaiables
+
+Notify event? tem tbc e seq no mas pode ter events diferentes
