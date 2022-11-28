@@ -24,7 +24,10 @@ class ChargePoint(cp):
             "DeviceDataCtrlrItemsPerMessageGetVariablesActual" : 10,
             "DeviceDataCtrlrItemsPerMessageSetVariablesActual" : 10,
             "MonitoringCtrlrBytesPerMessageSetVariableMonitoringActual" : 1000,
-            "MonitoringCtrlrItemsPerMessageSetVariableMonitoringActual" : 10
+            "MonitoringCtrlrItemsPerMessageSetVariableMonitoringActual" : 10,
+            "MonitoringCtrlrItemsPerMessageClearVariableMonitoringActual" : 10,
+            "MonitoringCtrlrBytesPerMessageClearVariableMonitoringActual" : 1000,
+
         }
 
 

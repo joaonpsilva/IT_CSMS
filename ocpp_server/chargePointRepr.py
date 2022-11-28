@@ -87,6 +87,20 @@ class ChargePoint(cp):
                     name="ItemsPerMessage",
                     instance="SetVariableMonitoring"
                 )
+            },
+            "ItemsPerMessageClearVariableMonitoring" : {
+                "component" : component_MonitoringCtrlr,
+                "variable" : datatypes.VariableType(
+                    name="ItemsPerMessage",
+                    instance="ClearVariableMonitoring"
+                )
+            },
+            "BytesPerMessageClearVariableMonitoring" : {
+                "component" : component_MonitoringCtrlr,
+                "variable" : datatypes.VariableType(
+                    name="BytesPerMessage",
+                    instance="ClearVariableMonitoring"
+                )
             }
         }
         self.max_get_messages=None
@@ -151,11 +165,8 @@ class ChargePoint(cp):
     async def getVariablesByName(self, variables):
         """
         getvariables by Name. Segment message and do multiple getvariablesRequests to respect cp limits
-
         ARGS: List of var names (str) or tuple(name, enums.AttributeType)
-        
         RETURNS dict with key name(str) or (name,enums.AttributeType) and value is what was returned in attribute_value
-
         If variable was not known, it will not be in the return
         """
         max_get_messages = await self.get_max_get_messages()
@@ -455,7 +466,15 @@ class ChargePoint(cp):
         return await self.call(request) 
     
     async def clearVariableMonitoring(self, payload):
+
+        vars = await self.getVariablesByName(["ItemsPerMessageClearVariableMonitoring", "BytesPerMessageClearVariableMonitoring"])
         request = call.ClearVariableMonitoringPayload(**payload)
+
+        if len(request.id) > int(vars["ItemsPerMessageClearVariableMonitoring"]):
+            raise ValueError("Maximum number of clear monitor messages is {}, current is {}".format(vars["ItemsPerMessageClearVariableMonitoring"], len(request.id)))
+        if getsizeof(request.id) > int(vars["BytesPerMessageClearVariableMonitoring"]):
+            raise ValueError("Maximum number of bytes is {}, current is {}".format(vars["BytesPerMessageClearVariableMonitoring"], getsizeof(request.id)))
+
         return await self.call(request)
 
 
