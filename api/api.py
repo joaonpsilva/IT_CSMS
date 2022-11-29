@@ -1,12 +1,18 @@
 import uvicorn
-from fastapi import FastAPI, Depends, Response, status
+from fastapi import FastAPI, Depends, Query, Response, status, Request
 from api_Rabbit_Handler import API_Rabbit_Handler
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 from ocpp.v201 import call, call_result, enums, datatypes
 import payloads
-
+from aio_pika.abc import AbstractIncomingMessage
 import asyncio
+import logging
+from fastapi.responses import StreamingResponse
+from sse_starlette.sse import EventSourceResponse
+import json
+logging.basicConfig(level=logging.INFO)
+
 
 app = FastAPI()
 broker = None
@@ -136,11 +142,59 @@ async def GetTransactionStatus(CP_Id: str,r: Response, transactionId: str = None
     #TODO request stop transaction without cp id input?
 
 
+event_listeners = {}
+@app.get('/stream')
+async def message_stream(request: Request, events: List[enums.Action]= Query(
+                    [],
+                    title="Events")):
+
+    if len(events) == 0:
+        return {"STATUS": "VAL_ERROR", "CONTENT":"specify at least 1 event"}
+
+    event_queue = asyncio.Queue()
+
+    #put queue to receive events 
+    for event in events:
+        if event not in event_listeners:
+            event_listeners[event] = []
+        event_listeners[event].append(event_queue)
+    
+
+    async def event_generator():
+        while True:
+            # If client closes connection, stop sending events
+            if await request.is_disconnected():
+                #remove queue from listener
+                for event in events:
+                    event_listeners[event].remove(event_queue)
+                break
+            
+            try:
+                #read and yield events as they arrive
+                new_event = await event_queue.get()
+                yield new_event
+                event_queue.task_done()
+            except:
+                pass
+        
+
+    return EventSourceResponse(event_generator())
+
+
+async def on_event(message: AbstractIncomingMessage):
+    if message["METHOD"] in event_listeners:
+        for event_queue in event_listeners[message["METHOD"]]:
+            await event_queue.put(json.dumps(message))
+
+
+
+
+
 @app.on_event("startup")
 async def main():
 
     global broker
-    broker = API_Rabbit_Handler()
+    broker = API_Rabbit_Handler(on_event)
     await broker.connect()
 
     
