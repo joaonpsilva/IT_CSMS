@@ -520,7 +520,7 @@ class ChargePoint(cp):
     @on('Authorize')
     async def on_Authorize(self, **kwargs):
 
-        message = ChargePoint.broker.build_message("Authorize_IdToken", self.id, kwargs)
+        message = ChargePoint.broker.build_message("Authorize", self.id, kwargs)
         response = await ChargePoint.broker.send_request_wait_response(message)
         return call_result.AuthorizePayload(**response["CONTENT"])
         

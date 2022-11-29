@@ -57,7 +57,7 @@ class DataBase:
             "BootNotification" : self.BootNotification,
             "StatusNotification" : self.StatusNotification,
             "MeterValues" : self.MeterValues,
-            "Authorize_IdToken" : self.Authorize_IdToken,
+            "Authorize" : self.Authorize_IdToken,
             "TransactionEvent" : self.TransactionEvent,
             "VERIFY_PASSWORD" : self.verify_password,
             "VERIFY_RECEIVED_ALL_TRANSACTION" : self.verify_received_all_transaction,
@@ -68,7 +68,7 @@ class DataBase:
         }
 
 
-    async def on_db_request(self, message: AbstractIncomingMessage) -> None:
+    async def on_db_request(self, message: AbstractIncomingMessage):
         """
         Function that will handle incoming requests from the api or ocpp Server
         """
