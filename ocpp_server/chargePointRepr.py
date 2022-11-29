@@ -591,6 +591,8 @@ class ChargePoint(cp):
 
     @on("NotifyEvent")
     async def on_notifyEvent(self, **kwargs):
+        message = ChargePoint.broker.build_message("NotifyEvent", self.id, kwargs)
+        await ChargePoint.broker.send_to_DB(message)
         return call_result.NotifyEventPayload()
 
 
