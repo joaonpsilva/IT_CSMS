@@ -112,17 +112,18 @@ class ChargePoint(cp):
         self.multiple_response_requests = {}
         self.wait_start_transaction = {}
     
-    def api_response(self, status, message):
-        return {"status":status, "content":message}
     
     async def send_CP_Message(self, method, content={}):
         """Funtion will use the mapping defined in method_mapping to call the correct function"""
         try:
-            return self.api_response("OK", await self.method_mapping[method](payload=content))
+            return {"status":"OK", "content": await self.method_mapping[method](payload=content)}
         except ValueError as ve:
-            return self.api_response("VAL_ERROR", ve.args[0])
+            return {"status":"VAL_ERROR", "content": ve.args[0]}
+        except Exception as e:
+            logging.error(e)
+            return {"status":"ERROR"}
 
-    
+
     async def get_authorization_relevant_info(self, payload):
         content = {"id_token" : payload["id_token"]}
 
@@ -494,9 +495,6 @@ class ChargePoint(cp):
 
         message = ChargePoint.broker.build_message("GET_FROM_TABLE", self.id, {"table":"IdToken"})
         response = await ChargePoint.broker.send_request_wait_response(message)
-
-        print(response)
-
 
 
     async def sendLocalList(self, payload):

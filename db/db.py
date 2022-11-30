@@ -90,13 +90,17 @@ class DataBase:
         """
         Function that will handle incoming requests from the api or ocpp Server
         """
-        #call method depending on the message
-        method = message.pop("method")
-        toReturn = self.method_mapping[method](**message)
-        #commit possible changes
-        self.session.commit()
+        try:
+            #call method depending on the message
+            method = message.pop("method")
+            toReturn = self.method_mapping[method](**message)
+            #commit possible changes
+            self.session.commit()
 
-        return {"status":"OK", "content":toReturn}
+            return {"status":"OK", "content":toReturn}
+        except Exception as e:
+            logging.error(e)
+            return {"status":"ERROR"}
 
 
     async def run(self):
@@ -116,7 +120,7 @@ class DataBase:
     def get_from_table(self, content, cp_id=None):
         if "filters" not in content:
             content["filters"] = {}
-            
+
         statement = select(self.table_mapping[content["table"]]).filter_by(**content["filters"])
         return {"objects": [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]}
 
