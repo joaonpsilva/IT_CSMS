@@ -29,7 +29,7 @@ def choose_status(response):
     return status.HTTP_500_INTERNAL_SERVER_ERROR
     
 
-async def send_ocpp_payload(method, CP_Id, payload, routing_key="request.ocppserver"):
+async def send_ocpp_payload(method, CP_Id, payload=None, routing_key="request.ocppserver"):
     message = broker.build_message(method, CP_Id, payload)
     response = await broker.send_request_wait_response(message, routing_key=routing_key)
     stat = choose_status(response)
@@ -140,7 +140,7 @@ async def Reset(CP_Id: str, payload: payloads.ResetPayload, r: Response):
 
 @app.post("/send_full_authorization_list/{CP_Id}", status_code=200)
 async def send_full_authorization_list(CP_Id: str, r: Response):
-    response, stat = await send_ocpp_payload("SEND_FULL_AUTHORIZATION_LIST", CP_Id, {})
+    response, stat = await send_ocpp_payload("SEND_FULL_AUTHORIZATION_LIST", CP_Id)
     r.status_code = stat
     return response
 

@@ -122,7 +122,7 @@ class DataBase:
             content["filters"] = {}
 
         statement = select(self.table_mapping[content["table"]]).filter_by(**content["filters"])
-        return {"objects": [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]}
+        return [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]
 
 
     def verify_password(self, cp_id, content):

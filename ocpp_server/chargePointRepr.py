@@ -124,7 +124,12 @@ class ChargePoint(cp):
             return {"status":"ERROR"}
 
 
-    async def get_authorization_relevant_info(self, payload):
+    async def get_id_token_info(self, payload):
+        """
+        authorize id token
+        args: dict with {"id_token": idtokentype}. Can also have evse_id or evse
+        """
+
         content = {"id_token" : payload["id_token"]}
 
         if "evse_id" in payload:
@@ -496,6 +501,17 @@ class ChargePoint(cp):
         message = ChargePoint.broker.build_message("GET_FROM_TABLE", self.id, {"table":"IdToken"})
         response = await ChargePoint.broker.send_request_wait_response(message)
 
+        local_authorization_list=[]
+        for id_token in response['content']:
+            id_token_info = await self.get_id_token_info({"id_token": id_token})
+
+            local_authorization_list.append(datatypes.AuthorizationData(
+                id_token=id_token,
+                id_token_info=id_token_info
+            ))
+        
+        print(local_authorization_list )
+
 
     async def sendLocalList(self, payload):
         pass
@@ -537,10 +553,10 @@ class ChargePoint(cp):
     
     @on('Authorize')
     async def on_Authorize(self, **kwargs):
-
-        message = ChargePoint.broker.build_message("Authorize", self.id, kwargs)
-        response = await ChargePoint.broker.send_request_wait_response(message)
-        return call_result.AuthorizePayload(**response["content"])
+        
+        #authorize id_token
+        id_token_info = await self.get_id_token_info(kwargs)
+        return call_result.AuthorizePayload(id_token_info=id_token_info)
         
     @on('TransactionEvent')
     async def on_TransactionEvent(self, **kwargs):
@@ -551,7 +567,7 @@ class ChargePoint(cp):
         transaction_response = call_result.TransactionEventPayload()
 
         if "id_token" in kwargs:
-            transaction_response.id_token_info = await self.get_authorization_relevant_info(kwargs)
+            transaction_response.id_token_info = await self.get_id_token_info(kwargs)
         
         if kwargs["trigger_reason"] == enums.TriggerReasonType.remote_start:
 
