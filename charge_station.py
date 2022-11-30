@@ -30,6 +30,7 @@ class ChargePoint(cp):
 
         }
 
+        self.version_number=0
 
     async def cold_Boot(self):
 
@@ -530,6 +531,11 @@ class ChargePoint(cp):
             ))
 
         return call_result.ClearVariableMonitoringPayload(clear_monitoring_result=result)
+    
+    @on("GetLocalListVersion")
+    async def on_GetLocalListVersion(self):
+        return call_result.GetLocalListVersionPayload(version_number=self.version_number)
+
 
 
 

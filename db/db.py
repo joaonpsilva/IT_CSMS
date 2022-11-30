@@ -3,9 +3,9 @@ from itertools import chain
 from db_Rabbit_Handler import DB_Rabbit_Handler
 from aio_pika.abc import AbstractIncomingMessage
 import logging
-from sqlalchemy import create_engine, update
+from sqlalchemy import create_engine, update, select
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
-from sqlalchemy.sql import exists
+from sqlalchemy.sql import exists, text
 from db_Tables import *
 from sqlalchemy.orm.util import identity_key
 from ocpp.v201 import enums
@@ -63,23 +63,40 @@ class DataBase:
             "VERIFY_RECEIVED_ALL_TRANSACTION" : self.verify_received_all_transaction,
             "VERIFY_CHARGING_PROFILE_CONFLICTS" : self.verify_charging_profile_conflicts,
             "SetChargingProfile" : self.setChargingProfile,
-            "clearChargingProfile" : self.delete_charging_profile
-
+            "clearChargingProfile" : self.delete_charging_profile,
+            "GET_FROM_TABLE" : self.get_from_table
         }
+
+        self.table_mapping={
+            "Modem":Modem,
+            "Charge_Point":Charge_Point,
+            "EVSE":EVSE,
+            "Connector":Connector,
+            "MeterValue":MeterValue,
+            "SignedMeterValue":SignedMeterValue,
+            "SampledValue":SampledValue,
+            "IdToken":IdToken,
+            "GroupIdToken":GroupIdToken,
+            "IdTokenInfo":IdTokenInfo,
+            "Transaction":Transaction,
+            "Transaction_Event":Transaction_Event,
+            "ChargingProfile":ChargingProfile,
+            "ChargingSchedule":ChargingSchedule,
+            "EventData":EventData,
+            }
 
 
     async def on_db_request(self, message: AbstractIncomingMessage):
         """
         Function that will handle incoming requests from the api or ocpp Server
         """
-
         #call method depending on the message
-        toReturn = self.method_mapping[message["METHOD"]](cp_id = message['CP_ID'], content = message['CONTENT'])
-        
+        method = message.pop("method")
+        toReturn = self.method_mapping[method](**message)
         #commit possible changes
         self.session.commit()
 
-        return toReturn
+        return {"status":"OK", "content":toReturn}
 
 
     async def run(self):
@@ -94,9 +111,17 @@ class DataBase:
     
     def get_dict_obj(self, obj):
         return { attr:value for attr, value in obj.__dict__.items() if not attr.startswith("_") and value is not None }
+    
+
+    def get_from_table(self, content, cp_id=None):
+        if "filters" not in content:
+            content["filters"] = {}
+            
+        statement = select(self.table_mapping[content["table"]]).filter_by(**content["filters"])
+        return {"objects": [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]}
 
 
-    def verify_password(self, cp_id, content, method = "VERIFY_PASSWORD"):
+    def verify_password(self, cp_id, content):
         #TODO assert not already online
         charge_point = self.session.query(Charge_Point).get(cp_id)
 
@@ -104,7 +129,7 @@ class DataBase:
         if charge_point is not None:
             result = charge_point.verify_password(content["password"])
 
-        return self.broker.build_message(method + "_RESPONSE", cp_id, {"APPROVED" : result})
+        return {"approved" : result}
 
 
 
@@ -186,7 +211,7 @@ class DataBase:
     
             
 
-    def Authorize_IdToken(self, cp_id, content, method="Authorize_IdToken"):
+    def Authorize_IdToken(self, cp_id, content):
         """cannot deal with certificates yet"""
         #validate idtoken
         id_token_info = self.build_idToken_Info(
@@ -194,11 +219,10 @@ class DataBase:
             cp_id,
             content['evse_id'] if 'evse_id' in content else None)
 
-        return self.broker.build_message(method + "_RESPONSE", cp_id, {"id_token_info" : id_token_info})
+        return {"id_token_info" : id_token_info}
 
-    
 
-    def verify_received_all_transaction(self, cp_id, content, method="VERIFY_RECEIVED_ALL_TRANSACTION"):
+    def verify_received_all_transaction(self, cp_id, content):
         
         response = {"status" : "OK"}
         try:
@@ -216,7 +240,7 @@ class DataBase:
         except:
             response["status"] = "ERROR"
 
-        return self.broker.build_message(method + "_RESPONSE", cp_id, response)
+        return response
 
 
 
@@ -310,7 +334,7 @@ class DataBase:
         return False
     
 
-    def verify_charging_profile_conflicts(self, cp_id, content, method="VERIFY_CHARGING_PROFILE_CONFLICTS"):
+    def verify_charging_profile_conflicts(self, cp_id, content):
 
         charging_profile = ChargingProfile(**content["charging_profile"])
 
@@ -342,7 +366,7 @@ class DataBase:
 
                         conflict_ids.append(evse_profile.id)
         
-        return self.broker.build_message(method + "_RESPONSE", cp_id, {"conflict_ids" : conflict_ids})
+        return {"conflict_ids" : conflict_ids}
     
 
 

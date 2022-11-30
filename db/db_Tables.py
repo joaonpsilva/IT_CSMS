@@ -72,7 +72,7 @@ evse_chargeProfiles = Table(
 )
 
 
-class Modem(Base):
+class Modem(CustomBase):
     __tablename__ = "Modem"
     iccid = Column(String(20), primary_key=True)
     imsi = Column(String(20), primary_key=True)
@@ -122,7 +122,7 @@ class Charge_Point(CustomBase):
         return PASSLIB_CONTEXT.verify(password, self.password_hash)
 
 
-class EVSE(Base):
+class EVSE(CustomBase):
     __tablename__ = "EVSE"
     evse_id = Column(Integer, primary_key=True)   #This id is only unique inside each CP
 
@@ -135,7 +135,7 @@ class EVSE(Base):
         super().__init__(**kwargs)
 
 
-class Connector(Base):
+class Connector(CustomBase):
     __tablename__ = "Connector"
 
     connector_id = Column(Integer, primary_key=True) #This id is only unique inside each EVSE
@@ -168,7 +168,7 @@ class MeterValue(CustomBase):
                                     ["Transaction_Event.transaction_id", "Transaction_Event.seq_no"]),{})
 
 
-class SignedMeterValue(Base):
+class SignedMeterValue(CustomBase):
     __tablename__ = "SignedMeterValue"
     id = Column(Integer, primary_key=True)
     signed_meter_data = Column(String(2500))
@@ -335,7 +335,7 @@ class ChargingSchedule(CustomBase):
     sales_tariff = relationship("SalesTariff", cascade="all,delete", uselist=False, backref="charging_schedule")
 
 
-class ChargingSchedulePeriod(Base):
+class ChargingSchedulePeriod(CustomBase):
     __tablename__ = "ChargingSchedulePeriod"
 
     id = Column(Integer, primary_key = True)
@@ -347,7 +347,7 @@ class ChargingSchedulePeriod(Base):
     _charging_schedule = Column(Integer, ForeignKey("ChargingSchedule.id"))
 
 
-class SalesTariff(Base):
+class SalesTariff(CustomBase):
     __tablename__ = "SalesTariff"
     id = Column(Integer, primary_key = True)
     content = Column(String(1000))
@@ -360,7 +360,7 @@ class SalesTariff(Base):
         super().__init__(**kwargs)
 
 
-class EventData(Base):
+class EventData(CustomBase):
     __tablename__ = "EventData"
     event_id = Column(Integer, primary_key = True)
     timestamp = Column(DateTime)

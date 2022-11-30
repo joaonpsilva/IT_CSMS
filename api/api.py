@@ -17,17 +17,22 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 broker = None
 
-async def send_ocpp_payload(method, CP_Id, payload):
+def choose_status(response):
+    try:
+        if response["status"] == "OK":
+            return status.HTTP_200_OK
+        elif response["status"] == "VAL_ERROR":
+            return status.HTTP_400_BAD_REQUEST
+    except:
+        pass
+
+    return status.HTTP_500_INTERNAL_SERVER_ERROR
+    
+
+async def send_ocpp_payload(method, CP_Id, payload, routing_key="request.ocppserver"):
     message = broker.build_message(method, CP_Id, payload)
-    response = await broker.send_request_wait_response(message, routing_key="request.ocppserver")
-
-    if response["STATUS"] == "OK":
-        stat = status.HTTP_200_OK
-    elif response["STATUS"] == "VAL_ERROR":
-        stat = status.HTTP_400_BAD_REQUEST
-    else:
-        stat = status.HTTP_500_INTERNAL_SERVER_ERROR
-
+    response = await broker.send_request_wait_response(message, routing_key=routing_key)
+    stat = choose_status(response)
     return response, stat
 
 
@@ -133,6 +138,21 @@ async def Reset(CP_Id: str, payload: payloads.ResetPayload, r: Response):
     r.status_code = stat
     return response
 
+@app.post("/send_full_authorization_list/{CP_Id}", status_code=200)
+async def send_full_authorization_list(CP_Id: str, r: Response):
+    response, stat = await send_ocpp_payload("SEND_FULL_AUTHORIZATION_LIST", CP_Id, {})
+    r.status_code = stat
+    return response
+
+
+@app.post("/get_from_table/", status_code=200)
+async def get_from_table(payload: payloads.Get_from_table_Payload, r: Response):
+    message = broker.build_message("GET_FROM_TABLE", content=payload)
+    response = await broker.send_request_wait_response(message, routing_key="request.db.db1")
+    stat = choose_status(response)
+    r.status_code = stat
+    return response
+
 
 @app.get("/GetTransactionStatus/{CP_Id}", status_code=200)
 async def GetTransactionStatus(CP_Id: str,r: Response, transactionId: str = None):
@@ -149,7 +169,7 @@ async def message_stream(request: Request, events: List[enums.Action]= Query(
                     title="Events")):
 
     if len(events) == 0:
-        return {"STATUS": "VAL_ERROR", "CONTENT":"specify at least 1 event"}
+        return {"status": "VAL_ERROR", "content":"specify at least 1 event"}
 
     event_queue = asyncio.Queue()
 
@@ -182,8 +202,8 @@ async def message_stream(request: Request, events: List[enums.Action]= Query(
 
 
 async def on_event(message: AbstractIncomingMessage):
-    if message["METHOD"] in event_listeners:
-        for event_queue in event_listeners[message["METHOD"]]:
+    if message["method"] in event_listeners:
+        for event_queue in event_listeners[message["method"]]:
             await event_queue.put(json.dumps(message))
 
 

@@ -137,7 +137,7 @@ class Rabbit_Handler:
             return await asyncio.wait_for(future, timeout=5)
         except asyncio.TimeoutError:
             #maybe delete entry in future map?
-            return {"STATUS":"ERROR"}
+            return {"status":"ERROR"}
     
     
     async def send_to_DB(self, message, routing_key="store"):
@@ -153,11 +153,13 @@ class Rabbit_Handler:
             routing_key=routing_key, #send to all DBs
         )
     
-    def build_message(self, method, cp_id, content):
+    def build_message(self, method, cp_id=None, content=None):
         message = {
-            "METHOD" : method,
-            "CP_ID" : cp_id,
-            "CONTENT" : content
+            "method" : method
         }
+        if cp_id:
+            message["cp_id"] = cp_id
+        if content:
+            message["content"] = content
 
         return message

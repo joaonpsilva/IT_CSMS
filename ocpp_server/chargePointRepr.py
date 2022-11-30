@@ -48,7 +48,8 @@ class ChargePoint(cp):
             "CHANGE_AVAILABILITY" : self.changeAvailability,
             "SET_VARIABLE_MONITORING" : self.setVariableMonitoring,
             "CLEAR_VARIABLE_MONITORING" : self.clearVariableMonitoring,
-            "RESET" : self.reset
+            "RESET" : self.reset,
+            "SEND_FULL_AUTHORIZATION_LIST": self.send_full_auhorization_list
         }
 
         
@@ -112,12 +113,12 @@ class ChargePoint(cp):
         self.wait_start_transaction = {}
     
     def api_response(self, status, message):
-        return {"STATUS":status, "CONTENT":message}
+        return {"status":status, "content":message}
     
-    async def send_CP_Message(self, method, payload):
+    async def send_CP_Message(self, method, content={}):
         """Funtion will use the mapping defined in method_mapping to call the correct function"""
         try:
-            return self.api_response("OK", await self.method_mapping[method](payload=payload))
+            return self.api_response("OK", await self.method_mapping[method](payload=content))
         except ValueError as ve:
             return self.api_response("VAL_ERROR", ve.args[0])
 
@@ -130,10 +131,10 @@ class ChargePoint(cp):
         elif "evse" in payload:
             content["evse_id"] = payload["evse"]["id"]
         
-        message = ChargePoint.broker.build_message("Authorize_IdToken", self.id, content)
+        message = ChargePoint.broker.build_message("Authorize", self.id, content)
         response = await ChargePoint.broker.send_request_wait_response(message)
         
-        return response["CONTENT"]["id_token_info"]
+        return response["content"]["id_token_info"]
 
 
     async def guarantee_transaction_integrity(self, transaction_id):
@@ -141,9 +142,9 @@ class ChargePoint(cp):
         message = ChargePoint.broker.build_message("VERIFY_RECEIVED_ALL_TRANSACTION", self.id, {"transaction_id" : transaction_id})
         response = await ChargePoint.broker.send_request_wait_response(message)
 
-        if response["CONTENT"]["status"] == "OK":
+        if response["content"]["status"] == "OK":
             return True
-        elif response["CONTENT"]["status"] == "ERROR":
+        elif response["content"]["status"] == "ERROR":
             logging.info("DB could not identify transaction")
         
         return False
@@ -319,7 +320,7 @@ class ChargePoint(cp):
         #relevant["charging_profile"] = {key: value for key, value in payload["charging_profile"].items() if key in ["id", "stack_level", "charging_profile_purpose", "valid_from", "valid_to"]}
         #message = ChargePoint.broker.build_message("VERIFY_CHARGING_PROFILE_CONFLICTS", self.id, relevant)
         #response = await ChargePoint.broker.send_request_wait_response(message)
-        #if len(response["CONTENT"]["conflict_ids"]) != 0:
+        #if len(response["content"]["conflict_ids"]) != 0:
         #    return "profile conflicts with existing profile"
 
         charging_profile = datatypes.ChargingProfileType(**payload.charging_profile)
@@ -483,6 +484,25 @@ class ChargePoint(cp):
         request = call.ResetPayload(**payload)
         return await self.call(request)
 
+    async def getLocalListVersion(self, payload=None):
+        request = call.GetLocalListVersionPayload()
+        return await self.call(request)
+    
+    async def send_full_auhorization_list(self, payload=None):
+
+        current_version = await self.getLocalListVersion()
+
+        message = ChargePoint.broker.build_message("GET_FROM_TABLE", self.id, {"table":"IdToken"})
+        response = await ChargePoint.broker.send_request_wait_response(message)
+
+        print(response)
+
+
+
+    async def sendLocalList(self, payload):
+        pass
+
+
 
 #######################Funtions staring from the CP Initiative
 
@@ -522,7 +542,7 @@ class ChargePoint(cp):
 
         message = ChargePoint.broker.build_message("Authorize", self.id, kwargs)
         response = await ChargePoint.broker.send_request_wait_response(message)
-        return call_result.AuthorizePayload(**response["CONTENT"])
+        return call_result.AuthorizePayload(**response["content"])
         
     @on('TransactionEvent')
     async def on_TransactionEvent(self, **kwargs):

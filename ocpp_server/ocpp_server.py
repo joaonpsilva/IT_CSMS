@@ -17,16 +17,16 @@ def Basic_auth_with_broker(broker):
             self.password = password
 
             message = {
-                "METHOD" : "VERIFY_PASSWORD",
-                "CP_ID" : username,
-                "CONTENT" : {
+                "method" : "VERIFY_PASSWORD",
+                "cp_id" : username,
+                "content" : {
                     "CP_ID" : username,
                     "password": password
                 }
             }
 
             response =  await self.broker.send_request_wait_response(message)
-            return response["CONTENT"]['APPROVED']
+            return response["content"]['approved']
 
     return BasicAuth
 
@@ -97,7 +97,7 @@ class OCPP_Server:
             logging.warning("Id already taken | Closing connection")
             return await websocket.close()
         
-        self.verify_protocols(websocket)
+        await self.verify_protocols(websocket)
 
         #create new charge point object that will handle the comunication
         cp = ChargePoint(charge_point_id, websocket)
@@ -117,9 +117,8 @@ class OCPP_Server:
     async def handle_api_request(self, request) -> None:
         """Function that handles requests from the api to comunicate with CPs"""
 
-        cp_id = request['CP_ID']
-        response = await self.connected_CPs[str(cp_id)].send_CP_Message(
-                request["METHOD"], request["CONTENT"])
+        cp_id = request.pop('cp_id')
+        response = await self.connected_CPs[str(cp_id)].send_CP_Message(**request)
 
         return response
 
