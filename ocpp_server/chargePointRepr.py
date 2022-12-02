@@ -60,6 +60,9 @@ class ChargePoint(cp):
         component_MonitoringCtrlr = datatypes.ComponentType(
             name="MonitoringCtrlr"
         )
+        component_LocalAuthListCtrlr = datatypes.ComponentType(
+            name="LocalAuthListCtrlr"
+        )
 
         self.variables ={
             "ItemsPerMessageGetVariables" : {
@@ -103,6 +106,18 @@ class ChargePoint(cp):
                     name="BytesPerMessage",
                     instance="ClearVariableMonitoring"
                 )
+            },
+            "ItemsPerMessageSendLocalList" : {
+                "component" : component_LocalAuthListCtrlr,
+                "variable" : datatypes.VariableType(
+                    name="ItemsPerMessage"
+                )
+            },
+            "BytesPerMessageSendLocalList" : {
+                "component" : component_LocalAuthListCtrlr,
+                "variable" : datatypes.VariableType(
+                    name="BytesPerMessage"
+                )
             }
         }
         self.max_get_messages=None
@@ -119,9 +134,9 @@ class ChargePoint(cp):
             return {"status":"OK", "content": await self.method_mapping[method](payload=content)}
         except ValueError as ve:
             return {"status":"VAL_ERROR", "content": ve.args[0]}
-        except Exception as e:
-            logging.error(e)
-            return {"status":"ERROR"}
+        #except Exception as e:
+        #    logging.error(e)
+        #   return {"status":"ERROR"}
 
 
     async def get_id_token_info(self, payload):
@@ -493,10 +508,47 @@ class ChargePoint(cp):
     async def getLocalListVersion(self, payload=None):
         request = call.GetLocalListVersionPayload()
         return await self.call(request)
+
+    async def sendListByChunks(self, Payload_type, request_dict, var_with_list, max_items=None, max_bytes=None):
+        
+        #TODO use this in other funcs
+        #TODO if sendauthlist make type partial...
+
+        item_list = [request_dict[var_with_list]]
+        results = []
+
+        while len(item_list) > 0:
+            
+            #get and delete first entry
+            current_list = item_list[0]
+            del item_list[0]
+
+            request_dict[var_with_list] = current_list
+            request = Payload_type(**request_dict)
+
+            #exceeded restrictions
+            if (max_items and len(request_dict[var_with_list]) > max_items) or \
+                (max_bytes and getsizeof(request) > max_bytes):
+
+                if len(request_dict[var_with_list]) == 1:
+                    raise ValueError("Charge Station doesnt allow a single item")
+
+                #insert splitted entries
+                half_of_list = len(current_list) // 2
+                item_list.insert(0, current_list[half_of_list:len(current_list)])
+                item_list.insert(0, current_list[0:half_of_list])
+
+            else:
+                #send
+                results.append(await self.call(request))
+        
+        return results
+
+        
     
     async def send_full_auhorization_list(self, payload=None):
 
-        current_version = await self.getLocalListVersion()
+        current_version = int((await self.getLocalListVersion()).version_number)
 
         message = ChargePoint.broker.build_message("GET_FROM_TABLE", self.id, {"table":"IdToken"})
         response = await ChargePoint.broker.send_request_wait_response(message)
@@ -509,8 +561,20 @@ class ChargePoint(cp):
                 id_token=id_token,
                 id_token_info=id_token_info
             ))
-        
-        print(local_authorization_list )
+
+        vars = await self.getVariablesByName(["ItemsPerMessageSendLocalList", "BytesPerMessageSendLocalList"])
+
+        request = {
+            "version_number":current_version+1,
+            "update_type":enums.UpdateType.full,
+            "local_authorization_list":local_authorization_list
+        }
+
+        return await self.sendListByChunks(call.SendLocalListPayload, 
+            request,
+            "local_authorization_list",
+            int(vars["ItemsPerMessageSendLocalList"]),
+            int(vars["BytesPerMessageSendLocalList"]))
 
 
     async def sendLocalList(self, payload):

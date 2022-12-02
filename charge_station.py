@@ -27,6 +27,9 @@ class ChargePoint(cp):
             "MonitoringCtrlrItemsPerMessageSetVariableMonitoringActual" : 10,
             "MonitoringCtrlrItemsPerMessageClearVariableMonitoringActual" : 10,
             "MonitoringCtrlrBytesPerMessageClearVariableMonitoringActual" : 1000,
+            "LocalAuthListCtrlrItemsPerMessageActual":1,
+            "LocalAuthListCtrlrBytesPerMessageActual":1000
+
 
         }
 
@@ -234,11 +237,15 @@ class ChargePoint(cp):
 
 ########################################
 
-    def total_name(self, *args):
+    def total_name(self, component, variable, type):
         s=""
-        for a in args:
-            if a is not None:
-                s += a
+
+        s += component["name"] if "name" in component else ""
+        s += component["instance"] if "instance" in component else ""
+        s += variable["name"] if "name" in variable else ""
+        s += variable["instance"] if "instance" in variable else ""
+        s += type
+
         return s
 
     @on('GetVariables')
@@ -255,7 +262,7 @@ class ChargePoint(cp):
             status = enums.GetVariableStatusType.unknown_variable
             value = None
 
-            total_name = self.total_name(component['name'], variable['name'], variable['instance'],type)
+            total_name = self.total_name(component, variable,type)
             if total_name in self.variables:
                 status = enums.GetVariableStatusType.accepted
                 value = str(self.variables[total_name])
@@ -535,6 +542,10 @@ class ChargePoint(cp):
     @on("GetLocalListVersion")
     async def on_GetLocalListVersion(self):
         return call_result.GetLocalListVersionPayload(version_number=self.version_number)
+    
+    @on("SendLocalList")
+    async def on_SendLocalList(self, **kwargs):
+        return call_result.SendLocalListPayload(status=enums.SendLocalListStatusType.accepted)
 
 
 
