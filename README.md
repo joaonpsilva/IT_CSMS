@@ -8,6 +8,7 @@ pip install websockets
 pip install sqlalchemy  
 pip install pymysql  
 pip install passlib
+pip install sse-starlette
 pip install aioconsole (apenas para debug)
 
 ## Rabbit MQ Server
