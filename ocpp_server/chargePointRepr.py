@@ -187,11 +187,9 @@ class ChargePoint(cp):
     
     async def sendListByChunks(self, Payload_type, request_dict, var_with_list, max_items=None, max_bytes=None):
         
-        #TODO use this in other funcs
-        #TODO if sendauthlist make type partial...
-
         item_list = [request_dict[var_with_list]]
         results = []
+        flag=True
 
         while len(item_list) > 0:
             
@@ -217,6 +215,12 @@ class ChargePoint(cp):
             else:
                 #send
                 results.append(await self.call(request))
+
+                #special cases after 1st message
+                if flag:
+                    flag=False
+                    if Payload_type == call.SendLocalListPayload:
+                        request_dict["update_type"] = enums.UpdateType.differential
         
         return results
 
@@ -265,9 +269,6 @@ class ChargePoint(cp):
         results = await self.sendListByChunks(call.GetVariablesPayload, payload, "get_variable_data", max_get_messages)
         result = {"get_variable_result" : [var for r in results for var in r.get_variable_result]}
 
-        #if max_get_messages and len(request.get_variable_data) > max_get_messages:
-        #    raise ValueError("Maximum number of setVariable messages is {}, current is {}".format(max_get_messages, len(request.get_variable_data)))
-
         return result
 
     
@@ -277,11 +278,7 @@ class ChargePoint(cp):
 
         results = await self.sendListByChunks(call.SetVariablesPayload, payload, "set_variable_data", int(max_set_messages))
         result = {"set_variable_result" : [var for r in results for var in r.set_variable_result]}
-
-        #B05.FR.11
-        #if len(request.set_variable_data) > int(vars["ItemsPerMessageSetVariables"]):
-        #    raise ValueError("Maximum number of setVariable messages is {}, current is {}".format(vars["ItemsPerMessageSetVariables"], len(request.set_variable_data)))
-        
+  
         return result
     
 
@@ -511,11 +508,6 @@ class ChargePoint(cp):
 
         vars = await self.getVariablesByName(["ItemsPerMessageSetVariableMonitoring", "BytesPerMessageSetVariableMonitoring"])
 
-        #if len(request.set_monitoring_data) > int(vars["ItemsPerMessageSetVariableMonitoring"]):
-        #    raise ValueError("Maximum number of set monitor messages is {}, current is {}".format(vars["ItemsPerMessageSetVariableMonitoring"], len(request.set_monitoring_data)))
-        #if getsizeof(request.set_monitoring_data) > int(vars["BytesPerMessageSetVariableMonitoring"]):
-        #    raise ValueError("Maximum number of bytes is {}, current is {}".format(vars["BytesPerMessageSetVariableMonitoring"], getsizeof(request.set_monitoring_data)))
-
         results = await self.sendListByChunks(call.SetVariableMonitoringPayload, payload, "set_monitoring_data", int(vars["ItemsPerMessageSetVariableMonitoring"]), int(vars["BytesPerMessageSetVariableMonitoring"]))
         result = {"set_monitoring_result" : [var for r in results for var in r.set_monitoring_result]}
 
@@ -525,11 +517,6 @@ class ChargePoint(cp):
 
         vars = await self.getVariablesByName(["ItemsPerMessageClearVariableMonitoring", "BytesPerMessageClearVariableMonitoring"])
 
-        #if len(request.id) > int(vars["ItemsPerMessageClearVariableMonitoring"]):
-        #    raise ValueError("Maximum number of clear monitor messages is {}, current is {}".format(vars["ItemsPerMessageClearVariableMonitoring"], len(request.id)))
-        #if getsizeof(request.id) > int(vars["BytesPerMessageClearVariableMonitoring"]):
-        #    raise ValueError("Maximum number of bytes is {}, current is {}".format(vars["BytesPerMessageClearVariableMonitoring"], getsizeof(request.id)))
-        
         results = await self.sendListByChunks(call.ClearVariableMonitoringPayload, payload, "id", int(vars["ItemsPerMessageClearVariableMonitoring"]), int(vars["BytesPerMessageClearVariableMonitoring"]))
         result = {"clear_monitoring_result" : [var for r in results for var in r.clear_monitoring_result]}
 
