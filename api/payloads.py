@@ -32,6 +32,16 @@ class Get_from_table_Payload:
     filters: Optional[dict]
 
 
+@dataclass
+class GetVariablesPayload:
+    get_variable_data: List[datatypes.GetVariableDataType]
+
+
+@dataclass
+class SetVariablesPayload:
+    set_variable_data: List[datatypes.SetVariableDataType]
+
+
 
 @dataclass
 class RequestStartTransaction_Payload:

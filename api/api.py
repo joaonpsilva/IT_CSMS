@@ -46,15 +46,15 @@ async def ChangeAvailability(CP_Id: str, payload: payloads.ChangeAvailabilityPay
 
 
 @app.post("/GetVariables/{CP_Id}", status_code=200)
-async def GetVariables(CP_Id: str, payload: List[datatypes.GetVariableDataType], r: Response):
-    response, stat = await send_ocpp_payload("GET_VARIABLES", CP_Id, {'get_variable_data' : payload})
+async def GetVariables(CP_Id: str, payload: payloads.GetVariablesPayload, r: Response):
+    response, stat = await send_ocpp_payload("GET_VARIABLES", CP_Id, payload)
     r.status_code = stat
     return response
 
 
 @app.post("/SetVariables/{CP_Id}", status_code=200)
-async def SetVariables(CP_Id: str, payload: List[datatypes.SetVariableDataType], r: Response):
-    response, stat = await send_ocpp_payload("SET_VARIABLES", CP_Id, {'set_variable_data' : payload})
+async def SetVariables(CP_Id: str, payload: payloads.SetVariablesPayload, r: Response):
+    response, stat = await send_ocpp_payload("SET_VARIABLES", CP_Id, payload)
     r.status_code = stat
     return response  
 
@@ -67,10 +67,10 @@ async def RequestStartTransaction(CP_Id: str, payload: payloads.RequestStartTran
 
 
 @app.post("/RequestStopTransaction/{CP_Id}", status_code=200)
-async def RequestStopTransaction(CP_Id: str, transaction_id: str, r: Response):
+async def RequestStopTransaction(CP_Id: str, payload: call.RequestStopTransactionPayload, r: Response):
     #TODO request stop transaction without cp id input?
     # request stop transaction with remote start id
-    response, stat = await send_ocpp_payload("REQUEST_STOP_TRANSACTION", CP_Id, {"transaction_id" : transaction_id})
+    response, stat = await send_ocpp_payload("REQUEST_STOP_TRANSACTION", CP_Id, payload)
     r.status_code = stat
     return response
 
@@ -138,6 +138,14 @@ async def Reset(CP_Id: str, payload: payloads.ResetPayload, r: Response):
     r.status_code = stat
     return response
 
+
+@app.post("/GetTransactionStatus/{CP_Id}", status_code=200)
+async def GetTransactionStatus(CP_Id: str, payload: call.GetTransactionStatusPayload, r: Response):
+    response, stat = await send_ocpp_payload("GET_TRANSACTION_STATUS", CP_Id, payload)
+    r.status_code = stat
+    return response
+
+
 @app.post("/send_full_authorization_list/{CP_Id}", status_code=200)
 async def send_full_authorization_list(CP_Id: str, r: Response):
     response, stat = await send_ocpp_payload("SEND_FULL_AUTHORIZATION_LIST", CP_Id)
@@ -153,13 +161,6 @@ async def get_from_table(payload: payloads.Get_from_table_Payload, r: Response):
     r.status_code = stat
     return response
 
-
-@app.get("/GetTransactionStatus/{CP_Id}", status_code=200)
-async def GetTransactionStatus(CP_Id: str,r: Response, transactionId: str = None):
-    response, stat = await send_ocpp_payload("GET_TRANSACTION_STATUS", CP_Id, {"transaction_id" : transactionId})
-    r.status_code = stat
-    return response
-    #TODO request stop transaction without cp id input?
 
 
 event_listeners = {}
