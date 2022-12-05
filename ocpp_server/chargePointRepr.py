@@ -49,7 +49,7 @@ class ChargePoint(cp):
             "SET_VARIABLE_MONITORING" : self.setVariableMonitoring,
             "CLEAR_VARIABLE_MONITORING" : self.clearVariableMonitoring,
             "RESET" : self.reset,
-            "SEND_FULL_AUTHORIZATION_LIST": self.send_full_auhorization_list
+            "SEND_AUTHORIZATION_LIST" : self.send_auhorization_list,
         }
 
         
@@ -548,7 +548,7 @@ class ChargePoint(cp):
         return await self.call(request)
         
     
-    async def send_full_auhorization_list(self, payload=None):
+    async def send_auhorization_list(self, payload=None):
         """
         Send a new authorization list to the cp
 
@@ -556,21 +556,33 @@ class ChargePoint(cp):
         Sends the ones that are authorized to the CP as the new authorization List
         """
 
-        #Get id tokens from DB
-        message = ChargePoint.broker.build_message("GET_FROM_TABLE", self.id, {"table":"IdToken"})
-        response = await ChargePoint.broker.send_request_wait_response(message)
+        if payload["update_type"] == enums.UpdateType.full:
+            #Get id tokens from DB
+            message = ChargePoint.broker.build_message("GET_FROM_TABLE", self.id, {"table":"IdToken"})
+            id_tokens = (await ChargePoint.broker.send_request_wait_response(message))['content']
+        else:
+            id_tokens = payload["id_tokens"]
 
-        #For each idtoken Authorize it for this CP
         local_authorization_list=[]
-        for id_token in response['content']:
-            id_token_info = await self.get_id_token_info({"id_token": id_token})
+        for id_token in id_tokens:
 
-            #If idtoken is valid for this CP, add it to the list
-            if id_token_info["status"] == enums.AuthorizationStatusType.accepted:
-                local_authorization_list.append(datatypes.AuthorizationData(
-                    id_token=id_token,
-                    id_token_info=id_token_info
-                ))
+            auth_data = datatypes.AuthorizationData(id_token=id_token)
+
+            #if add to local list or update_type_full, id_token_info needs to be specified
+            if payload["update_type"] == enums.UpdateType.full or payload["operation"] == "Add":
+                
+                #authorize the id_token
+                id_token_info = await self.get_id_token_info({"id_token": id_token})
+                auth_data.id_token_info = id_token_info
+
+                #If idtoken is valid for this CP, add it to the list
+                if id_token_info["status"] != enums.AuthorizationStatusType.accepted:
+                    continue
+
+            local_authorization_list.append(auth_data)
+        
+        if len(local_authorization_list) == 0:
+            return
 
         #Ask CP current version of the list
         current_version = int((await self.getLocalListVersion()).version_number)
@@ -578,7 +590,7 @@ class ChargePoint(cp):
         #Payload of the request
         request = {
             "version_number":current_version+1,
-            "update_type":enums.UpdateType.full,
+            "update_type":payload["update_type"],
             "local_authorization_list":local_authorization_list
         }
 
@@ -591,8 +603,6 @@ class ChargePoint(cp):
             "local_authorization_list",
             int(vars["ItemsPerMessageSendLocalList"]),
             int(vars["BytesPerMessageSendLocalList"]))
-
-
 
 
 #######################Funtions staring from the CP Initiative

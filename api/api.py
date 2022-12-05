@@ -3,7 +3,8 @@ from fastapi import FastAPI, Depends, Query, Response, status, Request
 from api_Rabbit_Handler import API_Rabbit_Handler
 from pydantic import BaseModel
 from typing import Dict, List, Optional
-from ocpp.v201 import call, call_result, enums, datatypes
+from ocpp.v201 import call, call_result, enums
+import datatypes
 import payloads
 from aio_pika.abc import AbstractIncomingMessage
 import asyncio
@@ -148,7 +149,26 @@ async def GetTransactionStatus(CP_Id: str, payload: call.GetTransactionStatusPay
 
 @app.post("/send_full_authorization_list/{CP_Id}", status_code=200)
 async def send_full_authorization_list(CP_Id: str, r: Response):
-    response, stat = await send_ocpp_payload("SEND_FULL_AUTHORIZATION_LIST", CP_Id)
+
+    payload = {"update_type" : enums.UpdateType.full}
+    response, stat = await send_ocpp_payload("SEND_AUTHORIZATION_LIST", CP_Id, payload)
+    r.status_code = stat
+    return response
+
+
+@app.post("/differential_Auth_List_Add/{CP_Id}", status_code=200)
+async def differential_Auth_List_Add(CP_Id: str, payload: List[datatypes.IdTokenType], r: Response):
+
+    payload = {"update_type" : enums.UpdateType.differential, "id_tokens" : payload, "operation" : "Add"}
+    response, stat = await send_ocpp_payload("SEND_AUTHORIZATION_LIST", CP_Id, payload)
+    r.status_code = stat
+    return response
+
+@app.post("/differential_Auth_List_Delete/{CP_Id}", status_code=200)
+async def differential_Auth_List_Delete(CP_Id: str, payload: List[datatypes.IdTokenType], r: Response):
+
+    payload = {"update_type" : enums.UpdateType.differential, "id_tokens" : payload, "operation" : "Delete"}
+    response, stat = await send_ocpp_payload("SEND_AUTHORIZATION_LIST", CP_Id, payload)
     r.status_code = stat
     return response
 
