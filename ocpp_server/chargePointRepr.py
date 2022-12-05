@@ -186,17 +186,32 @@ class ChargePoint(cp):
 
     
     async def sendListByChunks(self, Payload_type, request_dict, var_with_list, max_items=None, max_bytes=None):
+        """
+        Divide single request (that contains a list of items) in several smaller requests,
+        in order to fullfill the limitations max_items and max_bytes per message
+
+        Args:
+        Payload_type: class of the payload call.*Payload
+        request_dict: actual payload of the full message, should follow the ocpp guidelines
+        var_with_list: attribute in which the list of items is
+        max_items: max number of items in the list
+        max_bytes: max number of bytes of the request
+        """
         
+        #get all the items in the request list
         item_list = [request_dict[var_with_list]]
         results = []
         flag=True
 
-        while len(item_list) > 0:
+        while len(item_list) > 0:   #still more items to send
+            #Build request with whole list
+            #If too large, split in half and keep trying
             
             #get and delete first entry
-            current_list = item_list[0]
+            current_list = item_list[0] 
             del item_list[0]
-
+            
+            #Build request 
             request_dict[var_with_list] = current_list
             request = Payload_type(**request_dict)
 
@@ -204,6 +219,7 @@ class ChargePoint(cp):
             if (max_items and len(request_dict[var_with_list]) > max_items) or \
                 (max_bytes and getsizeof(request) > max_bytes):
 
+                #message was as small as it could be
                 if len(request_dict[var_with_list]) == 1:
                     raise ValueError("Charge Station doesnt allow a single item")
 
@@ -227,7 +243,7 @@ class ChargePoint(cp):
 
     async def getVariablesByName(self, variables):
         """
-        getvariables by Name. Segment message and do multiple getvariablesRequests to respect cp limits
+        getvariables by Name. Uses the name of the variable and builds a proper GetVariables request
         ARGS: List of var names (str) or tuple(name, enums.AttributeType)
         RETURNS dict with key name(str) or (name,enums.AttributeType) and value is what was returned in attribute_value
         If variable was not known, it will not be in the return
@@ -533,38 +549,49 @@ class ChargePoint(cp):
         
     
     async def send_full_auhorization_list(self, payload=None):
+        """
+        Send a new authorization list to the cp
 
-        current_version = int((await self.getLocalListVersion()).version_number)
+        Asks the DB for the idtokens and authorizes them for this CP
+        Sends the ones that are authorized to the CP as the new authorization List
+        """
 
+        #Get id tokens from DB
         message = ChargePoint.broker.build_message("GET_FROM_TABLE", self.id, {"table":"IdToken"})
         response = await ChargePoint.broker.send_request_wait_response(message)
 
+        #For each idtoken Authorize it for this CP
         local_authorization_list=[]
         for id_token in response['content']:
             id_token_info = await self.get_id_token_info({"id_token": id_token})
 
-            local_authorization_list.append(datatypes.AuthorizationData(
-                id_token=id_token,
-                id_token_info=id_token_info
-            ))
+            #If idtoken is valid for this CP, add it to the list
+            if id_token_info["status"] == enums.AuthorizationStatusType.accepted:
+                local_authorization_list.append(datatypes.AuthorizationData(
+                    id_token=id_token,
+                    id_token_info=id_token_info
+                ))
 
-        vars = await self.getVariablesByName(["ItemsPerMessageSendLocalList", "BytesPerMessageSendLocalList"])
+        #Ask CP current version of the list
+        current_version = int((await self.getLocalListVersion()).version_number)
 
+        #Payload of the request
         request = {
             "version_number":current_version+1,
             "update_type":enums.UpdateType.full,
             "local_authorization_list":local_authorization_list
         }
 
+        #D01.FR.11
+        vars = await self.getVariablesByName(["ItemsPerMessageSendLocalList", "BytesPerMessageSendLocalList"])
+
+        #Perform request to the CP, dividing into several requests if needed
         return await self.sendListByChunks(call.SendLocalListPayload, 
             request,
             "local_authorization_list",
             int(vars["ItemsPerMessageSendLocalList"]),
             int(vars["BytesPerMessageSendLocalList"]))
 
-
-    async def sendLocalList(self, payload):
-        pass
 
 
 
