@@ -1,19 +1,14 @@
 cp validation
-
 idtoken authorization
-
+billing? total cost transaction? charge profile tem charge tariff?
 Transaction id podem ser iguais de cp para cp?
-
 transaction ocorre toda no mesmo evse
+Notify event? tem tbc e seq no mas pode ter events diferentes
+como funciona getvariables, devo pedir logo tudo no bootnotif
 
-store all idtoken - evse permissions
 
-billing? total cost transaction
+
 
 api 100% transaprent, alguns parametros query (transaction_id), os dois modos
-
 csms deve retornar a api oq? reposta ocpp ou resposta com conteudi util?
-
-como funciona getvaiables
-
-Notify event? tem tbc e seq no mas pode ter events diferentes
+store all idtoken - evse permissions
