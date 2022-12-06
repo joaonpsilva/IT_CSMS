@@ -305,7 +305,7 @@ class RequestStartTransactionPayload:
 @dataclass  #OPTIONAL REMOTE START ID
 class RequestStartTransaction_Payload:
     id_token: datatypes.IdTokenType
-    remote_start_id: Optional[int]
+    remote_start_id: Optional[int] = None
     evse_id: Optional[int] = None
     group_id_token: Optional[datatypes.IdTokenType] = None
     charging_profile: Optional[datatypes.ChargingProfileType] = None
