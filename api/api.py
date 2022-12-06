@@ -174,14 +174,29 @@ async def differential_Auth_List_Delete(CP_Id: str, payload: List[datatypes.IdTo
     return response
 
 
-@app.post("/get_from_table/", status_code=200)
-async def get_from_table(payload: schemas.Get_from_table_Payload, r: Response):
-    message = broker.build_message("GET_FROM_TABLE", content=payload)
+@app.post("/CRUD/", status_code=200)
+async def CRUD(payload: schemas.CRUD_Payload, r: Response):
+    message = broker.build_message(payload.operation, content=payload)
     response = await broker.send_request_wait_response(message, routing_key="request.db.db1")
     stat = choose_status(response)
     r.status_code = stat
     return response
 
+@app.get("/getTransactions")
+async def getTransactions(r: Response):
+    message = broker.build_message("SELECT", content={"table" : schemas.DB_Tables.Transaction})
+    response = await broker.send_request_wait_response(message, routing_key="request.db.db1")
+    stat = choose_status(response)
+    r.status_code = stat
+    return response
+
+@app.get("/getTransactions_ById/{transactionId}")
+async def getTransactions(transactionId: str, r: Response):
+    message = broker.build_message("SELECT", content={"table":schemas.DB_Tables.Transaction, "filters":{"transaction_id":transactionId}})
+    response = await broker.send_request_wait_response(message, routing_key="request.db.db1")
+    stat = choose_status(response)
+    r.status_code = stat
+    return response
 
 
 event_listeners = {}

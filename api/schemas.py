@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from enum import Enum
 
 class DB_Tables(str, Enum):
-
     Modem = "Modem"
     Charge_Point="Charge_Point"
     EVSE="EVSE"
@@ -26,8 +25,29 @@ class DB_Tables(str, Enum):
     EventData="EventData"
 
 
+class Operation(str, Enum):
+    SELECT="SELECT"
+    CREATE="CREATE"
+    REMOVE="REMOVE"
+    UPDATE="UPDATE"
+
 @dataclass
-class Get_from_table_Payload:
+class CRUD_Payload:
+    operation: Operation
     table: DB_Tables
-    filters: Optional[dict]
+    filters: dict
+    values: dict
+
+
+
+
+####################################
+
+
+class Transaction_Schema(BaseModel):
+    transaction_id : Optional[str]
+    charging_state : Optional[enums.ChargingStateType]
+    time_spent_charging : Optional[int]
+    stopped_reason : Optional[enums.ReasonType]
+    remote_start_id : Optional[int]
 

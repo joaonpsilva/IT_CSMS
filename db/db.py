@@ -3,13 +3,14 @@ from itertools import chain
 from db_Rabbit_Handler import DB_Rabbit_Handler
 from aio_pika.abc import AbstractIncomingMessage
 import logging
-from sqlalchemy import create_engine, update, select
+from sqlalchemy import create_engine, update, select, delete, insert
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import exists, text
 from db_Tables import *
 from sqlalchemy.orm.util import identity_key
 from ocpp.v201 import enums
 from datetime import datetime
+import traceback
 
 import dateutil.parser
 
@@ -64,7 +65,10 @@ class DataBase:
             "VERIFY_CHARGING_PROFILE_CONFLICTS" : self.verify_charging_profile_conflicts,
             "SetChargingProfile" : self.setChargingProfile,
             "clearChargingProfile" : self.delete_charging_profile,
-            "GET_FROM_TABLE" : self.get_from_table
+            "SELECT" : self.select,
+            "CREATE" : self.create,
+            "REMOVE" : self.remove,
+            "UPDATE" : self.update
         }
 
         self.table_mapping={
@@ -99,7 +103,7 @@ class DataBase:
 
             return {"status":"OK", "content":toReturn}
         except Exception as e:
-            logging.error(e)
+            logging.error(traceback.format_exc())
             return {"status":"ERROR"}
 
 
@@ -113,16 +117,29 @@ class DataBase:
     def get_class_attributes(self, c):
         return [attr for attr in dir(c) if not callable(getattr(c, attr)) and not attr.startswith("_")]
     
-    def get_dict_obj(self, obj):
-        return { attr:value for attr, value in obj.__dict__.items() if not attr.startswith("_") and value is not None }
-    
 
-    def get_from_table(self, content, cp_id=None):
+    def select(self, content, cp_id=None):
         if "filters" not in content:
             content["filters"] = {}
-
         statement = select(self.table_mapping[content["table"]]).filter_by(**content["filters"])
         return [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]
+    
+    def create(self, content, cp_id=None):
+        statement = insert(self.table_mapping[content["table"]]).values(**content["values"])
+        self.session.execute(statement)
+    
+    def remove(self, content, cp_id=None):
+        if "filters" not in content:
+            content["filters"] = {}
+        statement = delete(self.table_mapping[content["table"]]).filter_by(**content["filters"])
+        self.session.execute(statement)
+
+    def update(self, content, cp_id=None):
+        if "filters" not in content:
+            content["filters"] = {}
+        statement = update(self.table_mapping[content["table"]]).filter_by(**content["filters"]).values(**content["values"])
+        self.session.execute(statement)
+
 
 
     def verify_password(self, cp_id, content):
