@@ -118,9 +118,8 @@ class OCPP_Server:
         """Function that handles requests from the api to comunicate with CPs"""
 
         cp_id = request.pop('cp_id')
-        response = await self.connected_CPs[str(cp_id)].send_CP_Message(**request)
-
-        return response
+        if cp_id in self.connected_CPs:
+            return await self.connected_CPs[str(cp_id)].send_CP_Message(**request)
 
 
 if __name__ == '__main__':
