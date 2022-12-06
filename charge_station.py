@@ -21,16 +21,14 @@ class ChargePoint(cp):
         self.messages_in_queue=False
 
         self.variables = {
-            "DeviceDataCtrlrItemsPerMessageGetVariablesActual" : 2,
+            "DeviceDataCtrlrItemsPerMessageGetVariablesActual" : 10,
             "DeviceDataCtrlrItemsPerMessageSetVariablesActual" : 10,
             "MonitoringCtrlrBytesPerMessageSetVariableMonitoringActual" : 1000,
             "MonitoringCtrlrItemsPerMessageSetVariableMonitoringActual" : 10,
             "MonitoringCtrlrItemsPerMessageClearVariableMonitoringActual" : 10,
             "MonitoringCtrlrBytesPerMessageClearVariableMonitoringActual" : 1000,
-            "LocalAuthListCtrlrItemsPerMessageActual":1,
+            "LocalAuthListCtrlrItemsPerMessageActual":10,
             "LocalAuthListCtrlrBytesPerMessageActual":1000
-
-
         }
 
         self.version_number=0
