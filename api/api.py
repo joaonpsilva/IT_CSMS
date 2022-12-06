@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 from ocpp.v201 import call, call_result, enums
 import datatypes
 import payloads
+import schemas
 from aio_pika.abc import AbstractIncomingMessage
 import asyncio
 import logging
@@ -77,7 +78,7 @@ async def RequestStopTransaction(CP_Id: str, payload: call.RequestStopTransactio
 
 
 @app.post("/TriggerMessage/{CP_Id}", status_code=200)
-async def TriggerMessage(CP_Id: str, payload: payloads.TriggerMessage_Payload, r: Response):
+async def TriggerMessage(CP_Id: str, payload: payloads.TriggerMessagePayload, r: Response):
     response, stat = await send_ocpp_payload("TRIGGER_MESSAGE", CP_Id, payload)
     r.status_code = stat
     return response
@@ -112,7 +113,7 @@ async def ClearChargingProfile(CP_Id: str, payload: payloads.ClearChargingProfil
 
 
 @app.post("/GetBaseReport/{CP_Id}", status_code=200)
-async def GetBaseReport(CP_Id: str, payload: payloads.GetBaseReportPayload, r: Response):
+async def GetBaseReport(CP_Id: str, payload: payloads.GetBaseReport_Payload, r: Response):
     response, stat = await send_ocpp_payload("GET_BASE_REPORT", CP_Id, payload)
     r.status_code = stat
     return response
@@ -141,7 +142,7 @@ async def Reset(CP_Id: str, payload: payloads.ResetPayload, r: Response):
 
 
 @app.post("/GetTransactionStatus/{CP_Id}", status_code=200)
-async def GetTransactionStatus(CP_Id: str, payload: call.GetTransactionStatusPayload, r: Response):
+async def GetTransactionStatus(CP_Id: str, payload: payloads.GetTransactionStatusPayload, r: Response):
     response, stat = await send_ocpp_payload("GET_TRANSACTION_STATUS", CP_Id, payload)
     r.status_code = stat
     return response
@@ -174,7 +175,7 @@ async def differential_Auth_List_Delete(CP_Id: str, payload: List[datatypes.IdTo
 
 
 @app.post("/get_from_table/", status_code=200)
-async def get_from_table(payload: payloads.Get_from_table_Payload, r: Response):
+async def get_from_table(payload: schemas.Get_from_table_Payload, r: Response):
     message = broker.build_message("GET_FROM_TABLE", content=payload)
     response = await broker.send_request_wait_response(message, routing_key="request.db.db1")
     stat = choose_status(response)
