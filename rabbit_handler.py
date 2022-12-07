@@ -136,7 +136,7 @@ class Rabbit_Handler:
         try:
             return await asyncio.wait_for(future, timeout=5)
         except asyncio.TimeoutError:
-            #maybe delete entry in future map?
+            #TODO maybe delete entry in future map?
             logging.error("No response received")
             return {"status":"ERROR"}
     
