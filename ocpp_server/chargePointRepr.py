@@ -87,22 +87,31 @@ class ChargePoint(cp):
             content["evse_id"] = payload["evse"]["id"]
         
         message = ChargePoint.broker.build_message("Authorize", self.id, content)
+
         response = await ChargePoint.broker.send_request_wait_response(message)
+        if response["status"] == "OK":
+            id_token_info = response["content"]["id_token_info"]
+        else:
+            id_token_info = {"status":enums.AuthorizationStatusType.invalid}
         
-        return response["content"]["id_token_info"]
+        return id_token_info
 
 
     async def guarantee_transaction_integrity(self, transaction_id):
 
         message = ChargePoint.broker.build_message("VERIFY_RECEIVED_ALL_TRANSACTION", self.id, {"transaction_id" : transaction_id})
+
         response = await ChargePoint.broker.send_request_wait_response(message)
 
-        if response["content"]["status"] == "OK":
-            return True
-        elif response["content"]["status"] == "ERROR":
+        if response["status"] == "OK":
+
+            if response["content"]["status"] == "OK":
+                return True
             logging.info("DB could not identify transaction")
+            return False
         
-        return False
+        raise ValueError("DB ERROR")
+        
     
 
     async def get_max_get_messages(self):
@@ -493,7 +502,11 @@ class ChargePoint(cp):
         if payload["update_type"] == enums.UpdateType.full:
             #Get id tokens from DB
             message = ChargePoint.broker.build_message("GET_FROM_TABLE", self.id, {"table":"IdToken"})
-            id_tokens = (await ChargePoint.broker.send_request_wait_response(message))['content']
+            response = await ChargePoint.broker.send_request_wait_response(message)
+            if response["status"] != "OK":
+                raise ValueError("DB ERROR")
+
+            id_tokens = response['content']
         else:
             id_tokens = payload["id_tokens"]
 
@@ -622,7 +635,12 @@ class ChargePoint(cp):
                 self.out_of_order_transaction.add(transaction_id)
             else:
                 #verify in db if we have all messages
-                all_messages_received = await self.guarantee_transaction_integrity(transaction_id)
+                try:
+                    all_messages_received = await self.guarantee_transaction_integrity(transaction_id)
+                except ValueError as ve:
+                    logging.error("Cannot verify received all transaction messages " + ve.args[0])
+                    return
+
                 if not all_messages_received:
                     logging.info("Messages lost for transaction %s", transaction_id)
     

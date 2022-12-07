@@ -26,7 +26,10 @@ def Basic_auth_with_broker(broker):
             }
 
             response =  await self.broker.send_request_wait_response(message)
-            return response["content"]['approved']
+            if response["status"] == "OK":
+                return response["content"]['approved']
+            else:
+                return False
 
     return BasicAuth
 
