@@ -1,7 +1,7 @@
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
 from ocpp.routing import on, after
-
+from variable_definitions import VARIABLES
 from datetime import datetime
 import asyncio
 from dataclasses import asdict
@@ -54,73 +54,6 @@ class ChargePoint(cp):
         }
 
         
-        #Variables Cache
-        component_DeviceDataCtrlr = datatypes.ComponentType(
-            name="DeviceDataCtrlr"
-        )
-        component_MonitoringCtrlr = datatypes.ComponentType(
-            name="MonitoringCtrlr"
-        )
-        component_LocalAuthListCtrlr = datatypes.ComponentType(
-            name="LocalAuthListCtrlr"
-        )
-
-        self.variables ={
-            "ItemsPerMessageGetVariables" : {
-                "component" : component_DeviceDataCtrlr,
-                "variable" : datatypes.VariableType(
-                    name="ItemsPerMessage",
-                    instance="GetVariables"
-                )            
-            },
-            "ItemsPerMessageSetVariables" : {
-                "component" : component_DeviceDataCtrlr,
-                "variable" : datatypes.VariableType(
-                    name="ItemsPerMessage",
-                    instance="SetVariables"
-                )            
-            },
-            "BytesPerMessageSetVariableMonitoring" : {
-                "component" : component_MonitoringCtrlr,
-                "variable" : datatypes.VariableType(
-                    name="BytesPerMessage",
-                    instance="SetVariableMonitoring"
-                )
-            },
-            "ItemsPerMessageSetVariableMonitoring" : {
-                "component" : component_MonitoringCtrlr,
-                "variable" : datatypes.VariableType(
-                    name="ItemsPerMessage",
-                    instance="SetVariableMonitoring"
-                )
-            },
-            "ItemsPerMessageClearVariableMonitoring" : {
-                "component" : component_MonitoringCtrlr,
-                "variable" : datatypes.VariableType(
-                    name="ItemsPerMessage",
-                    instance="ClearVariableMonitoring"
-                )
-            },
-            "BytesPerMessageClearVariableMonitoring" : {
-                "component" : component_MonitoringCtrlr,
-                "variable" : datatypes.VariableType(
-                    name="BytesPerMessage",
-                    instance="ClearVariableMonitoring"
-                )
-            },
-            "ItemsPerMessageSendLocalList" : {
-                "component" : component_LocalAuthListCtrlr,
-                "variable" : datatypes.VariableType(
-                    name="ItemsPerMessage"
-                )
-            },
-            "BytesPerMessageSendLocalList" : {
-                "component" : component_LocalAuthListCtrlr,
-                "variable" : datatypes.VariableType(
-                    name="BytesPerMessage"
-                )
-            }
-        }
         self.max_get_messages=None
 
         self.loop = asyncio.get_running_loop()
@@ -176,8 +109,8 @@ class ChargePoint(cp):
         if self.max_get_messages is None:
             request = call.GetVariablesPayload(get_variable_data=[
                 datatypes.GetVariableDataType(
-                    component=self.variables["ItemsPerMessageGetVariables"]["component"],
-                    variable=self.variables["ItemsPerMessageGetVariables"]["variable"]
+                    component=VARIABLES["ItemsPerMessageGetVariables"]["component"],
+                    variable=VARIABLES["ItemsPerMessageGetVariables"]["variable"]
                 )
             ])
             self.max_get_messages = int((await self.call(request)).get_variable_result[0]["attribute_value"])
@@ -260,10 +193,10 @@ class ChargePoint(cp):
                 variable_name = variable
                 type = enums.AttributeType.actual
             
-            if variable_name in self.variables:
+            if variable_name in VARIABLES:
                 requests.append(datatypes.GetVariableDataType(
-                    component=self.variables[variable_name]["component"],
-                    variable=self.variables[variable_name]["variable"],
+                    component=VARIABLES[variable_name]["component"],
+                    variable=VARIABLES[variable_name]["variable"],
                     attribute_type=type
                 ))
             else:

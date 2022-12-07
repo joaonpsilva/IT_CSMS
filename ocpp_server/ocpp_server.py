@@ -117,11 +117,14 @@ class OCPP_Server:
     async def handle_api_request(self, request) -> None:
         """Function that handles requests from the api to comunicate with CPs"""
 
+        #api wants to know current connected cps
         if request['method'] == "GET_CONNECTED_CPS":
             return {"status" : "OK", "content": list(self.connected_CPs.keys())}
 
+        #wich CP send the message to
         cp_id = request.pop('cp_id')
         if cp_id in self.connected_CPs:
+            #if is connected
             status, content = await self.connected_CPs[str(cp_id)].send_CP_Message(**request)
             return {"status" : status, "content": content}
         else:
