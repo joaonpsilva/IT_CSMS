@@ -14,12 +14,6 @@ PASSLIB_CONTEXT = CryptContext(
 
 Base = declarative_base()
 
-"""class Table_Factory:
-
-    session = None
-
-    def get_or_Create(table_class, **kwargs):
-"""
 
 class CustomBase(Base):
     """Base extender
@@ -77,7 +71,7 @@ class Modem(CustomBase):
     iccid = Column(String(20), primary_key=True)
     imsi = Column(String(20), primary_key=True)
 
-    _cp_id = Column(String(20), ForeignKey("Charge_point.cp_id"))
+    _cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
 
     def __init__(self, iccid="NULL", imsi="NULL", **kwargs):
         kwargs["iccid"] = iccid
@@ -87,7 +81,7 @@ class Modem(CustomBase):
 
 
 class Charge_Point(CustomBase):
-    __tablename__ = "Charge_point"
+    __tablename__ = "Charge_Point"
     cp_id = Column(String(20), primary_key=True)
     password_hash = Column(String(256)) #https://stackoverflow.com/questions/56738384/sqlalchemy-call-function-and-save-returned-value-in-table-always
     model = Column(String(20))
@@ -95,7 +89,7 @@ class Charge_Point(CustomBase):
     serial_number = Column(String(25))
     firmware_version = Column(String(50))
 
-    modem = relationship("Modem", backref="charge_point", uselist=False)
+    modem = relationship("Modem", backref="Charge_Point", uselist=False)
 
     def __init__(self, password=None, **kwargs):
         
@@ -122,12 +116,24 @@ class Charge_Point(CustomBase):
         return PASSLIB_CONTEXT.verify(password, self.password_hash)
 
 
+class BootNotification(CustomBase):
+    __tablename__ = "BootNotification"
+
+    message_id = Column(Integer, primary_key=True)
+    reason = Column(Enum(enums.BootReasonType))
+    timestamp = Column(DateTime)
+    cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
+
+    charging_station = relationship("Charge_Point", backref="boot_nofications", uselist=False)
+
+
+
 class EVSE(CustomBase):
     __tablename__ = "EVSE"
     evse_id = Column(Integer, primary_key=True)   #This id is only unique inside each CP
 
-    cp_id = Column(String(20), ForeignKey("Charge_point.cp_id"), primary_key=True)
-    charge_point = relationship("Charge_Point", backref="evse")
+    cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"), primary_key=True)
+    Charge_Point = relationship("Charge_Point", backref="evse")
 
     def __init__(self, id = None, **kwargs):
         if id:
@@ -139,15 +145,33 @@ class Connector(CustomBase):
     __tablename__ = "Connector"
 
     connector_id = Column(Integer, primary_key=True) #This id is only unique inside each EVSE
-    connector_status = Column(Enum(enums.ConnectorStatusType))
-    timestamp = Column(DateTime)
+    connector_type = Column(Enum(enums.ConnectorType))
 
     cp_id = Column(String(20), primary_key=True)
     evse_id = Column(Integer, primary_key=True)
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
-                                            [ "EVSE.cp_id", "EVSE.evse_id"]),
-                        {})
+                                            [ "EVSE.cp_id", "EVSE.evse_id"]),{})
+
     evse = relationship("EVSE", backref="connector")
+
+
+class StatusNotification(CustomBase):
+    __tablename__ = "StatusNotification"
+
+    message_id = Column(Integer, primary_key=True)
+    connector_status = Column(Enum(enums.ConnectorStatusType))
+    timestamp = Column(DateTime)
+    
+    cp_id = Column(String(20))
+    evse_id = Column(Integer)
+    connector_id = Column(Integer)
+    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id", "connector_id"],
+                                            [ "Connector.cp_id", "Connector.evse_id", "Connector.connector_id"]),{})
+
+    connector = relationship("Connector", backref="status_nofications", uselist=False)
+
+    
+
 
 
 class MeterValue(CustomBase):
@@ -276,7 +300,7 @@ class Transaction_Event(CustomBase):
     id_token = relationship("IdToken", backref="transaction_event", uselist=False)
 
     #CP, EVSE, Connector
-    cp_id = Column(String(20), ForeignKey("Charge_point.cp_id"))
+    cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
     connector_id = Column(Integer)
     evse_id = Column(Integer)
 
@@ -285,9 +309,9 @@ class Transaction_Event(CustomBase):
                 ForeignKeyConstraint(["cp_id", "evse_id", "connector_id"],
                                 [ "Connector.cp_id", "Connector.evse_id", "Connector.connector_id"]),{})
 
-    charge_point = relationship("Charge_Point", backref="transaction", uselist=False)
-    evse = relationship("EVSE", backref=backref("transaction", overlaps="charge_point,transaction"), uselist=False, overlaps="charge_point,transaction")
-    connector = relationship("Connector", backref=backref("transaction", overlaps="charge_point,evse,transaction"), uselist=False, overlaps="charge_point,evse,transaction")
+    Charge_Point = relationship("Charge_Point", backref="transaction", uselist=False)
+    evse = relationship("EVSE", backref=backref("transaction", overlaps="Charge_Point,transaction"), uselist=False, overlaps="Charge_Point,transaction")
+    connector = relationship("Connector", backref=backref("transaction", overlaps="Charge_Point,evse,transaction"), uselist=False, overlaps="Charge_Point,evse,transaction")
 
 
     #Transaction

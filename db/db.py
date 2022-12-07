@@ -64,7 +64,6 @@ class DataBase:
             "VERIFY_RECEIVED_ALL_TRANSACTION" : self.verify_received_all_transaction,
             "VERIFY_CHARGING_PROFILE_CONFLICTS" : self.verify_charging_profile_conflicts,
             "SetChargingProfile" : self.setChargingProfile,
-            "clearChargingProfile" : self.delete_charging_profile,
             "SELECT" : self.select,
             "CREATE" : self.create,
             "REMOVE" : self.remove,
@@ -143,7 +142,6 @@ class DataBase:
 
 
     def verify_password(self, cp_id, content):
-        #TODO assert not already online
         charge_point = self.session.query(Charge_Point).get(cp_id)
 
         result = False
@@ -155,20 +153,20 @@ class DataBase:
 
 
     def BootNotification(self, cp_id, content):
-                
-        charge_point_InMessage = content["charging_station"]
-        charge_point_InMessage["cp_id"] = cp_id
 
-        cp = Charge_Point(**charge_point_InMessage)
-        self.session.merge(cp)
-
+        content["charging_station"]["cp_id"] = cp_id
+        bootNotification = BootNotification(**content)
+        
+        self.session.merge(bootNotification)
 
     def StatusNotification(self, cp_id, content):
 
-        evse = EVSE(cp_id=cp_id, evse_id=content["evse_id"])
+        connector_id = content.pop("connector_id")
+        evse_id = content.pop("evse_id")
+        content["connector"] = {"cp_id": cp_id, "evse_id":evse_id, "connector_id":connector_id}
 
-        connector = Connector(cp_id=cp_id, **content, evse=evse)
-        self.session.merge(connector)
+        statusNotification = StatusNotification(**content)
+        self.session.merge(statusNotification)
         
 
     def MeterValues(self, cp_id, content): 
@@ -317,28 +315,6 @@ class DataBase:
             charging_profile.evse = evses
 
         self.session.add(charging_profile)
-    
-
-    def delete_charging_profile(self, cp_id, content):
-        #NOT WORKING
-        pass
-        #try:
-        # if "charging_profile_id" in content and content["charging_profile_id"] is not None:
-        #     self.session.query(ChargingProfile).filter(ChargingProfile.id==content["charging_profile_id"]).delete()
-        # else:
-        #     criteria = content["charging_profile_criteria"]
-        #     query = self.session.query(ChargingProfile, evse_chargeProfiles)
-            
-        #     if "evse_id" in criteria and criteria["evse_id"] is None:
-        #         query.filter(evse_chargeProfiles.evse_id==criteria["evse_id"]).filter(evse_chargeProfiles.cp_id==cp_id)
-        #     if "charging_profile_purpose" in criteria and criteria["charging_profile_purpose"] is None:
-        #         query.filter(ChargingProfile.charging_profile_purpose == criteria["charging_profile_purpose"])
-        #     if "stack_level" in criteria and criteria["stack_level"] is None:
-        #         query.filter(ChargingProfile.stack_level == criteria["stack_level"])
-        #     query.delete()
-        #except:
-        #    logging.info("ERROR DELETING CHARGING PROFILES")
-
 
     
     def dates_overlap(self, valid_from1, valid_to1, valid_from2, valid_to2):

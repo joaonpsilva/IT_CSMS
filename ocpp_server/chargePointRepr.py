@@ -609,6 +609,9 @@ class ChargePoint(cp):
 
     @on('BootNotification')
     async def on_BootNotification(self, **kwargs):
+        
+        #insert timestamp in bootnofification
+        kwargs["timestamp"] = datetime.utcnow().isoformat()
 
         #inform db that new cp has connected
         message = ChargePoint.broker.build_message("BootNotification", self.id, kwargs)
