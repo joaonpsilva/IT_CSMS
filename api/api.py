@@ -31,7 +31,7 @@ def choose_status(response):
     return status.HTTP_500_INTERNAL_SERVER_ERROR
     
 
-async def send_ocpp_payload(method, CP_Id, payload=None, routing_key="request.ocppserver"):
+async def send_ocpp_payload(method, CP_Id=None, payload=None, routing_key="request.ocppserver"):
     message = broker.build_message(method, CP_Id, payload)
     response = await broker.send_request_wait_response(message, routing_key=routing_key)
     stat = choose_status(response)
@@ -197,6 +197,14 @@ async def getTransactions(transactionId: str, r: Response):
     stat = choose_status(response)
     r.status_code = stat
     return response
+
+
+@app.get("/getConnected_ChargePoints/")
+async def getConnected_ChargePoints(r: Response):
+    response, stat = await send_ocpp_payload("GET_CONNECTED_CPS")
+    r.status_code = stat
+    return response
+
 
 
 event_listeners = {}

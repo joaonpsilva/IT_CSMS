@@ -8,6 +8,7 @@ from dataclasses import asdict
 import logging
 import dateutil.parser
 from sys import getsizeof
+import traceback
 
 logging.basicConfig(level=logging.INFO)
 
@@ -131,12 +132,12 @@ class ChargePoint(cp):
     async def send_CP_Message(self, method, content={}):
         """Funtion will use the mapping defined in method_mapping to call the correct function"""
         try:
-            return {"status":"OK", "content": await self.method_mapping[method](payload=content)}
+            return "OK", await self.method_mapping[method](payload=content)
         except ValueError as ve:
-            return {"status":"VAL_ERROR", "content": ve.args[0]}
-        #except Exception as e:
-        #    logging.error(e)
-        #   return {"status":"ERROR"}
+            return "VAL_ERROR", ve.args[0]
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            return "ERROR", None
 
 
     async def get_id_token_info(self, payload):
