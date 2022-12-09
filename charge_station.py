@@ -554,10 +554,10 @@ class ChargePoint(cp):
         return call_result.GetDisplayMessagesPayload(status=enums.GetDisplayMessagesStatusType.accepted)
     
     @after("GetDisplayMessages")
-    async def after_GetDisplayMessages(self, requestId, **kwargs):
+    async def after_GetDisplayMessages(self, request_id, **kwargs):
 
         request = call.NotifyDisplayMessagesPayload(
-            request_id=requestId,
+            request_id=request_id,
             tbc=True,
             message_info=[datatypes.MessageInfoType(
                 id = 1,
@@ -572,7 +572,7 @@ class ChargePoint(cp):
         await self.call(request)
 
         request = call.NotifyDisplayMessagesPayload(
-            request_id=requestId,
+            request_id=request_id,
             tbc=False,
             message_info=[datatypes.MessageInfoType(
                 id = 2,

@@ -555,16 +555,16 @@ class ChargePoint(cp):
             int(vars["BytesPerMessageSendLocalList"]))
     
 
-    async def setDisplayMessage(self, content):
-        request = call.SetDisplayMessagePayload(**content)
+    async def setDisplayMessage(self, payload):
+        request = call.SetDisplayMessagePayload(**payload)
         return await self.call(request)
 
-    async def getDisplayMessages(self, content):
-        request = call.GetDisplayMessagesPayload(**content)
+    async def getDisplayMessages(self, payload):
+        request = call.GetDisplayMessagesPayload(**payload)
         return await self.async_request(request)
     
-    async def clearDisplayMessage(self, content):
-        request = call.ClearDisplayMessagePayload(**content)
+    async def clearDisplayMessage(self, payload):
+        request = call.ClearDisplayMessagePayload(**payload)
         return await self.call(request)
 
 
