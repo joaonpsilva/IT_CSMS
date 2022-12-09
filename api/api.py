@@ -148,6 +148,28 @@ async def GetTransactionStatus(CP_Id: str, payload: payloads.GetTransactionStatu
     return response
 
 
+
+@app.post("/SetDisplayMessage/{CP_Id}", status_code=200)
+async def SetDisplayMessage(CP_Id: str, payload: payloads.SetDisplayMessagePayload, r: Response):
+    response, stat = await send_request("SET_DISPLAY_MESSAGE", CP_Id, payload)
+    r.status_code = stat
+    return response
+
+@app.post("/GetDisplayMessages/{CP_Id}", status_code=200)
+async def GetDisplayMessages(CP_Id: str, payload: payloads.GetDisplayMessagesPayload, r: Response):
+    response, stat = await send_request("GET_DISPLAY_MESSAGES", CP_Id, payload)
+    r.status_code = stat
+    return response
+
+@app.post("/ClearDisplayMessage/{CP_Id}", status_code=200)
+async def ClearDisplayMessage(CP_Id: str, payload: payloads.ClearDisplayMessagePayload, r: Response):
+    response, stat = await send_request("CLEAR_DISPLAY_MESSAGE", CP_Id, payload)
+    r.status_code = stat
+    return response
+
+
+
+
 @app.post("/send_full_authorization_list/{CP_Id}", status_code=200)
 async def send_full_authorization_list(CP_Id: str, r: Response):
 

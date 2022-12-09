@@ -544,6 +544,53 @@ class ChargePoint(cp):
     @on("SendLocalList")
     async def on_SendLocalList(self, **kwargs):
         return call_result.SendLocalListPayload(status=enums.SendLocalListStatusType.accepted)
+    
+    @on("SetDisplayMessage")
+    async def on_SetDisplayMessage(self, **kwargs):
+        return call_result.SetDisplayMessagePayload(status=enums.DisplayMessageStatusType.accepted)
+    
+    @on("GetDisplayMessages")
+    async def on_GetDisplayMessages(self, **kwargs):
+        return call_result.GetDisplayMessagesPayload(status=enums.GetDisplayMessagesStatusType.accepted)
+    
+    @after("GetDisplayMessages")
+    async def after_GetDisplayMessages(self, requestId, **kwargs):
+
+        request = call.NotifyDisplayMessagesPayload(
+            request_id=requestId,
+            tbc=True,
+            message_info=[datatypes.MessageInfoType(
+                id = 1,
+                priority=enums.MessagePriorityType.normal_cycle,
+                message=datatypes.MessageContentType(
+                    format=enums.MessageFormatType.utf8,
+                    content="Welcome"
+                )
+            )]
+        )
+
+        await self.call(request)
+
+        request = call.NotifyDisplayMessagesPayload(
+            request_id=requestId,
+            tbc=False,
+            message_info=[datatypes.MessageInfoType(
+                id = 2,
+                priority=enums.MessagePriorityType.normal_cycle,
+                message=datatypes.MessageContentType(
+                    format=enums.MessageFormatType.utf8,
+                    content="Goodbye"
+                )
+            )]
+        )
+
+        await self.call(request)
+    
+    @on("ClearDisplayMessage")
+    async def on_ClearDisplayMessage(self, **kwargs):
+        return call_result.ClearDisplayMessagePayload(status=enums.ClearMessageStatusType.accepted)
+
+
 
 
 

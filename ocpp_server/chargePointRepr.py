@@ -51,6 +51,9 @@ class ChargePoint(cp):
             "CLEAR_VARIABLE_MONITORING" : self.clearVariableMonitoring,
             "RESET" : self.reset,
             "SEND_AUTHORIZATION_LIST" : self.send_auhorization_list,
+            "SET_DISPLAY_MESSAGE" : self.setDisplayMessage,
+            "GET_DISPLAY_MESSAGES" : self.getDisplayMessages,
+            "CLEAR_DISPLAY_MESSAGE" : self.clearDisplayMessage
         }
 
         
@@ -550,6 +553,19 @@ class ChargePoint(cp):
             "local_authorization_list",
             int(vars["ItemsPerMessageSendLocalList"]),
             int(vars["BytesPerMessageSendLocalList"]))
+    
+
+    async def setDisplayMessage(self, content):
+        request = call.SetDisplayMessagePayload(**content)
+        return await self.call(request)
+
+    async def getDisplayMessages(self, content):
+        request = call.GetDisplayMessagesPayload(**content)
+        return await self.async_request(request)
+    
+    async def clearDisplayMessage(self, content):
+        request = call.ClearDisplayMessagePayload(**content)
+        return await self.call(request)
 
 
 #######################Funtions staring from the CP Initiative
@@ -664,6 +680,11 @@ class ChargePoint(cp):
     async def on_notifyReport(self, **kwargs):
         self.received_message_async_request(kwargs)  
         return call_result.NotifyReportPayload()
+    
+    @on("NotifyDisplayMessages")
+    async def on_NotifyDisplayMessages(self, **kwargs):
+        self.received_message_async_request(kwargs)  
+        return call_result.NotifyDisplayMessagesPayload()
 
     @on("NotifyEvent")
     async def on_notifyEvent(self, **kwargs):

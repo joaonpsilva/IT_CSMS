@@ -133,10 +133,10 @@ class GetCompositeSchedulePayload:
 
 @dataclass
 class GetDisplayMessagesPayload:
-    request_id: int
-    id: Optional[List] = None
-    priority: Optional[str] = None
-    state: Optional[str] = None
+    request_id: Optional[int]
+    id: Optional[List[int]] = None
+    priority: Optional[enums.MessagePriorityType] = None
+    state: Optional[enums.MessageStateType] = None
 
 
 @dataclass
@@ -361,7 +361,7 @@ class SetChargingProfilePayload:
 
 @dataclass
 class SetDisplayMessagePayload:
-    message: Dict
+    message: datatypes.MessageInfoType
 
 
 @dataclass

@@ -528,8 +528,8 @@ class MessageInfoType:
     priority: enums.MessagePriorityType
     message: MessageContentType
     state: Optional[enums.MessageStateType] = None
-    start_date_time: Optional[str] = None
-    end_data_time: Optional[str] = None
+    start_date_time: Optional[datetime.datetime] = None
+    end_data_time: Optional[datetime.datetime] = None
     transaction_id: Optional[str] = None
     display: Optional[ComponentType] = None
 
