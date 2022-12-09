@@ -17,23 +17,6 @@ import dateutil.parser
 logging.basicConfig(level=logging.INFO)
 
 
-#UPDATE example
-"""stmt = (
-    update(Charge_Point).
-    where(Charge_Point.cp_id == cp_id).
-    values(**charge_point_InMessage)
-)
-
-self.session.execute(stmt)"""
-
-#CHECK if exists
-"""q = self.session.query(EVSE)\
-    .filter(EVSE.evse_id==content["evse_id"])\
-    .filter(EVSE.cp_id==cp_id)
-
-exists = self.session.query(q.exists()).scalar()
-"""
-
 class DataBase:
 
     def __init__(self):
