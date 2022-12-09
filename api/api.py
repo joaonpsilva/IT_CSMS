@@ -31,7 +31,7 @@ def choose_status(response):
     return status.HTTP_500_INTERNAL_SERVER_ERROR
     
 
-async def send_ocpp_payload(method, CP_Id=None, payload=None, routing_key="request.ocppserver"):
+async def send_request(method, CP_Id=None, payload=None, routing_key="request.ocppserver"):
     message = broker.build_message(method, CP_Id, payload)
     response = await broker.send_request_wait_response(message, routing_key=routing_key)
     stat = choose_status(response)
@@ -42,28 +42,28 @@ async def send_ocpp_payload(method, CP_Id=None, payload=None, routing_key="reque
 
 @app.post("/ChangeAvailability/{CP_Id}", status_code=200)
 async def ChangeAvailability(CP_Id: str, payload: payloads.ChangeAvailabilityPayload, r: Response):
-    response, stat = await send_ocpp_payload("CHANGE_AVAILABILITY", CP_Id, payload)
+    response, stat = await send_request("CHANGE_AVAILABILITY", CP_Id, payload)
     r.status_code = stat
     return response
 
 
 @app.post("/GetVariables/{CP_Id}", status_code=200)
 async def GetVariables(CP_Id: str, payload: payloads.GetVariablesPayload, r: Response):
-    response, stat = await send_ocpp_payload("GET_VARIABLES", CP_Id, payload)
+    response, stat = await send_request("GET_VARIABLES", CP_Id, payload)
     r.status_code = stat
     return response
 
 
 @app.post("/SetVariables/{CP_Id}", status_code=200)
 async def SetVariables(CP_Id: str, payload: payloads.SetVariablesPayload, r: Response):
-    response, stat = await send_ocpp_payload("SET_VARIABLES", CP_Id, payload)
+    response, stat = await send_request("SET_VARIABLES", CP_Id, payload)
     r.status_code = stat
     return response  
 
 
 @app.post("/RequestStartTransaction/{CP_Id}", status_code=200)
 async def RequestStartTransaction(CP_Id: str, payload: payloads.RequestStartTransaction_Payload, r: Response):
-    response, stat = await send_ocpp_payload("REQUEST_START_TRANSACTION", CP_Id, payload)
+    response, stat = await send_request("REQUEST_START_TRANSACTION", CP_Id, payload)
     r.status_code = stat
     return response
 
@@ -72,34 +72,34 @@ async def RequestStartTransaction(CP_Id: str, payload: payloads.RequestStartTran
 async def RequestStopTransaction(CP_Id: str, payload: call.RequestStopTransactionPayload, r: Response):
     #TODO request stop transaction without cp id input?
     # request stop transaction with remote start id
-    response, stat = await send_ocpp_payload("REQUEST_STOP_TRANSACTION", CP_Id, payload)
+    response, stat = await send_request("REQUEST_STOP_TRANSACTION", CP_Id, payload)
     r.status_code = stat
     return response
 
 
 @app.post("/TriggerMessage/{CP_Id}", status_code=200)
 async def TriggerMessage(CP_Id: str, payload: payloads.TriggerMessagePayload, r: Response):
-    response, stat = await send_ocpp_payload("TRIGGER_MESSAGE", CP_Id, payload)
+    response, stat = await send_request("TRIGGER_MESSAGE", CP_Id, payload)
     r.status_code = stat
     return response
 
 
 @app.post("/GetCompositeSchedule/{CP_Id}", status_code=200)
 async def GetCompositeSchedule(CP_Id: str, payload: payloads.GetCompositeSchedulePayload, r: Response):
-    response, stat = await send_ocpp_payload("GET_COMPOSITE_SCHEDULE", CP_Id, payload)
+    response, stat = await send_request("GET_COMPOSITE_SCHEDULE", CP_Id, payload)
     r.status_code = stat
     return response
     #TODO make a get 
 
 @app.post("/SetChargingProfile/{CP_Id}", status_code=200)
 async def SetChargingProfile(CP_Id: str, payload: payloads.SetChargingProfilePayload, r: Response):
-    response, stat = await send_ocpp_payload("SET_CHARGING_PROFILE", CP_Id, payload)
+    response, stat = await send_request("SET_CHARGING_PROFILE", CP_Id, payload)
     r.status_code = stat
     return response
 
 @app.post("/GetChargingProfiles/{CP_Id}", status_code=200)
 async def GetChargingProfiles(CP_Id: str, payload: payloads.GetChargingProfilesPayload, r: Response):
-    response, stat = await send_ocpp_payload("GET_CHARGING_PROFILES", CP_Id, payload)
+    response, stat = await send_request("GET_CHARGING_PROFILES", CP_Id, payload)
     r.status_code = stat
     return response
     #TODO make a get 
@@ -107,14 +107,14 @@ async def GetChargingProfiles(CP_Id: str, payload: payloads.GetChargingProfilesP
 
 @app.post("/ClearChargingProfile/{CP_Id}", status_code=200)
 async def ClearChargingProfile(CP_Id: str, payload: payloads.ClearChargingProfilePayload, r: Response):
-    response, stat = await send_ocpp_payload("CLEAR_CHARGING_PROFILE", CP_Id, payload)
+    response, stat = await send_request("CLEAR_CHARGING_PROFILE", CP_Id, payload)
     r.status_code = stat
     return response
 
 
 @app.post("/GetBaseReport/{CP_Id}", status_code=200)
 async def GetBaseReport(CP_Id: str, payload: payloads.GetBaseReport_Payload, r: Response):
-    response, stat = await send_ocpp_payload("GET_BASE_REPORT", CP_Id, payload)
+    response, stat = await send_request("GET_BASE_REPORT", CP_Id, payload)
     r.status_code = stat
     return response
     #TODO make a get
@@ -122,28 +122,28 @@ async def GetBaseReport(CP_Id: str, payload: payloads.GetBaseReport_Payload, r: 
 
 @app.post("/ClearVariableMonitoring/{CP_Id}", status_code=200)
 async def ClearVariableMonitoring(CP_Id: str, payload: payloads.ClearVariableMonitoringPayload, r: Response):
-    response, stat = await send_ocpp_payload("CLEAR_VARIABLE_MONITORING", CP_Id, payload)
+    response, stat = await send_request("CLEAR_VARIABLE_MONITORING", CP_Id, payload)
     r.status_code = stat
     return response
 
 
 @app.post("/SetVariableMonitoring/{CP_Id}", status_code=200)
 async def SetVariableMonitoring(CP_Id: str, payload: payloads.SetVariableMonitoringPayload, r: Response):
-    response, stat = await send_ocpp_payload("SET_VARIABLE_MONITORING", CP_Id, payload)
+    response, stat = await send_request("SET_VARIABLE_MONITORING", CP_Id, payload)
     r.status_code = stat
     return response
 
 
 @app.post("/Reset/{CP_Id}", status_code=200)
 async def Reset(CP_Id: str, payload: payloads.ResetPayload, r: Response):
-    response, stat = await send_ocpp_payload("RESET", CP_Id, payload)
+    response, stat = await send_request("RESET", CP_Id, payload)
     r.status_code = stat
     return response
 
 
 @app.post("/GetTransactionStatus/{CP_Id}", status_code=200)
 async def GetTransactionStatus(CP_Id: str, payload: payloads.GetTransactionStatusPayload, r: Response):
-    response, stat = await send_ocpp_payload("GET_TRANSACTION_STATUS", CP_Id, payload)
+    response, stat = await send_request("GET_TRANSACTION_STATUS", CP_Id, payload)
     r.status_code = stat
     return response
 
@@ -152,7 +152,7 @@ async def GetTransactionStatus(CP_Id: str, payload: payloads.GetTransactionStatu
 async def send_full_authorization_list(CP_Id: str, r: Response):
 
     payload = {"update_type" : enums.UpdateType.full}
-    response, stat = await send_ocpp_payload("SEND_AUTHORIZATION_LIST", CP_Id, payload)
+    response, stat = await send_request("SEND_AUTHORIZATION_LIST", CP_Id, payload)
     r.status_code = stat
     return response
 
@@ -161,7 +161,7 @@ async def send_full_authorization_list(CP_Id: str, r: Response):
 async def differential_Auth_List_Add(CP_Id: str, payload: List[datatypes.IdTokenType], r: Response):
 
     payload = {"update_type" : enums.UpdateType.differential, "id_tokens" : payload, "operation" : "Add"}
-    response, stat = await send_ocpp_payload("SEND_AUTHORIZATION_LIST", CP_Id, payload)
+    response, stat = await send_request("SEND_AUTHORIZATION_LIST", CP_Id, payload)
     r.status_code = stat
     return response
 
@@ -169,31 +169,27 @@ async def differential_Auth_List_Add(CP_Id: str, payload: List[datatypes.IdToken
 async def differential_Auth_List_Delete(CP_Id: str, payload: List[datatypes.IdTokenType], r: Response):
 
     payload = {"update_type" : enums.UpdateType.differential, "id_tokens" : payload, "operation" : "Delete"}
-    response, stat = await send_ocpp_payload("SEND_AUTHORIZATION_LIST", CP_Id, payload)
+    response, stat = await send_request("SEND_AUTHORIZATION_LIST", CP_Id, payload)
     r.status_code = stat
     return response
 
 
 @app.post("/CRUD/", status_code=200)
 async def CRUD(payload: schemas.CRUD_Payload, r: Response):
-    message = broker.build_message(payload.operation, content=payload)
-    response = await broker.send_request_wait_response(message, routing_key="request.db.db1")
-    stat = choose_status(response)
+    response, stat = await send_request(payload.operation, payload=payload, routing_key="request.db.db1")
     r.status_code = stat
     return response
 
 @app.get("/getTransactions")
 async def getTransactions(r: Response):
-    message = broker.build_message("SELECT", content={"table" : schemas.DB_Tables.Transaction})
-    response = await broker.send_request_wait_response(message, routing_key="request.db.db1")
+    response, stat = await send_request("SELECT", payload={"table" : schemas.DB_Tables.Transaction}, routing_key="request.db.db1")
     stat = choose_status(response)
     r.status_code = stat
     return response
 
 @app.get("/getTransactions_ById/{transactionId}")
 async def getTransactions(transactionId: str, r: Response):
-    message = broker.build_message("SELECT", content={"table":schemas.DB_Tables.Transaction, "filters":{"transaction_id":transactionId}})
-    response = await broker.send_request_wait_response(message, routing_key="request.db.db1")
+    response, stat = await send_request("SELECT", payload={"table":schemas.DB_Tables.Transaction, "filters":{"transaction_id":transactionId}}, routing_key="request.db.db1")
     stat = choose_status(response)
     r.status_code = stat
     return response
@@ -201,7 +197,7 @@ async def getTransactions(transactionId: str, r: Response):
 
 @app.get("/getConnected_ChargePoints/")
 async def getConnected_ChargePoints(r: Response):
-    response, stat = await send_ocpp_payload("GET_CONNECTED_CPS")
+    response, stat = await send_request("GET_CONNECTED_CPS")
     r.status_code = stat
     return response
 
