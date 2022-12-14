@@ -46,6 +46,12 @@ async def ChangeAvailability(CP_Id: str, payload: payloads.ChangeAvailabilityPay
     r.status_code = stat
     return response
 
+@app.post("/UnlockConnector/{CP_Id}", status_code=200)
+async def UnlockConnector(CP_Id: str, payload: payloads.UnlockConnectorPayload, r: Response):
+    response, stat = await send_request("UNLOCK_CONNECTOR", CP_Id, payload)
+    r.status_code = stat
+    return response
+
 
 @app.post("/GetVariables/{CP_Id}", status_code=200)
 async def GetVariables(CP_Id: str, payload: payloads.GetVariablesPayload, r: Response):

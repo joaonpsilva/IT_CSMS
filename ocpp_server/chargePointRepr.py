@@ -54,7 +54,8 @@ class ChargePoint(cp):
             "SEND_AUTHORIZATION_LIST" : self.send_auhorization_list,
             "SET_DISPLAY_MESSAGE" : self.setDisplayMessage,
             "GET_DISPLAY_MESSAGES" : self.getDisplayMessages,
-            "CLEAR_DISPLAY_MESSAGE" : self.clearDisplayMessage
+            "CLEAR_DISPLAY_MESSAGE" : self.clearDisplayMessage,
+            "UNLOCK_CONNECTOR" : self.unlockConnector
         }
 
         
@@ -564,6 +565,10 @@ class ChargePoint(cp):
     
     async def clearDisplayMessage(self, payload):
         request = call.ClearDisplayMessagePayload(**payload)
+        return await self.call(request)
+    
+    async def unlockConnector(self, payload):
+        request = call.UnlockConnectorPayload(**payload)
         return await self.call(request)
 
 

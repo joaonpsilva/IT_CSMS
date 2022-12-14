@@ -589,15 +589,11 @@ class ChargePoint(cp):
     @on("ClearDisplayMessage")
     async def on_ClearDisplayMessage(self, **kwargs):
         return call_result.ClearDisplayMessagePayload(status=enums.ClearMessageStatusType.accepted)
-
-
-
-
-
-
-
-
     
+
+    @on("UnlockConnector")
+    async def on_UnlockConnector(self, **kwargs):
+        return call_result.UnlockConnectorPayload(status=enums.UnlockStatusType.unlocked)
 
 
 
