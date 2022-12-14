@@ -1,7 +1,7 @@
 import websockets
 import logging
 from chargePointRepr import ChargePoint
-from csms_Rabbit_Handler import CSMS_Rabbit_Handler
+from csms_Rabbit_Handler import CSMS_Rabbit_Handler, Rabbit_Message
 import asyncio
 
 logging.basicConfig(level=logging.INFO)
@@ -16,15 +16,9 @@ def Basic_auth_with_broker(broker):
             self.user = username
             self.password = password
 
-            message = {
-                "method" : "VERIFY_PASSWORD",
-                "cp_id" : username,
-                "content" : {
-                    "CP_ID" : username,
-                    "password": password
-                }
-            }
 
+            content = {"CP_ID" : username,"password": password}
+            message = Rabbit_Message(origin = "ocppserver", destination="db1", method = "VERIFY_PASSWORD", cp_id=username, content=content)
             response =  await self.broker.send_request_wait_response(message)
             if response["status"] == "OK":
                 return response["content"]['approved']
@@ -117,7 +111,7 @@ class OCPP_Server:
         self.connected_CPs.pop(charge_point_id)
     
 
-    async def handle_api_request(self, request) -> None:
+    async def handle_api_request(self, request):
         """Function that handles requests from the api to comunicate with CPs"""
 
         #api wants to know current connected cps
@@ -125,7 +119,7 @@ class OCPP_Server:
             return {"status" : "OK", "content": list(self.connected_CPs.keys())}
 
         #wich CP send the message to
-        cp_id = request.pop('cp_id')
+        cp_id = request['cp_id']
         if cp_id in self.connected_CPs:
             #if is connected
             status, content = await self.connected_CPs[str(cp_id)].send_CP_Message(**request)

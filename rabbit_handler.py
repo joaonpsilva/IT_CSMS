@@ -19,10 +19,29 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return dataclasses.asdict(o)
         if isinstance(o, datetime.datetime):
             return o.strftime("%Y-%m-%d %H:%M:%S")
+        if isinstance(o, Rabbit_Message):
+            return o.__dict__
         return super().default(o)
 
-class Rabbit_Handler:
 
+class Rabbit_Message:
+    def __init__(self, destination = None, origin = None, method = None,type = None,content = None,cp_id = None):
+        self.destination = destination
+        self.origin = origin
+        self.method = method
+        self.type = type
+        self.content = content
+        self.cp_id = cp_id
+
+    def routing_key(self):
+        s=self.type
+        if self.destination!=None:
+            s += "." + self.destination
+        if self.cp_id!=None:
+            s += "." + self.cp_id
+        return s
+
+class Rabbit_Handler:
 
     def __init__(self, handle_request = None):
 
@@ -45,10 +64,8 @@ class Rabbit_Handler:
         #declare channel
         self.channel = await self.connection.channel()
 
-        #Declare exchange to where API will send requests
-        self.request_Exchange = await self.channel.declare_exchange(name="requests", type=ExchangeType.TOPIC)
-        #Declare exchange where logs are sent
-        #self.db_store_Exchange = await self.channel.declare_exchange("db_store", type=ExchangeType.FANOUT)
+        #Declare exchange to where communication will be sent
+        self.private_Exchange = await self.channel.declare_exchange(name="messages", type=ExchangeType.TOPIC)
 
         if create_response_queue:
             #declare a callback queue to where the reponses will be consumed
@@ -74,13 +91,12 @@ class Rabbit_Handler:
         future: asyncio.Future = self.futures.pop(message.correlation_id)
 
         #set a result to that future
-        future.set_result(json.loads(message.body.decode()))
+        future.set_result(json.loads(message.body.decode())["content"])
 
 
     async def unpack(self, message: AbstractIncomingMessage):
         #manually acknowledge
         await message.ack()
-
         #load json content
         return json.loads(message.body.decode())
 
@@ -93,44 +109,38 @@ class Rabbit_Handler:
 
         logging.info("RabbitMQ RECEIVED message: %s", str(content))
 
-        #pass content to csms
+        #pass content to be handled
         response = await self.handle_request(content)
         
-        #send response to the api if requested
+        #send response to the entity that made the request
         if message.reply_to is not None:
-            logging.info("RabbitMQ REPLYING: %s", str(response))
-            await self.channel.default_exchange.publish(
-                Message(
-                    body=json.dumps(response, cls=EnhancedJSONEncoder).encode(),
-                    correlation_id=message.correlation_id,
-                ),
-                routing_key=message.reply_to,
+            response = Rabbit_Message(
+                content=response,
+                type = "RESPONSE",
+                destination = content["origin"],
+                origin = content["destination"],
+                method =content["method"],
+                cp_id=content["cp_id"]
             )
+
+            await self.send_Message(response, message.correlation_id, routing_key=message.reply_to, exange=self.channel.default_exchange)
+            
+
         
-    async def send_request_wait_response(self, message, routing_key):
+    async def send_request_wait_response(self, message):
         """
         Send a request and wait for response
         """
-
-        logging.info("RabbitMQ SENDING request: %s", str(message))
+        message.type = "REQUEST"
 
         #create an ID for the request
         requestID = str(uuid.uuid4())
-
         #create a future and introduce it in the request map
         future = self.loop.create_future()
         self.futures[requestID] = future
 
         #send request
-        await self.request_Exchange.publish(
-            Message(
-                body=json.dumps(message, cls=EnhancedJSONEncoder).encode(),
-                content_type="application/json",
-                correlation_id=requestID,
-                reply_to=self.callback_queue.name,  #tell consumer: reply to this queue
-            ),
-            routing_key=routing_key,
-        )
+        await self.send_Message(message, requestID, self.callback_queue.name)
 
         #wait for the future to have a value and then return it
         try:
@@ -139,28 +149,28 @@ class Rabbit_Handler:
             #TODO maybe delete entry in future map?
             logging.error("No response received")
             return {"status":"ERROR"}
+        
+    async def ocpp_log(self, message):
+        message.type = "OCPP_LOG"
+        await self.send_Message(message)
+
     
     
-    async def send_to_DB(self, message, routing_key="store"):
+    
+    async def send_Message(self, message, requestID=None, reply_to=None, routing_key=None, exange=None):
+        json_message = json.dumps(message, cls=EnhancedJSONEncoder)
+        logging.info("RabbitMQ SENDING Message: %s", str(json_message))
 
-        logging.info("RabbitMQ SENDING info to store: %s", str(message))
-
-        #send message to store
-        await self.request_Exchange.publish(
+        #send request
+        if not exange:
+            exange = self.private_Exchange
+        
+        await exange.publish(
             Message(
-                body=json.dumps(message, cls=EnhancedJSONEncoder).encode(),
+                body=json_message.encode(),
                 content_type="application/json",
+                correlation_id=requestID,
+                reply_to=reply_to,  #tell consumer: reply to this queue
             ),
-            routing_key=routing_key, #send to all DBs
+            routing_key=routing_key if routing_key != None else message.routing_key(),
         )
-    
-    def build_message(self, method, cp_id=None, content=None):
-        message = {
-            "method" : method
-        }
-        if cp_id:
-            message["cp_id"] = cp_id
-        if content:
-            message["content"] = content
-
-        return message

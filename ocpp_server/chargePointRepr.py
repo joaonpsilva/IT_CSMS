@@ -9,6 +9,7 @@ import logging
 import dateutil.parser
 from sys import getsizeof
 import traceback
+from csms_Rabbit_Handler import Rabbit_Message
 
 logging.basicConfig(level=logging.INFO)
 
@@ -65,7 +66,7 @@ class ChargePoint(cp):
         self.wait_start_transaction = {}
     
     
-    async def send_CP_Message(self, method, content={}):
+    async def send_CP_Message(self, method, content={}, **kwargs):
         """Funtion will use the mapping defined in method_mapping to call the correct function"""
         try:
             return "OK", await self.method_mapping[method](payload=content)
@@ -89,8 +90,7 @@ class ChargePoint(cp):
         elif "evse" in payload:
             content["evse_id"] = payload["evse"]["id"]
         
-        message = ChargePoint.broker.build_message("Authorize", self.id, content)
-
+        message = Rabbit_Message(method="Authorize", cp_id=self.id, content=content)
         response = await ChargePoint.broker.send_request_wait_response(message)
         if response["status"] == "OK":
             id_token_info = response["content"]["id_token_info"]
@@ -102,8 +102,7 @@ class ChargePoint(cp):
 
     async def guarantee_transaction_integrity(self, transaction_id):
 
-        message = ChargePoint.broker.build_message("VERIFY_RECEIVED_ALL_TRANSACTION", self.id, {"transaction_id" : transaction_id})
-
+        message = Rabbit_Message(method="VERIFY_RECEIVED_ALL_TRANSACTION", cp_id=self.id, content={"transaction_id" : transaction_id})
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if response["status"] == "OK":
@@ -282,8 +281,8 @@ class ChargePoint(cp):
                 payload.charging_profile["transaction_id"] = response.transaction_id
                 
                 m = {"evse_id": payload.evse_id, "charging_profile":payload.charging_profile}
-                message = ChargePoint.broker.build_message("SetChargingProfile", self.id, m)
-                await ChargePoint.broker.send_to_DB(message)
+                message = Rabbit_Message(method="SetChargingProfile", cp_id=self.id, content=m)
+                await ChargePoint.broker.ocpp_log(message)
 
         return response                
 
@@ -400,8 +399,8 @@ class ChargePoint(cp):
 
         #send profile to the db
         if response.status == enums.ChargingProfileStatus.accepted:
-            message = ChargePoint.broker.build_message("SetChargingProfile", self.id, payload)
-            await ChargePoint.broker.send_to_DB(message)
+            message = Rabbit_Message(method="SetChargingProfile", cp_id=self.id, content=payload)
+            await ChargePoint.broker.ocpp_log(message)
         
         return response
 
@@ -455,8 +454,8 @@ class ChargePoint(cp):
         if request.charging_profile_id is None and (request.charging_profile_criteria is None or all(v is None for v in request.charging_profile_criteria.values())):
             raise ValueError("Specify at least 1 field")
             
-        message = ChargePoint.broker.build_message("clearChargingProfile", self.id, payload)
-        await ChargePoint.broker.send_to_DB(message)
+        message = Rabbit_Message(method="clearChargingProfile", cp_id=self.id, content=payload)
+        await ChargePoint.broker.ocpp_log(message)
 
         return await self.call(request)
 
@@ -504,7 +503,7 @@ class ChargePoint(cp):
 
         if payload["update_type"] == enums.UpdateType.full:
             #Get id tokens from DB
-            message = ChargePoint.broker.build_message("GET_FROM_TABLE", self.id, {"table":"IdToken"})
+            message = Rabbit_Message(method="GET_FROM_TABLE", cp_id=self.id, content={"table":"IdToken"})
             response = await ChargePoint.broker.send_request_wait_response(message)
             if response["status"] != "OK":
                 raise ValueError("DB ERROR")
@@ -577,8 +576,8 @@ class ChargePoint(cp):
         kwargs["timestamp"] = datetime.utcnow().isoformat()
 
         #inform db that new cp has connected
-        message = ChargePoint.broker.build_message("BootNotification", self.id, kwargs)
-        await ChargePoint.broker.send_to_DB(message)
+        message = Rabbit_Message(method="BootNotification", cp_id=self.id, content=kwargs)
+        await ChargePoint.broker.ocpp_log(message)
 
         return call_result.BootNotificationPayload(
             current_time=datetime.utcnow().isoformat(),
@@ -590,8 +589,9 @@ class ChargePoint(cp):
     async def on_StatusNotification(self, **kwargs):
 
         #inform db that new cp has connected
-        message = ChargePoint.broker.build_message("StatusNotification", self.id, kwargs)
-        await ChargePoint.broker.send_to_DB(message)
+        message = Rabbit_Message(method="StatusNotification", cp_id=self.id, content=kwargs)
+
+        await ChargePoint.broker.ocpp_log(message)
         
         return call_result.StatusNotificationPayload()
 
@@ -599,8 +599,8 @@ class ChargePoint(cp):
     @on('MeterValues')
     async def on_MeterValues(self, **kwargs):
 
-        message = ChargePoint.broker.build_message("MeterValues", self.id, kwargs)
-        await ChargePoint.broker.send_to_DB(message)
+        message = Rabbit_Message(method="MeterValues", cp_id=self.id, content=kwargs)
+        await ChargePoint.broker.ocpp_log(message)
         return call_result.MeterValuesPayload()
 
     
@@ -614,8 +614,8 @@ class ChargePoint(cp):
     @on('TransactionEvent')
     async def on_TransactionEvent(self, **kwargs):
         
-        message = ChargePoint.broker.build_message("TransactionEvent", self.id, kwargs)
-        await ChargePoint.broker.send_to_DB(message)
+        message = Rabbit_Message(method="TransactionEvent", cp_id=self.id, content=kwargs)
+        await ChargePoint.broker.ocpp_log(message)
 
         transaction_response = call_result.TransactionEventPayload()
 
@@ -688,8 +688,8 @@ class ChargePoint(cp):
 
     @on("NotifyEvent")
     async def on_notifyEvent(self, **kwargs):
-        message = ChargePoint.broker.build_message("NotifyEvent", self.id, kwargs)
-        await ChargePoint.broker.send_to_DB(message)
+        message = Rabbit_Message(method="NotifyEvent", cp_id=self.id, content=kwargs)
+        await ChargePoint.broker.ocpp_log(message)
         return call_result.NotifyEventPayload()
 
 

@@ -72,14 +72,13 @@ class DataBase:
             }
 
 
-    async def on_db_request(self, message: AbstractIncomingMessage):
+    async def on_db_request(self, message):
         """
         Function that will handle incoming requests from the api or ocpp Server
         """
         try:
             #call method depending on the message
-            method = message.pop("method")
-            toReturn = self.method_mapping[method](**message)
+            toReturn = self.method_mapping[message["method"]](**message)
             #commit possible changes
             self.session.commit()
 
@@ -100,23 +99,23 @@ class DataBase:
         return [attr for attr in dir(c) if not callable(getattr(c, attr)) and not attr.startswith("_")]
     
 
-    def select(self, content, cp_id=None):
+    def select(self, content, **kwargs):
         if "filters" not in content:
             content["filters"] = {}
         statement = select(self.table_mapping[content["table"]]).filter_by(**content["filters"])
         return [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]
     
-    def create(self, content, cp_id=None):
+    def create(self, content, **kwargs):
         statement = insert(self.table_mapping[content["table"]]).values(**content["values"])
         self.session.execute(statement)
     
-    def remove(self, content, cp_id=None):
+    def remove(self, content, **kwargs):
         if "filters" not in content:
             content["filters"] = {}
         statement = delete(self.table_mapping[content["table"]]).filter_by(**content["filters"])
         self.session.execute(statement)
 
-    def update(self, content, cp_id=None):
+    def update(self, content, **kwargs):
         if "filters" not in content:
             content["filters"] = {}
         statement = update(self.table_mapping[content["table"]]).filter_by(**content["filters"]).values(**content["values"])
@@ -124,7 +123,7 @@ class DataBase:
 
 
 
-    def verify_password(self, cp_id, content):
+    def verify_password(self, cp_id, content, **kwargs):
         charge_point = self.session.query(Charge_Point).get(cp_id)
 
         result = False
@@ -135,14 +134,14 @@ class DataBase:
 
 
 
-    def BootNotification(self, cp_id, content):
+    def BootNotification(self, cp_id, content, **kwargs):
 
         content["charging_station"]["cp_id"] = cp_id
         bootNotification = BootNotification(**content)
         
         self.session.merge(bootNotification)
 
-    def StatusNotification(self, cp_id, content):
+    def StatusNotification(self, cp_id, content, **kwargs):
 
         connector_id = content.pop("connector_id")
         evse_id = content.pop("evse_id")
@@ -152,7 +151,7 @@ class DataBase:
         self.session.merge(statusNotification)
         
 
-    def MeterValues(self, cp_id, content): 
+    def MeterValues(self, cp_id, content, **kwargs): 
         
         evse_id = content["evse_id"]
 
@@ -165,7 +164,7 @@ class DataBase:
             self.session.add(meter_value)
 
     
-    def build_idToken_Info(self, idToken, cp_id, evse_id = None):
+    def build_idToken_Info(self, idToken, cp_id, evse_id = None, **kwargs):
         """
         Builds an idTokenInfo based on id token
         """
@@ -213,7 +212,7 @@ class DataBase:
     
             
 
-    def Authorize_IdToken(self, cp_id, content):
+    def Authorize_IdToken(self, cp_id, content, **kwargs):
         """cannot deal with certificates yet"""
         #validate idtoken
         id_token_info = self.build_idToken_Info(
@@ -224,7 +223,7 @@ class DataBase:
         return {"id_token_info" : id_token_info}
 
 
-    def verify_received_all_transaction(self, cp_id, content):
+    def verify_received_all_transaction(self, cp_id, content, **kwargs):
         
         response = {"status" : "OK"}
         try:
@@ -246,7 +245,7 @@ class DataBase:
 
 
 
-    def TransactionEvent(self, cp_id, content):
+    def TransactionEvent(self, cp_id, content, **kwargs):
         
         #If message contains idtoken
         if "id_token" in content:
@@ -280,7 +279,7 @@ class DataBase:
         self.session.merge(transaction_event)
     
 
-    def setChargingProfile(self, cp_id, content):
+    def setChargingProfile(self, cp_id, content, **kwargs):
         
         self.session.query(ChargingProfile).filter(ChargingProfile.id==content["charging_profile"]["id"]).delete()
         # for schedule in content["charging_profile"]["charging_schedule"]:
@@ -314,7 +313,7 @@ class DataBase:
         return False
     
 
-    def verify_charging_profile_conflicts(self, cp_id, content):
+    def verify_charging_profile_conflicts(self, cp_id, content, **kwargs):
 
         charging_profile = ChargingProfile(**content["charging_profile"])
 

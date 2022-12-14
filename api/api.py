@@ -1,6 +1,6 @@
 import uvicorn
 from fastapi import FastAPI, Depends, Query, Response, status, Request
-from api_Rabbit_Handler import API_Rabbit_Handler
+from api_Rabbit_Handler import API_Rabbit_Handler, Rabbit_Message
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 from ocpp.v201 import call, call_result, enums
@@ -31,9 +31,9 @@ def choose_status(response):
     return status.HTTP_500_INTERNAL_SERVER_ERROR
     
 
-async def send_request(method, CP_Id=None, payload=None, routing_key="request.ocppserver"):
-    message = broker.build_message(method, CP_Id, payload)
-    response = await broker.send_request_wait_response(message, routing_key=routing_key)
+async def send_request(method, CP_Id=None, payload=None, destination="ocppserver"):
+    message = Rabbit_Message(method=method, content=payload,cp_id = CP_Id, origin="API", destination=destination)
+    response = await broker.send_request_wait_response(message)
     stat = choose_status(response)
     return response, stat
 
@@ -198,20 +198,20 @@ async def differential_Auth_List_Delete(CP_Id: str, payload: List[datatypes.IdTo
 
 @app.post("/CRUD/", status_code=200)
 async def CRUD(payload: schemas.CRUD_Payload, r: Response):
-    response, stat = await send_request(payload.operation, payload=payload, routing_key="request.db.db1")
+    response, stat = await send_request(payload.operation, payload=payload, destination="db1")
     r.status_code = stat
     return response
 
 @app.get("/getTransactions")
 async def getTransactions(r: Response):
-    response, stat = await send_request("SELECT", payload={"table" : schemas.DB_Tables.Transaction}, routing_key="request.db.db1")
+    response, stat = await send_request("SELECT", payload={"table" : schemas.DB_Tables.Transaction}, destination="db1")
     stat = choose_status(response)
     r.status_code = stat
     return response
 
 @app.get("/getTransactions_ById/{transactionId}")
 async def getTransactions(transactionId: str, r: Response):
-    response, stat = await send_request("SELECT", payload={"table":schemas.DB_Tables.Transaction, "filters":{"transaction_id":transactionId}}, routing_key="request.db.db1")
+    response, stat = await send_request("SELECT", payload={"table":schemas.DB_Tables.Transaction, "filters":{"transaction_id":transactionId}}, destination="db1")
     stat = choose_status(response)
     r.status_code = stat
     return response
