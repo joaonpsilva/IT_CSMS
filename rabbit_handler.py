@@ -87,11 +87,14 @@ class Rabbit_Handler:
             logging.info(f"Bad response {message!r}")
             return
 
-        #get the future with key = correlationid
-        future: asyncio.Future = self.futures.pop(message.correlation_id)
+        try:
+            #get the future with key = correlationid
+            future: asyncio.Future = self.futures.pop(message.correlation_id)
 
-        #set a result to that future
-        future.set_result(json.loads(message.body.decode())["content"])
+            #set a result to that future
+            future.set_result(json.loads(message.body.decode())["content"])
+        except Exception:
+            pass
 
 
     async def unpack(self, message: AbstractIncomingMessage):
@@ -146,7 +149,7 @@ class Rabbit_Handler:
         try:
             return await asyncio.wait_for(future, timeout=5)
         except asyncio.TimeoutError:
-            #TODO maybe delete entry in future map?
+            self.futures.pop(requestID)
             logging.error("No response received")
             return {"status":"ERROR"}
         
