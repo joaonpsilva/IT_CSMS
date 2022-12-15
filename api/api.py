@@ -153,6 +153,12 @@ async def GetTransactionStatus(CP_Id: str, payload: payloads.GetTransactionStatu
     r.status_code = stat
     return response
 
+@app.get("/GetTransactionStatus", status_code=200)
+async def GetTransactionStatus(transaction_id: str, r: Response):
+    response, stat = await send_request("GET_TRANSACTION_STATUS", payload={"transaction_id":transaction_id})
+    r.status_code = stat
+    return response
+
 
 
 @app.post("/SetDisplayMessage/{CP_Id}", status_code=200)

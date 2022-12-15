@@ -114,18 +114,32 @@ class OCPP_Server:
     async def handle_api_request(self, request):
         """Function that handles requests from the api to comunicate with CPs"""
 
-        #api wants to know current connected cps
-        if request['method'] == "GET_CONNECTED_CPS":
-            return {"status" : "OK", "content": list(self.connected_CPs.keys())}
-
         #wich CP send the message to
         cp_id = request['cp_id']
+
+        if cp_id is None:
+            #api wants to know current connected cps
+            if request['method'] == "GET_CONNECTED_CPS":
+                return {"status" : "OK", "content": list(self.connected_CPs.keys())}
+            
+            if request["method"] == "GET_TRANSACTION_STATUS":
+                cp_id = await self.get_cpID_by_TransactionId(request["content"]["transaction_id"])
+
+
         if cp_id in self.connected_CPs:
             #if is connected
             status, content = await self.connected_CPs[str(cp_id)].send_CP_Message(**request)
             return {"status" : status, "content": content}
         else:
             return {"status":"VAL_ERROR", "content": "This CP is not connected"}
+    
+
+    async def get_cpID_by_TransactionId(self, transaction_id):
+        message = Rabbit_Message(method="SELECT", content={"table":"Transaction_Event", "filters": {"transaction_id" : transaction_id}})
+        response = await ChargePoint.broker.send_request_wait_response(message)
+
+        if len(response["content"]) > 0:
+            return response["content"][0]["cp_id"]
 
 
 if __name__ == '__main__':
