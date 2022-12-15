@@ -76,32 +76,35 @@ class Rabbit_Handler:
         logging.info("Connected to the RMQ Broker")
 
 
-            
-    def on_response(self, message: AbstractIncomingMessage) -> None:
-        """
-        callback funtion. Will be executed when a message is received in the callback queue
-        """
-        logging.info("RabbitMQ RECEIVED response: %s", str(json.loads(message.body.decode())))
-
-        if message.correlation_id is None:
-            logging.info(f"Bad response {message!r}")
-            return
-
-        try:
-            #get the future with key = correlationid
-            future: asyncio.Future = self.futures.pop(message.correlation_id)
-
-            #set a result to that future
-            future.set_result(json.loads(message.body.decode())["content"])
-        except Exception:
-            pass
-
 
     async def unpack(self, message: AbstractIncomingMessage):
         #manually acknowledge
         await message.ack()
         #load json content
         return json.loads(message.body.decode())
+
+            
+    async def on_response(self, message: AbstractIncomingMessage) -> None:
+        """
+        callback funtion. Will be executed when a message is received in the callback queue
+        """
+
+        #load json content
+        content = await self.unpack(message)
+
+        logging.info("RabbitMQ RECEIVED response: %s", str(content))
+
+        if message.correlation_id is None:
+            logging.info(f"Bad response {content!r}")
+            return
+
+        try:
+            #get the future with key = correlationid
+            future: asyncio.Future = self.futures.pop(message.correlation_id)
+            #set a result to that future
+            future.set_result(content["content"])
+        except Exception:
+            pass
 
 
     async def on_request(self, message: AbstractIncomingMessage) -> None:
