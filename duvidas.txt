@@ -17,9 +17,13 @@ store all idtoken - evse permissions
 
 Client ocpp-----------------
 
--apenas da forward the mensagens? p. ex. Charging profiles, apenas tenho q dar forward? quem limita as cargas?
 -rabbitmq nome das exanges e com quem posso comunicar
--rabbitmq usa reply_to e correlation_id? (se calhar não têm q lidar com multiplos requests?
+-rabbitmq usa reply_to e correlation_id? (se calhar não têm q lidar com multiplos requests?)
 -conteudo das mensagens segue sempre o ocpp?
 -p. ex. transaction, de onde vêm os transaction events?
+-apenas da forward the mensagens? p. ex. Charging profiles, apenas tenho q dar forward? quem limita as cargas? Local auth list quem guarda?
+
+
+
+
 
