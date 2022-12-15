@@ -504,7 +504,7 @@ class ChargePoint(cp):
 
         if payload["update_type"] == enums.UpdateType.full:
             #Get id tokens from DB
-            message = Rabbit_Message(method="GET_FROM_TABLE", cp_id=self.id, content={"table":"IdToken"})
+            message = Rabbit_Message(method="SELECT", cp_id=self.id, content={"table":"IdToken"})
             response = await ChargePoint.broker.send_request_wait_response(message)
             if response["status"] != "OK":
                 raise ValueError("DB ERROR")
