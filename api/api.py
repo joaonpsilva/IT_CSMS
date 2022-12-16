@@ -276,10 +276,10 @@ async def message_stream(request: Request, events: List[enums.Action]= Query(
     return EventSourceResponse(event_generator())
 
 
-async def on_event(message: AbstractIncomingMessage):
-    if message["method"] in event_listeners:
-        for event_queue in event_listeners[message["method"]]:
-            await event_queue.put(json.dumps(message))
+async def on_event(message):
+    if message.method in event_listeners:
+        for event_queue in event_listeners[message.method]:
+            await event_queue.put(json.dumps(message.content))
 
 
 

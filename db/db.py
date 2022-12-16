@@ -78,7 +78,7 @@ class DataBase:
         """
         try:
             #call method depending on the message
-            toReturn = self.method_mapping[message["method"]](**message)
+            toReturn = self.method_mapping[message.method](**message.__dict__)
             #commit possible changes
             self.session.commit()
 

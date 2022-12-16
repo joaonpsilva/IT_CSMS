@@ -41,6 +41,15 @@ class Rabbit_Message:
             s += "." + self.cp_id
         return s
 
+    def prepare_Response(self):
+        temp_destination = self.destination
+        self.destination = self.origin
+        self.origin = temp_destination
+        self.type = "RESPONSE"
+        self.content = None
+        return self
+    
+
 class Rabbit_Handler:
 
     def __init__(self, handle_request = None):
@@ -50,7 +59,10 @@ class Rabbit_Handler:
         self.futures: MutableMapping[str, asyncio.Future] = {}
         self.loop = asyncio.get_running_loop()
 
+        self.rabbit_Message = Rabbit_Message
+
         self.handle_request = handle_request
+
 
     
     async def connect(self, create_response_queue = True):
@@ -81,7 +93,7 @@ class Rabbit_Handler:
         #manually acknowledge
         await message.ack()
         #load json content
-        return json.loads(message.body.decode())
+        return self.rabbit_Message(**json.loads(message.body.decode()))
 
             
     async def on_response(self, message: AbstractIncomingMessage) -> None:
@@ -90,44 +102,42 @@ class Rabbit_Handler:
         """
 
         #load json content
-        content = await self.unpack(message)
+        response = await self.unpack(message)
 
-        logging.info("RabbitMQ RECEIVED response: %s", str(content))
-
-        if message.correlation_id is None:
-            logging.info(f"Bad response {content!r}")
+        if response.type != "RESPONSE":
             return
 
-        try:
-            #get the future with key = correlationid
-            future: asyncio.Future = self.futures.pop(message.correlation_id)
-            #set a result to that future
-            future.set_result(content["content"])
-        except Exception:
-            pass
+        logging.info("RabbitMQ RECEIVED response: %s", response.__dict__)
+
+        if message.correlation_id is None:
+            logging.info(f"Bad response {response!r}")
+            return
+
+        #get the future with key = correlationid
+        future: asyncio.Future = self.futures.pop(message.correlation_id)
+        #set a result to that future
+        future.set_result(response.content)
+
 
 
     async def on_request(self, message: AbstractIncomingMessage) -> None:
         """Received message from with a request"""
 
         #load json content
-        content = await self.unpack(message)
+        request = await self.unpack(message)
 
-        logging.info("RabbitMQ RECEIVED message: %s", str(content))
+        if request.type not in ["REQUEST", "OCPP_LOG"]:
+            return
+
+        logging.info("RabbitMQ RECEIVED message: %s", request.__dict__)
 
         #pass content to be handled
-        response = await self.handle_request(content)
+        response_content = await self.handle_request(request)
         
         #send response to the entity that made the request
         if message.reply_to is not None:
-            response = Rabbit_Message(
-                content=response,
-                type = "RESPONSE",
-                destination = content["origin"],
-                origin = content["destination"],
-                method =content["method"],
-                cp_id=content["cp_id"]
-            )
+            response = request.prepare_Response()
+            response.content = response_content
 
             await self.send_Message(response, message.correlation_id, routing_key=message.reply_to, exange=self.channel.default_exchange)
             

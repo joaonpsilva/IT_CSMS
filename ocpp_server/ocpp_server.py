@@ -115,20 +115,20 @@ class OCPP_Server:
         """Function that handles requests from the api to comunicate with CPs"""
 
         #wich CP send the message to
-        cp_id = request['cp_id']
+        cp_id = request.cp_id
 
         if cp_id is None:
             #api wants to know current connected cps
-            if request['method'] == "GET_CONNECTED_CPS":
+            if request.method == "GET_CONNECTED_CPS":
                 return {"status" : "OK", "content": list(self.connected_CPs.keys())}
             
-            if request["method"] == "GET_TRANSACTION_STATUS":
-                cp_id = await self.get_cpID_by_TransactionId(request["content"]["transaction_id"])
+            if request.method == "GET_TRANSACTION_STATUS":
+                cp_id = await self.get_cpID_by_TransactionId(request.content["transaction_id"])
 
 
         if cp_id in self.connected_CPs:
             #if is connected
-            status, content = await self.connected_CPs[str(cp_id)].send_CP_Message(**request)
+            status, content = await self.connected_CPs[str(cp_id)].send_CP_Message(**request.__dict__)
             return {"status" : status, "content": content}
         else:
             return {"status":"VAL_ERROR", "content": "This CP is not connected"}
