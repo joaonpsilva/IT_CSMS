@@ -45,7 +45,7 @@ class Rabbit_Message:
         temp_destination = self.destination
         self.destination = self.origin
         self.origin = temp_destination
-        self.type = "RESPONSE"
+        self.type = "response"
         self.content = None
         return self
     
@@ -65,7 +65,7 @@ class Rabbit_Handler:
 
 
     
-    async def connect(self, create_response_queue = True):
+    async def connect(self):
         """
         connect to the rabbitmq server and setup connection
         """
@@ -77,14 +77,8 @@ class Rabbit_Handler:
         self.channel = await self.connection.channel()
 
         #Declare exchange to where communication will be sent
-        self.private_Exchange = await self.channel.declare_exchange(name="messages", type=ExchangeType.TOPIC)
+        self.exchange = await self.channel.declare_exchange(name="messages", type=ExchangeType.TOPIC)
 
-        if create_response_queue:
-            #declare a callback queue to where the reponses will be consumed
-            self.callback_queue = await self.channel.declare_queue(exclusive=True)
-            #consume messages from the queue
-            await self.callback_queue.consume(self.on_response)
-        
         logging.info("Connected to the RMQ Broker")
 
 
@@ -104,7 +98,7 @@ class Rabbit_Handler:
         #load json content
         response = await self.unpack(message)
 
-        if response.type != "RESPONSE":
+        if response.type != "response":
             return
 
         logging.info("RabbitMQ RECEIVED response: %s", response.__dict__)
@@ -126,7 +120,7 @@ class Rabbit_Handler:
         #load json content
         request = await self.unpack(message)
 
-        if request.type not in ["REQUEST", "OCPP_LOG"]:
+        if request.type not in ["request", "ocpp_log"]:
             return
 
         logging.info("RabbitMQ RECEIVED message: %s", request.__dict__)
@@ -139,7 +133,7 @@ class Rabbit_Handler:
             response = request.prepare_Response()
             response.content = response_content
 
-            await self.send_Message(response, message.correlation_id, routing_key=message.reply_to, exange=self.channel.default_exchange)
+            await self.send_Message(response, message.correlation_id)
             
 
         
@@ -147,7 +141,7 @@ class Rabbit_Handler:
         """
         Send a request and wait for response
         """
-        message.type = "REQUEST"
+        message.type = "request"
 
         #create an ID for the request
         requestID = str(uuid.uuid4())
@@ -156,7 +150,7 @@ class Rabbit_Handler:
         self.futures[requestID] = future
 
         #send request
-        await self.send_Message(message, requestID, self.callback_queue.name)
+        await self.send_Message(message, requestID, self.response_queue.name)
 
         #wait for the future to have a value and then return it
         try:
@@ -167,21 +161,17 @@ class Rabbit_Handler:
             return {"status":"ERROR"}
         
     async def ocpp_log(self, message):
-        message.type = "OCPP_LOG"
+        message.type = "ocpp_log"
         await self.send_Message(message)
 
     
     
     
-    async def send_Message(self, message, requestID=None, reply_to=None, routing_key=None, exange=None):
+    async def send_Message(self, message, requestID=None, reply_to=None, routing_key=None):
         json_message = json.dumps(message, cls=EnhancedJSONEncoder)
         logging.info("RabbitMQ SENDING Message: %s", str(json_message))
-
-        #send request
-        if not exange:
-            exange = self.private_Exchange
         
-        await exange.publish(
+        await self.exchange.publish(
             Message(
                 body=json_message.encode(),
                 content_type="application/json",
