@@ -7,8 +7,6 @@ Notify event? tem tbc e seq no mas pode ter events diferentes
 como funciona getvariables, devo pedir logo tudo no bootnotif
 
 
-
-
 api 100% transaprent, alguns parametros query (transaction_id), os dois modos
 csms deve retornar a api oq? reposta ocpp ou resposta com conteudi util?
 store all idtoken - evse permissions
@@ -20,11 +18,15 @@ Client ocpp-----------------
 
 -rabbitmq usa reply_to e correlation_id? (se calhar não têm q lidar com multiplos requests?)
 
+-resposta do decision point e cp tambem é ocpp? o decision point quer as respostas?
+
 -Charging profiles, apenas tenho q dar forward? quem limita as cargas? Local auth list quem guarda?
 
 -statusnotif e bootnotif sao pedidos por mim ou sao enviados pelo decision point qnd ele quiser?posso pedir status notification ou so recebo? Quando boot da pending status nao podem ser enviados
 
+- quem guarda as variaveis de configuração? se for a charging station, como é q o decision point sabe quando começar a transaçao (txstartpoint)?
 
+- remote start quem manda autorizar? remote stop cp deve verificar se transaction existe?
 
 
 
