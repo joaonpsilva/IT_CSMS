@@ -1,7 +1,9 @@
 import asyncio
 
-from charge_station_Rabbit_Handler import Charge_Station_Rabbit_Handler
-#TODO needs own queue
+import sys
+from os import path
+sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
+from fanout_Rabbit_Handler import Fanout_Rabbit_Handler
 
 class DataBase_CP:
 
@@ -12,7 +14,7 @@ class DataBase_CP:
     async def run(self):
 
         #Initialize broker that will handle Rabbit coms
-        self.broker = Charge_Station_Rabbit_Handler(self.on_db_request)
+        self.broker = Fanout_Rabbit_Handler(self.on_db_request, "OCPPclientDB")
         #Start listening to messages
         await self.broker.connect()
 

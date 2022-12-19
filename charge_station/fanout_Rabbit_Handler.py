@@ -29,12 +29,13 @@ class Fanout_Message(Rabbit_Message):
         return self
 
 
-class Charge_Station_Rabbit_Handler(Rabbit_Handler):
+class Fanout_Rabbit_Handler(Rabbit_Handler):
     """class that will handle communication inter services"""
 
-    def __init__(self, handle_request = None):
+    def __init__(self, handle_request = None, name=None):
         super().__init__(handle_request)
         self.rabbit_Message = Fanout_Message
+        self.name = name
 
     
     async def connect(self):
@@ -49,21 +50,21 @@ class Charge_Station_Rabbit_Handler(Rabbit_Handler):
         self.channel = await self.connection.channel()
 
         #TODO exchanges?
-        self.fanout_Exchange = await self.channel.declare_exchange(name="fanout", type=ExchangeType.FANOUT)
+        self.exchange = await self.channel.declare_exchange(name="fanout", type=ExchangeType.FANOUT)
 
 
         #Declare queue that will receive the requests to be handled by the occp_server
-        self.request_queue = await self.channel.declare_queue("ocpp_client_request_queue")
+        self.request_queue = await self.channel.declare_queue(self.name + "_Request_queue")
         #Bind queue to exchange so that the queue is eligible to receive requests
-        await self.request_queue.bind(self.fanout_Exchange, routing_key='')
+        await self.request_queue.bind(self.exchange, routing_key='')
         #Start consuming requests from the queue
         await self.request_queue.consume(self.on_request, no_ack=False)
 
 
         #declare a callback queue to where the reponses will be consumed
-        self.callback_queue = await self.channel.declare_queue("ocpp_client_response_queue")
+        self.callback_queue = await self.channel.declare_queue(self.name + "_Response_queue")
         #Bind queue to exchange so that the queue is eligible to receive responses
-        await self.callback_queue.bind(self.fanout_Exchange, routing_key='')
+        await self.callback_queue.bind(self.exchange, routing_key='')
         #consume messages from the queue
         await self.callback_queue.consume(self.on_response, no_ack=False)
 
@@ -72,5 +73,5 @@ class Charge_Station_Rabbit_Handler(Rabbit_Handler):
     
 
     async def ocpp_log(self, message):
-        message.type = "REQUEST"
-        await self.send_Message(message, exange=self.fanout_Exchange)
+        message.type = "request"
+        await self.send_Message(message)

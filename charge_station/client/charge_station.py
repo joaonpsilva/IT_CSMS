@@ -1,7 +1,11 @@
 import logging
 import asyncio
 import websockets
-from charge_station_Rabbit_Handler import Charge_Station_Rabbit_Handler, Fanout_Message
+
+from os import path
+sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
+from fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
+
 from ocpp.v201 import call
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
@@ -22,7 +26,7 @@ class ChargePoint(cp):
 
     async def run(self):
         #broker handles the rabbit mq queues and communication between services
-        self.broker = Charge_Station_Rabbit_Handler(self.handle_request)
+        self.broker = Fanout_Rabbit_Handler(self.handle_request, "OCPPclient")
         await self.broker.connect()
 
         await self.start()
@@ -36,7 +40,7 @@ class ChargePoint(cp):
     @on('TriggerMessage')
     async def on_TriggerMessage(self, **kwargs):
 
-        message = Fanout_Message(intent="TriggerMessage", type="REQUEST", content=kwargs)
+        message = Fanout_Message(intent="TriggerMessage", type="request", content=kwargs)
         await self.broker.ocpp_log(message)
 
         return call_result.TriggerMessagePayload(
