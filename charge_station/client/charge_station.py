@@ -3,6 +3,8 @@ import asyncio
 import websockets
 
 from os import path
+import sys
+
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
 
@@ -11,7 +13,6 @@ from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
 from ocpp.routing import after,on
 
-import sys
 logging.basicConfig(level=logging.INFO)
 
 
@@ -21,8 +22,11 @@ class ChargePoint(cp):
         super().__init__(cp_id, ws)
 
         self.method_mapping = {
-            "request_boot_notification" : call.BootNotificationPayload
+            "request_boot_notification" : self.bootNotification
         }
+
+        self.accepted = False
+        
 
     async def run(self):
         #broker handles the rabbit mq queues and communication between services
@@ -34,13 +38,42 @@ class ChargePoint(cp):
     
     async def handle_request(self, request):
         if request.intent in self.method_mapping:
-            return await self.call(self.method_mapping[request.intent](**request.content))
+            return await self.method_mapping[request.intent](**request.content)
+    
+    
+    async def bootNotification(self, **kwargs):
+        #TODO B01.FR.06
 
+        request = call.BootNotificationPayload(**kwargs)
+        response = await self.call(request)
+
+        loop = asyncio.get_event_loop()
+
+        if response.status == enums.RegistrationStatusType.accepted:
+            self.accepted = True
+            #initiate heart beat
+            loop.create_task(self.heartBeat(response.interval))
+
+        else:
+            #Retry boot after x senconds
+            loop.call_later(response.interval, loop.create_task, self.bootNotification(**kwargs))
+        
+
+    
+    async def heartBeat(self, interval):
+        while True:
+            request = call.HeartbeatPayload()
+            response = await self.call(request)
+            await asyncio.sleep(interval)
+
+
+
+    #---------------------------------------------------------------------------------
     
     @on('TriggerMessage')
     async def on_TriggerMessage(self, **kwargs):
 
-        message = Fanout_Message(intent="TriggerMessage", type="request", content=kwargs)
+        message = Fanout_Message(intent="TriggerMessage", content=kwargs)
         await self.broker.ocpp_log(message)
 
         return call_result.TriggerMessagePayload(

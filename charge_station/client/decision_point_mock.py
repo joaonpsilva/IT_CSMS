@@ -2,12 +2,13 @@ import logging
 import asyncio
 import websockets
 from os import path
+import sys
+
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
 from ocpp.v201 import call
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
-import sys
 logging.basicConfig(level=logging.INFO)
 
 

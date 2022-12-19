@@ -587,7 +587,7 @@ class ChargePoint(cp):
         return call_result.BootNotificationPayload(
             current_time=datetime.utcnow().isoformat(),
             interval=10,
-            status='Accepted'
+            status=enums.RegistrationStatusType.accepted
         )
 
     @on('StatusNotification')
