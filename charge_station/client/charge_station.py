@@ -51,6 +51,7 @@ class ChargePoint(cp):
 
         if response.status == enums.RegistrationStatusType.accepted:
             self.accepted = True
+            #TODO status notification
             #initiate heart beat
             loop.create_task(self.heartBeat(response.interval))
 
@@ -66,23 +67,36 @@ class ChargePoint(cp):
             response = await self.call(request)
             await asyncio.sleep(interval)
 
-
-
     #---------------------------------------------------------------------------------
     
     @on('TriggerMessage')
     async def on_TriggerMessage(self, **kwargs):
 
-        message = Fanout_Message(intent="TriggerMessage", content=kwargs)
-        await self.broker.ocpp_log(message)
+        #message = Fanout_Message(intent="TriggerMessage", content=kwargs)
+        #wait self.broker.ocpp_log(message)
 
         return call_result.TriggerMessagePayload(
             status=enums.TriggerMessageStatusType.accepted
-        )
+        )    
 
+    @on('RequestStartTransaction')
+    async def on_RequestStartTransaction(self, **kwargs):
+
+        message = Fanout_Message(intent="remote_start_transaction", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+        
+        return call_result.RequestStartTransactionPayload(**response)
     
 
+    @on('RequestStopTransaction')
+    async def on_RequestStopTransaction(self, **kwargs):
 
+        message = Fanout_Message(intent="remote_stop_transaction", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+
+        return call_result.RequestStopTransactionPayload(**response)
+
+    
 
 async def main(cp_id):
 
