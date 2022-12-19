@@ -22,7 +22,7 @@ Client ocpp-----------------
 
 -Charging profiles, apenas tenho q dar forward? quem limita as cargas? Local auth list quem guarda?
 
--posso pedir status notification ou so recebo? Quando boot da pending status nao podem ser enviados
+-statusnotif e bootnotif sao pedidos por mim ou sao enviados pelo decision point qnd ele quiser?posso pedir status notification ou so recebo? Quando boot da pending status nao podem ser enviados
 
 
 
