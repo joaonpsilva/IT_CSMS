@@ -95,6 +95,34 @@ class ChargePoint(cp):
         response = await self.broker.send_request_wait_response(message)
 
         return call_result.RequestStopTransactionPayload(**response)
+    
+
+    @on("GetLocalListVersion")
+    async def on_GetLocalListVersion(self):
+
+        message = Fanout_Message(intent="SELECT", content={"table":"LocalList"})
+        response = await self.broker.send_request_wait_response(message)
+
+        return call_result.GetLocalListVersionPayload(version_number=response[0]["version_number"])
+    
+    @on("SendLocalList")
+    async def on_SendLocalList(self, **kwargs):
+        return call_result.SendLocalListPayload(status=enums.SendLocalListStatusType.accepted)
+
+    
+    @on('GetVariables')
+    def on_get_variables(self,get_variable_data,**kwargs):
+        
+        get_variable_result = [
+            datatypes.GetVariableResultType(
+                attribute_status= enums.GetVariableStatusType.rejected, 
+                component=var["component"],
+                variable= var["variable"],
+            )   
+            for var in get_variable_data]
+
+        return call_result.GetVariablesPayload(get_variable_result=get_variable_result)
+
 
     
 
