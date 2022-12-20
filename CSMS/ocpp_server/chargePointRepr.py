@@ -125,7 +125,15 @@ class ChargePoint(cp):
                     variable=VARIABLES["ItemsPerMessageGetVariables"]["variable"]
                 )
             ])
-            self.max_get_messages = int((await self.call(request)).get_variable_result[0]["attribute_value"])
+            response = await self.call(request)
+            
+
+            if response.get_variable_result[0]["attribute_status"] == enums.GetVariableStatusType.accepted:
+                self.max_get_messages = int(response.get_variable_result[0]["attribute_value"])
+            else:
+                #if no response assume high number
+                self.max_get_messages = 9999
+
             logging.info("Max number of getvariables supported is %d", self.max_get_messages)
 
         return self.max_get_messages
@@ -143,6 +151,9 @@ class ChargePoint(cp):
         max_items: max number of items in the list
         max_bytes: max number of bytes of the request
         """
+
+        max_items = int(max_items) if max_items else None
+        max_bytes = int(max_bytes) if max_bytes else None
         
         #get all the items in the request list
         item_list = [request_dict[var_with_list]]
@@ -216,8 +227,10 @@ class ChargePoint(cp):
         
         results = await self.getVariables({"get_variable_data":requests})
 
-        return {request: result['attribute_value'] for request, result in zip(variables, results["get_variable_result"]) 
-            if result['attribute_status'] == enums.GetVariableStatusType.accepted}
+
+        return {request: result['attribute_value'] if result['attribute_status'] == enums.GetVariableStatusType.accepted else None
+            for request, result in zip(variables, results["get_variable_result"]) 
+            }
         
 
 #######################Functions starting from CSMS Initiative
@@ -238,7 +251,7 @@ class ChargePoint(cp):
 
         max_set_messages = (await self.getVariablesByName(["ItemsPerMessageSetVariables"]))["ItemsPerMessageSetVariables"]
 
-        results = await self.sendListByChunks(call.SetVariablesPayload, payload, "set_variable_data", int(max_set_messages))
+        results = await self.sendListByChunks(call.SetVariablesPayload, payload, "set_variable_data", max_set_messages)
         result = {"set_variable_result" : [var for r in results for var in r.set_variable_result]}
   
         return result
@@ -364,13 +377,7 @@ class ChargePoint(cp):
 
     
     def verify_charging_profile_structure(self, payload):
-        #DB bug
-        if payload.charging_profile["id"] == 0:
-            raise ValueError("Charge profile ID cannot be 0")
-
-        for schedule in payload.charging_profile["charging_schedule"]:
-            if schedule["id"] == 0:
-                raise ValueError("Charge Schedule ID cannot be 0")
+        
 
         if payload.charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
             #K01.FR.03
@@ -470,7 +477,7 @@ class ChargePoint(cp):
 
         vars = await self.getVariablesByName(["ItemsPerMessageSetVariableMonitoring", "BytesPerMessageSetVariableMonitoring"])
 
-        results = await self.sendListByChunks(call.SetVariableMonitoringPayload, payload, "set_monitoring_data", int(vars["ItemsPerMessageSetVariableMonitoring"]), int(vars["BytesPerMessageSetVariableMonitoring"]))
+        results = await self.sendListByChunks(call.SetVariableMonitoringPayload, payload, "set_monitoring_data", vars["ItemsPerMessageSetVariableMonitoring"], vars["BytesPerMessageSetVariableMonitoring"])
         result = {"set_monitoring_result" : [var for r in results for var in r.set_monitoring_result]}
 
         return result
@@ -479,7 +486,7 @@ class ChargePoint(cp):
 
         vars = await self.getVariablesByName(["ItemsPerMessageClearVariableMonitoring", "BytesPerMessageClearVariableMonitoring"])
 
-        results = await self.sendListByChunks(call.ClearVariableMonitoringPayload, payload, "id", int(vars["ItemsPerMessageClearVariableMonitoring"]), int(vars["BytesPerMessageClearVariableMonitoring"]))
+        results = await self.sendListByChunks(call.ClearVariableMonitoringPayload, payload, "id", vars["ItemsPerMessageClearVariableMonitoring"], vars["BytesPerMessageClearVariableMonitoring"])
         result = {"clear_monitoring_result" : [var for r in results for var in r.clear_monitoring_result]}
 
         return result
@@ -551,8 +558,8 @@ class ChargePoint(cp):
         return await self.sendListByChunks(call.SendLocalListPayload, 
             request,
             "local_authorization_list",
-            int(vars["ItemsPerMessageSendLocalList"]),
-            int(vars["BytesPerMessageSendLocalList"]))
+            vars["ItemsPerMessageSendLocalList"],
+            vars["BytesPerMessageSendLocalList"])
     
 
     async def setDisplayMessage(self, payload):
@@ -586,7 +593,7 @@ class ChargePoint(cp):
 
         return call_result.BootNotificationPayload(
             current_time=datetime.utcnow().isoformat(),
-            interval=10,
+            interval=30,
             status=enums.RegistrationStatusType.accepted
         )
 
