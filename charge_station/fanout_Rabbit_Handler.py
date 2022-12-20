@@ -24,7 +24,7 @@ class Fanout_Message(Rabbit_Message):
         return ''
     
     def prepare_Response(self):
-        self.type = "RESPONSE"
+        self.type = "response"
         self.content = None
         return self
 
@@ -62,11 +62,11 @@ class Fanout_Rabbit_Handler(Rabbit_Handler):
 
 
         #declare a callback queue to where the reponses will be consumed
-        self.callback_queue = await self.channel.declare_queue(self.name + "_Response_queue")
+        self.response_queue = await self.channel.declare_queue(self.name + "_Response_queue")
         #Bind queue to exchange so that the queue is eligible to receive responses
-        await self.callback_queue.bind(self.exchange, routing_key='')
+        await self.response_queue.bind(self.exchange, routing_key='')
         #consume messages from the queue
-        await self.callback_queue.consume(self.on_response, no_ack=False)
+        await self.response_queue.consume(self.on_response, no_ack=False)
 
         logging.info("Connected to the RMQ Broker")
     

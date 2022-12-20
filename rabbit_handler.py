@@ -108,9 +108,10 @@ class Rabbit_Handler:
             return
 
         #get the future with key = correlationid
-        future: asyncio.Future = self.futures.pop(message.correlation_id)
-        #set a result to that future
-        future.set_result(response.content)
+        if message.correlation_id in self.futures:
+            future: asyncio.Future = self.futures.pop(message.correlation_id)
+            #set a result to that future
+            future.set_result(response.content)
 
 
 
@@ -129,7 +130,7 @@ class Rabbit_Handler:
         response_content = await self.handle_request(request)
         
         #send response to the entity that made the request
-        if message.reply_to is not None:
+        if response_content is not None:
             response = request.prepare_Response()
             response.content = response_content
 
