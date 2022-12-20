@@ -1,7 +1,5 @@
 import asyncio
-from itertools import chain
 from db_Rabbit_Handler import DB_Rabbit_Handler
-from aio_pika.abc import AbstractIncomingMessage
 import logging
 from sqlalchemy import create_engine, update, select, delete, insert
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker

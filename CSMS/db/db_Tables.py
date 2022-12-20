@@ -326,7 +326,7 @@ class Transaction_Event(CustomBase):
 class ChargingProfile(CustomBase):
     __tablename__ = "ChargingProfile"
 
-    id = Column(Integer, primary_key = True)
+    id = Column(Integer, primary_key = True, autoincrement=False)
     stack_level = Column(Integer)
     charging_profile_purpose = Column(Enum(enums.ChargingProfilePurposeType))
     charging_profile_kind = Column(Enum(enums.ChargingProfileKindType))
@@ -347,7 +347,7 @@ class ChargingProfile(CustomBase):
 class ChargingSchedule(CustomBase):
     __tablename__ = "ChargingSchedule"
 
-    id = Column(Integer, primary_key = True)
+    id = Column(Integer, primary_key = True, autoincrement=False)
     start_schedule = Column(DateTime)
     duration = Column(Integer)
     charging_rate_unit = Column(Enum(enums.ChargingRateUnitType))
