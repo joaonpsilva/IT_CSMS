@@ -249,8 +249,8 @@ class IdTokenInfo(CustomBase):
 
     cache_expiry_date_time = Column(DateTime)
     charging_priority = Column(Integer)
-    language_1 = Column(String(8))
-    language_2 = Column(String(8))
+    language1 = Column(String(8))
+    language2 = Column(String(8))
     evse = relationship('EVSE', secondary=evse_idTokens, backref='id_token_info')
     
     _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
@@ -437,7 +437,7 @@ def insert_Hard_Coded(db):
     objects.append(group_id_token)
     info = IdTokenInfo(
             id_token=id_Token, 
-            language_1="PT", 
+            language1="PT", 
             group_id_token=group_id_token,
             #cache_expiry_date_time = datetime.utcnow().isoformat()
             )
