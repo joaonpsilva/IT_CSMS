@@ -63,14 +63,23 @@ class IdTokenInfo(CustomBase):
 
     cache_expiry_date_time = Column(DateTime)
     charging_priority = Column(Integer)
-    language_1 = Column(String(8))
-    language_2 = Column(String(8))
-    evse = Column(JSON)
+    language1 = Column(String(8))
+    language2 = Column(String(8))
+    evse_id = Column(JSON)
 
-    _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
+    _id_token = Column(String(36), ForeignKey("IdToken.id_token",ondelete='CASCADE'), primary_key=True)
     
     _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
     group_id_token = relationship("GroupIdToken", backref="id_token_info", uselist=False)
+
+    def get_dict_obj(self):
+        result = super().get_dict_obj()
+
+        #check if belongs to a group
+        if self.group_id_token is not None:
+            result["group_id_token"] = self.group_id_token.get_dict_obj()
+        
+        return result
 
 
 

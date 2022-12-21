@@ -34,6 +34,18 @@ async def main():
 
     await broker.ocpp_log(message)
 
+    ########
+
+    message = Fanout_Message(
+        intent="request_authorize",
+        type="REQUEST",
+        content=call.AuthorizePayload(
+            id_token=datatypes.IdTokenType(id_token = "123456789", type=enums.IdTokenType.iso14443)
+        )
+    )
+
+    await broker.ocpp_log(message)
+
 
 
 if __name__ == '__main__':

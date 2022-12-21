@@ -3,7 +3,7 @@ import asyncio
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, update, select, delete, insert
 from db_Tables_CS import *
-
+import traceback
 
 import sys
 from os import path
@@ -35,45 +35,81 @@ class DataBase_CP:
             "SELECT" : self.select,
             "CREATE" : self.create,
             "REMOVE" : self.remove,
-            "UPDATE" : self.update
+            "UPDATE" : self.update,
+            "SendLocalList" : self.updateLocalList,
+            "get_IdToken_Info" : self.get_IdToken_Info
         }
 
         self.table_mapping={
             "LocalList":LocalList,
             "IdToken":IdToken,
-            "GroupIdToken":GroupIdToken,
             "IdTokenInfo":IdTokenInfo
         }
 
     
     async def on_db_request(self, request):
         if request.intent in self.method_mapping:
-            return self.method_mapping[request.intent](**request.__dict__)
+            try:
+                toReturn = self.method_mapping[request.intent](**request.content)
+                self.session.commit()
+                return {"status":"OK", "content":toReturn}
+
+            except:
+                self.session.rollback()
+
+                logging.error(traceback.format_exc())
+                return {"status":"ERROR"}
 
 
-    def select(self, content, **kwargs):
-        if "filters" not in content:
-            content["filters"] = {}
-        statement = select(self.table_mapping[content["table"]]).filter_by(**content["filters"])
-        return [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]
+    def select(self, table, filters={}, dict_format=True, **kwargs):
+        statement = select(self.table_mapping[table]).filter_by(**filters)
+        if dict_format:
+            return [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]
+        return self.session.scalars(statement).all()
     
-    def create(self, content, **kwargs):
-        statement = insert(self.table_mapping[content["table"]]).values(**content["values"])
+    def create(self, table,values,**kwargs):
+        statement = insert(self.table_mapping[table]).values(**values)
         self.session.execute(statement)
     
-    def remove(self, content, **kwargs):
-        if "filters" not in content:
-            content["filters"] = {}
-        statement = delete(self.table_mapping[content["table"]]).filter_by(**content["filters"])
+    def remove(self, table,filters={}, **kwargs):
+        statement = delete(self.table_mapping[table]).filter_by(**filters)
         self.session.execute(statement)
 
-    def update(self, content, **kwargs):
-        if "filters" not in content:
-            content["filters"] = {}
-        statement = update(self.table_mapping[content["table"]]).filter_by(**content["filters"]).values(**content["values"])
+    def update(self, table, values, filters={}, **kwargs):
+        statement = update(self.table_mapping[table]).filter_by(**filters).values(**values)
         self.session.execute(statement)
+    
 
+    def updateLocalList(self, version_number, update_type, local_authorization_list=[]):
 
+        #start transaction
+        with self.session.begin():
+            
+            current_version = self.select("LocalList")[-1]["version_number"]
+            self.update("LocalList", filters={"version_number":current_version}, values={"version_number":version_number})
+
+            if update_type == enums.UpdateType.full:
+                self.remove("IdToken")
+            
+            for auth_data in local_authorization_list:
+                if "id_token_info" in auth_data:
+                    auth_data["id_token_info"].pop("status")
+                    auth_data["id_token"]["id_token_info"] = auth_data["id_token_info"]
+                    #self.create("IdToken", auth_data["id_token"])
+                    id_token = IdToken(**auth_data["id_token"])
+                    self.session.merge(id_token)               
+                else:
+                    self.remove("IdToken", auth_data["id_token"])
+        
+    
+    def get_IdToken_Info(self, id_token, **kwargs):
+
+        idToken = self.select("IdToken", id_token, dict_format=False)
+        IdTokenInfo = idToken.id_token_info
+
+        return {"id_token" : idToken.get_dict_obj(), "id_token_info" : IdTokenInfo.get_dict_obj()}
+
+                
 
     async def run(self):
 

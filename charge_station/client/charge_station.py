@@ -22,7 +22,8 @@ class ChargePoint(cp):
         super().__init__(cp_id, ws)
 
         self.method_mapping = {
-            "request_boot_notification" : self.bootNotification
+            "request_boot_notification" : self.bootNotification,
+            "request_authorize" : self.authorize
         }
 
         self.accepted = False
@@ -66,6 +67,23 @@ class ChargePoint(cp):
             request = call.HeartbeatPayload()
             response = await self.call(request)
             await asyncio.sleep(interval)
+        
+    
+    async def authorize(self, **kwargs):
+
+        message = Fanout_Message(intent="get_IdToken_Info", content={"id_token": kwargs["id_token"]})
+        response = await self.broker.send_request_wait_response(message)
+
+        if response["status"] == "OK":
+            if response["content"]["id_token"]["id_token"] == kwargs["id_token"]["id_token"]:
+                print(response)
+        
+        return
+        #local
+        request = call.AuthorizePayload(**kwargs)
+        response = await self.call(request)
+
+
 
     #---------------------------------------------------------------------------------
     
@@ -95,19 +113,36 @@ class ChargePoint(cp):
         response = await self.broker.send_request_wait_response(message)
 
         return call_result.RequestStopTransactionPayload(**response)
+
+    
+    async def getLocalListVersionFromDb(self):
+    
+        message = Fanout_Message(intent="SELECT", content={"table":"LocalList"})
+        response = await self.broker.send_request_wait_response(message)
+
+        return response["content"][-1]["version_number"]
     
 
     @on("GetLocalListVersion")
     async def on_GetLocalListVersion(self):
-
-        message = Fanout_Message(intent="SELECT", content={"table":"LocalList"})
-        response = await self.broker.send_request_wait_response(message)
-
-        return call_result.GetLocalListVersionPayload(version_number=response[0]["version_number"])
+        return call_result.GetLocalListVersionPayload(version_number= await self.getLocalListVersionFromDb())
     
     @on("SendLocalList")
     async def on_SendLocalList(self, **kwargs):
-        return call_result.SendLocalListPayload(status=enums.SendLocalListStatusType.accepted)
+
+        current_version = await self.getLocalListVersionFromDb()
+        if 0 >= kwargs["version_number"] <= current_version:
+            status = enums.SendLocalListStatusType.version_mismatch
+        else:
+            message = Fanout_Message(intent="SendLocalList", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+
+            if response["status"] == "OK":
+                status = enums.SendLocalListStatusType.accepted
+            else:
+                status = enums.SendLocalListStatusType.failed
+
+        return call_result.SendLocalListPayload(status=status)
 
     
     @on('GetVariables')
