@@ -2,9 +2,13 @@ from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, Fore
 from sqlalchemy.orm import declarative_base, relationship, backref
 from ocpp.v201 import enums
 from passlib.context import CryptContext
-from datetime import datetime
-from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.inspection import inspect
+
+import sys
+from os import path
+sys.path.append( path.dirname(path.dirname( path.dirname( path.abspath(__file__) ) ) ))
+
+
+from database_Base import *
 
 PASSLIB_CONTEXT = CryptContext(
     # in a new application with no previous schemes, start with pbkdf2 SHA512
@@ -12,36 +16,6 @@ PASSLIB_CONTEXT = CryptContext(
     deprecated="auto",
 )
 
-Base = declarative_base()
-
-
-class CustomBase(Base):
-    """Base extender
-    In sqlalchemy we can init an obj and pass a relation throw passing another object in the init
-    This extender allows to also pass a dict with the correct fields for creating that object
-    """
-    __abstract__ = True
-
-    def __init__(self, **kwargs):
-
-        for arg in kwargs:
-            if arg in self.__mapper__.relationships.keys():
-                rel = self.__mapper__.relationships[arg] 
-
-                if rel.uselist:                    
-                    o = [rel.mapper.class_(**d_l) if not isinstance(d_l, rel.mapper.class_) else d_l for d_l in kwargs[arg]]
-                else:
-                    if isinstance(kwargs[arg], rel.mapper.class_):
-                        continue
-                    o = rel.mapper.class_(**kwargs[arg])
-                
-                kwargs[arg] = o
-
-
-        super().__init__(**kwargs)
-    
-    def get_dict_obj(self):
-        return { attr:value for attr, value in self.__dict__.items() if not attr.startswith("_") and value is not None }
 
 
 
@@ -256,14 +230,6 @@ class IdTokenInfo(CustomBase):
     _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
     group_id_token = relationship("GroupIdToken", backref="id_token_info", uselist=False)
 
-    def get_dict_obj(self):
-        result = super().get_dict_obj()
-
-        #check if belongs to a group
-        if self.group_id_token is not None:
-            result["group_id_token"] = self.group_id_token.get_dict_obj()
-        
-        return result
     
     def get_allowed_evse_for_cp(self, cp_id):
             

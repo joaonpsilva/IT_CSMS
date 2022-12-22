@@ -39,7 +39,7 @@ class DataBase:
             "BootNotification" : self.BootNotification,
             "StatusNotification" : self.StatusNotification,
             "MeterValues" : self.MeterValues,
-            "Authorize" : self.Authorize_IdToken,
+            "get_IdToken_Info" : self.get_IdToken_Info,
             "TransactionEvent" : self.TransactionEvent,
             "VERIFY_PASSWORD" : self.verify_password,
             "VERIFY_RECEIVED_ALL_TRANSACTION" : self.verify_received_all_transaction,
@@ -162,63 +162,27 @@ class DataBase:
             self.session.add(meter_value)
 
     
-    def build_idToken_Info(self, idToken, cp_id, evse_id = None, **kwargs):
-        """
-        Builds an idTokenInfo based on id token
-        """
+    def get_IdToken_Info(self, content, cp_id, **kwargs):
 
-        #no auth required
-        if idToken["type"] == enums.IdTokenType.no_authorization:
-            return {"status" : enums.AuthorizationStatusType.accepted}
-
-
-        try:
-            idToken_fromDb = self.session.query(IdToken).get(idToken["id_token"])
-            assert(idToken_fromDb.type == idToken["type"])
-        except:
-            return {"status" : enums.AuthorizationStatusType.invalid}
-
-        if idToken_fromDb is not None:
-
-            #get id token info
-            id_token_info = idToken_fromDb.id_token_info 
-            
-            #add available information
-            result = id_token_info.get_dict_obj()
-
-            allowed_evse = id_token_info.get_allowed_evse_for_cp(cp_id)                
-            #check if not allowed for whole cp
-            if len(allowed_evse) != len(self.session.query(Charge_Point).get(cp_id).evse):
-                result["evse_id"] = allowed_evse
-            
-
-            #--------Choose STATUS
-
-            if id_token_info.cache_expiry_date_time != None and id_token_info.cache_expiry_date_time < datetime.utcnow().isoformat():
-                result["status"] = enums.AuthorizationStatusType.expired
-            elif len(allowed_evse) == 0 or (evse_id is not None and evse_id not in allowed_evse):
-                #in authorize request, cant know this because dont know the evse
-                result["status"] = enums.AuthorizationStatusType.not_at_this_location
-            else: 
-                result["status"] = enums.AuthorizationStatusType.accepted
+        #get Idtoken fromdb
+        idToken = self.session.query(IdToken).get(content['id_token']["id_token"])
+        if idToken is None:
+            return {"id_token" : None, "id_token_info" : None}
         
-        else:
-            result = {"status" : enums.AuthorizationStatusType.unknown}
+        #transform do dict
+        idToken_dict = idToken.get_dict_obj()
 
+        #get idtokeninfo from idtoken
+        idTokenInfo = idToken.id_token_info
+        #load groupid from info
+        idTokenInfo.group_id_token
+        #transform to dict
+        idTokenInfo_dict = idTokenInfo.get_dict_obj()
+        #append allowed evseids
+        idTokenInfo_dict["evse_id"] = idTokenInfo.get_allowed_evse_for_cp(cp_id) 
         
-        return result
+        return {"id_token" : idToken_dict, "id_token_info" : idTokenInfo_dict}
     
-            
-
-    def Authorize_IdToken(self, cp_id, content, **kwargs):
-        """cannot deal with certificates yet"""
-        #validate idtoken
-        id_token_info = self.build_idToken_Info(
-            content['id_token'],
-            cp_id,
-            content['evse_id'] if 'evse_id' in content else None)
-
-        return {"id_token_info" : id_token_info}
 
 
     def verify_received_all_transaction(self, cp_id, content, **kwargs):

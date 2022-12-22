@@ -76,29 +76,52 @@ class ChargePoint(cp):
         except Exception as e:
             logging.error(traceback.format_exc())
             return "ERROR", None
-
-
-    async def get_id_token_info(self, payload):
-        """
-        authorize id token
-        args: dict with {"id_token": idtokentype}. Can also have evse_id or evse
-        """
-
-        content = {"id_token" : payload["id_token"]}
-
-        if "evse_id" in payload:
-            content["evse_id"] = payload["evse_id"]
-        elif "evse" in payload:
-            content["evse_id"] = payload["evse"]["id"]
         
-        message = Rabbit_Message(method="Authorize", cp_id=self.id, content=content)
-        response = await ChargePoint.broker.send_request_wait_response(message)
-        if response["status"] == "OK":
-            id_token_info = response["content"]["id_token_info"]
-        else:
-            id_token_info = {"status":enums.AuthorizationStatusType.invalid}
+    
+    async def authorize_idToken(self, id_token, evse_id=None, **kwargs):
+        #no auth required
+        if id_token["type"] == enums.IdTokenType.no_authorization:
+            return {"status" : enums.AuthorizationStatusType.accepted}
         
-        return id_token_info
+        try:
+            #get info from db
+            message = Rabbit_Message(method="get_IdToken_Info", cp_id=self.id, content={"id_token": id_token})
+            response = await ChargePoint.broker.send_request_wait_response(message)
+            id_token =response["content"]["id_token"]
+            id_token_info =response["content"]["id_token_info"]
+
+            if id_token is None:
+                return {"status" : enums.AuthorizationStatusType.unknown}
+
+            #assert its the same idtoken
+            assert(id_token["id_token"] == id_token["id_token"])
+            assert(id_token["type"] == id_token["type"])
+
+            #If id token is valid and known, check status
+            id_token_info["status"] =  enums.AuthorizationStatusType.accepted
+
+            #check if is allowed to charge at this CP
+            if evse_id is not None and evse_id not in id_token_info["evse_id"]:
+                id_token_info["status"] =  enums.AuthorizationStatusType.not_at_this_location
+
+            #evse_id needs to be empty if allowed for all charging station
+            message = Rabbit_Message(method="SELECT", cp_id=self.id, content={"table": "EVSE", "filters":{"cp_id" : self.id}})
+            response = await ChargePoint.broker.send_request_wait_response(message)
+            total_evses = len(response["content"])
+            if total_evses == len(id_token_info["evse_id"]):
+                id_token_info["evse_id"] = []
+            
+            #expired
+            if id_token_info["cache_expiry_date_time"] != None and id_token_info["cache_expiry_date_time"] < datetime.utcnow().isoformat():
+                id_token_info["status"] = enums.AuthorizationStatusType.expired
+            
+            
+            return id_token_info
+            
+        except:
+            logging.error(traceback.format_exc())
+            return {"status" : enums.AuthorizationStatusType.invalid}
+
 
 
     async def guarantee_transaction_integrity(self, transaction_id):
@@ -529,7 +552,7 @@ class ChargePoint(cp):
             if payload["update_type"] == enums.UpdateType.full or payload["operation"] == "Add":
                 
                 #authorize the id_token
-                id_token_info = await self.get_id_token_info({"id_token": id_token})
+                id_token_info = await self.authorize_idToken(id_token)
                 auth_data.id_token_info = id_token_info
 
                 #If idtoken is valid for this CP, add it to the list
@@ -620,7 +643,7 @@ class ChargePoint(cp):
     async def on_Authorize(self, **kwargs):
         
         #authorize id_token
-        id_token_info = await self.get_id_token_info(kwargs)
+        id_token_info = await self.authorize_idToken(**kwargs)
         return call_result.AuthorizePayload(id_token_info=id_token_info)
         
     @on('TransactionEvent')
@@ -632,7 +655,7 @@ class ChargePoint(cp):
         transaction_response = call_result.TransactionEventPayload()
 
         if "id_token" in kwargs:
-            transaction_response.id_token_info = await self.get_id_token_info(kwargs)
+            transaction_response.id_token_info = await self.authorize_idToken(**kwargs)
         
         if kwargs["trigger_reason"] == enums.TriggerReasonType.remote_start:
 
