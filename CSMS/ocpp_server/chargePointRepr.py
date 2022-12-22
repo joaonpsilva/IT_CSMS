@@ -625,7 +625,6 @@ class ChargePoint(cp):
 
         #inform db that new cp has connected
         message = Rabbit_Message(method="StatusNotification", cp_id=self.id, content=kwargs)
-
         await ChargePoint.broker.ocpp_log(message)
         
         return call_result.StatusNotificationPayload()
@@ -641,6 +640,9 @@ class ChargePoint(cp):
     
     @on('Authorize')
     async def on_Authorize(self, **kwargs):
+
+        message = Rabbit_Message(method="Authorize", cp_id=self.id, content=kwargs)
+        await ChargePoint.broker.ocpp_log(message)
         
         #authorize id_token
         id_token_info = await self.authorize_idToken(**kwargs)
@@ -707,17 +709,26 @@ class ChargePoint(cp):
     
     @on("ReportChargingProfiles")
     async def on_reportChargingProfiles(self, **kwargs):
+        message = Rabbit_Message(method="ReportChargingProfiles", cp_id=self.id, content=kwargs)
+        await ChargePoint.broker.ocpp_log(message)
+
         self.received_message_async_request(kwargs)        
         return call_result.ReportChargingProfilesPayload()
     
 
     @on("NotifyReport")
     async def on_notifyReport(self, **kwargs):
+        message = Rabbit_Message(method="NotifyReport", cp_id=self.id, content=kwargs)
+        await ChargePoint.broker.ocpp_log(message)
+
         self.received_message_async_request(kwargs)  
         return call_result.NotifyReportPayload()
     
     @on("NotifyDisplayMessages")
     async def on_NotifyDisplayMessages(self, **kwargs):
+        message = Rabbit_Message(method="NotifyDisplayMessages", cp_id=self.id, content=kwargs)
+        await ChargePoint.broker.ocpp_log(message)
+
         self.received_message_async_request(kwargs)  
         return call_result.NotifyDisplayMessagesPayload()
 

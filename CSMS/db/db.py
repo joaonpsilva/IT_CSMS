@@ -70,20 +70,22 @@ class DataBase:
             }
 
 
-    async def on_db_request(self, message):
+    async def on_db_request(self, request):
         """
         Function that will handle incoming requests from the api or ocpp Server
         """
-        try:
-            #call method depending on the message
-            toReturn = self.method_mapping[message.method](**message.__dict__)
-            #commit possible changes
-            self.session.commit()
+        if request.intent in self.method_mapping:
+            try:
+                #call method depending on the message
+                toReturn = self.method_mapping[request.method](**request.__dict__)
+                #commit possible changes
+                self.session.commit()
 
-            return {"status":"OK", "content":toReturn}
-        except Exception as e:
-            logging.error(traceback.format_exc())
-            return {"status":"ERROR"}
+                return {"status":"OK", "content":toReturn}
+            except Exception as e:
+                self.session.rollback()
+                logging.error(traceback.format_exc())
+                return {"status":"ERROR"}
 
 
     async def run(self):
