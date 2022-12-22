@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import websockets
-
+from datetime import datetime
 from os import path
 import sys
 
@@ -67,21 +67,52 @@ class ChargePoint(cp):
             request = call.HeartbeatPayload()
             response = await self.call(request)
             await asyncio.sleep(interval)
+    
+
+    async def authorize_with_localList(self, id_token):
+
+        #no authorization
+        if id_token["type"] == enums.IdTokenType.no_authorization:
+            return {"status": enums.AuthorizationStatusType.accepted}
+
+        #get idtoken info from db
+        try:
+            message = Fanout_Message(intent="get_IdToken_Info", content={"id_token": id_token})
+            response = await self.broker.send_request_wait_response(message)
+            id_token =response["content"]["id_token"]
+            id_token_info =response["content"]["id_token_info"]
+            if id_token is None:
+                return {"status" : enums.AuthorizationStatusType.unknown}
+
+            #assert its the same idtoken
+            assert(id_token["id_token"] == id_token["id_token"])
+            assert(id_token["type"] == id_token["type"])
+
+            #If id token is valid and known, check status
+            id_token_info["status"] =  enums.AuthorizationStatusType.accepted
+
+            #expired
+            if id_token_info["cache_expiry_date_time"] != None and id_token_info["cache_expiry_date_time"] < datetime.utcnow().isoformat():
+                id_token_info["status"] = enums.AuthorizationStatusType.expired
+
+        except:
+            id_token_info = {"status": enums.AuthorizationStatusType.invalid}
+        
+        return id_token_info
         
     
     async def authorize(self, **kwargs):
 
-        message = Fanout_Message(intent="get_IdToken_Info", content={"id_token": kwargs["id_token"]})
-        response = await self.broker.send_request_wait_response(message)
+        id_token_info = await self.authorize_with_localList(kwargs["id_token"])
+        auth_response = {"id_token_info" : id_token_info} 
 
-        if response["status"] == "OK":
-            if response["content"]["id_token"]["id_token"] == kwargs["id_token"]["id_token"]:
-                print(response)
+        if id_token_info["status"] != enums.AuthorizationStatusType.accepted:
+            #Ask the CSMS
+            request = call.AuthorizePayload(**kwargs)
+            auth_response = await self.call(request)
         
-        return
-        #local
-        request = call.AuthorizePayload(**kwargs)
-        response = await self.call(request)
+        return auth_response
+
 
 
 

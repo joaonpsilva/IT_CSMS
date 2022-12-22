@@ -95,7 +95,7 @@ class DataBase_CP:
                 if "id_token_info" in auth_data:
                     auth_data["id_token_info"].pop("status")
                     auth_data["id_token"]["id_token_info"] = auth_data["id_token_info"]
-                    #self.create("IdToken", auth_data["id_token"])
+
                     id_token = IdToken(**auth_data["id_token"])
                     self.session.merge(id_token)               
                 else:
@@ -104,10 +104,21 @@ class DataBase_CP:
     
     def get_IdToken_Info(self, id_token, **kwargs):
 
-        idToken = self.select("IdToken", id_token, dict_format=False)
-        IdTokenInfo = idToken.id_token_info
+        idToken = self.session.query(IdToken).get(id_token['id_token'])
+        if idToken is None:
+            return {"id_token" : None, "id_token_info" : None}
 
-        return {"id_token" : idToken.get_dict_obj(), "id_token_info" : IdTokenInfo.get_dict_obj()}
+        #transform do dict
+        idToken_dict = idToken.get_dict_obj()
+
+        #get idtokeninfo from idtoken
+        idTokenInfo = idToken.id_token_info
+        #load groupid from info
+        idTokenInfo.group_id_token
+        #transform to dict
+        idTokenInfo_dict = idTokenInfo.get_dict_obj()
+        
+        return {"id_token" : idToken_dict, "id_token_info" : idTokenInfo_dict}
 
                 
 
