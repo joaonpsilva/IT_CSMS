@@ -64,7 +64,6 @@ class Rabbit_Handler:
         self.handle_request = handle_request
 
 
-    
     async def connect(self):
         """
         connect to the rabbitmq server and setup connection
@@ -101,14 +100,11 @@ class Rabbit_Handler:
         if response.type != "response":
             return
 
-        logging.info("RabbitMQ RECEIVED response: %s", response.__dict__)
-
-        if message.correlation_id is None:
-            logging.info(f"Bad response {response!r}")
-            return
 
         #get the future with key = correlationid
         if message.correlation_id in self.futures:
+            logging.info("RabbitMQ RECEIVED response: %s", response.__dict__)
+
             future: asyncio.Future = self.futures.pop(message.correlation_id)
             #set a result to that future
             future.set_result(response.content)
@@ -130,7 +126,7 @@ class Rabbit_Handler:
         response_content = await self.handle_request(request)
         
         #send response to the entity that made the request
-        if response_content is not None:
+        if request.type == "request" and response_content is not None:
             response = request.prepare_Response()
             response.content = response_content
 
