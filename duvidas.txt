@@ -18,15 +18,14 @@ Client ocpp-----------------
 
 -rabbitmq usa reply_to e correlation_id? (se calhar não têm q lidar com multiplos requests?)
 
--resposta do decision point e cp tambem é ocpp? o decision point quer as respostas?
-
--Charging profiles, apenas tenho q dar forward? quem limita as cargas? Local auth list quem guarda?
+-Charging profiles, apenas tenho q dar forward? quem limita as cargas? 
 
 -statusnotif e bootnotif sao pedidos por mim ou sao enviados pelo decision point qnd ele quiser?posso pedir status notification ou so recebo? Quando boot da pending status nao podem ser enviados
 
 - quem guarda as variaveis de configuração? se for a charging station, como é q o decision point sabe quando começar a transaçao (txstartpoint)?
 
 - remote start quem manda autorizar? remote stop cp deve verificar se transaction existe?
+
 
 
 
