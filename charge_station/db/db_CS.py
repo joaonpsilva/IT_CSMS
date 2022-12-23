@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, update, select, delete, insert
 from db_Tables_CS import *
 import traceback
-
+import argparse
 import sys
 from os import path
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
@@ -122,18 +122,23 @@ class DataBase_CP:
 
                 
 
-    async def run(self):
+    async def run(self, rabbit):
 
         #Initialize broker that will handle Rabbit coms
-        self.broker = Fanout_Rabbit_Handler(self.on_db_request, "OCPPclientDB")
+        self.broker = Fanout_Rabbit_Handler("OCPPclientDB", self.on_db_request)
         #Start listening to messages
-        await self.broker.connect()
+        await self.broker.connect(rabbit)
 
 
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
+    args = parser.parse_args()
+
     # Main part
     loop = asyncio.new_event_loop()
 
-    loop.create_task(DataBase_CP().run())
+    loop.create_task(DataBase_CP().run(args.rb))
     loop.run_forever()

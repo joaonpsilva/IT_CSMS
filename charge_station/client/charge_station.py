@@ -2,9 +2,9 @@ import logging
 import asyncio
 import websockets
 from datetime import datetime
+import argparse
 from os import path
 import sys
-
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
 
@@ -29,10 +29,10 @@ class ChargePoint(cp):
         self.accepted = False
         
 
-    async def run(self):
+    async def run(self, rabbit):
         #broker handles the rabbit mq queues and communication between services
-        self.broker = Fanout_Rabbit_Handler(self.handle_request, "OCPPclient")
-        await self.broker.connect()
+        self.broker = Fanout_Rabbit_Handler("OCPPclient", self.handle_request)
+        await self.broker.connect(rabbit)
 
         await self.start()
 
@@ -192,19 +192,26 @@ class ChargePoint(cp):
 
     
 
-async def main(cp_id):
+async def main(server_port, rabbit, cp_id, password):
 
     logging.info("Trying to connect to csms with id %s", cp_id)
 
     async with websockets.connect(
-        'ws://{cp_id}:{password}@localhost:9000/{cp_id}'.format(cp_id = cp_id, password='passcp1'),
+        'ws://{cp_id}:{password}@localhost:{server_port}/{cp_id}'.format(cp_id = cp_id, password=password, server_port=server_port),
         
             subprotocols=['ocpp2.0.1']
     ) as ws:
 
         cp = ChargePoint(cp_id, ws)
-        await cp.run()
+        await cp.run(rabbit)
 
 
 if __name__ == '__main__':
-   asyncio.run(main(sys.argv[1]))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", type=int, default = 9000, help="OCPP server port")
+    parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
+    parser.add_argument("-cp", type=str, default = "CP_1", help="Cp_id")
+    parser.add_argument("-pw", type=str, default = "passcp1", help="Cp password")
+    args = parser.parse_args()
+
+    asyncio.run(main(args.p, args.rb, args.cp, args.pw))

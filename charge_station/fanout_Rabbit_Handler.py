@@ -32,19 +32,18 @@ class Fanout_Message(Rabbit_Message):
 class Fanout_Rabbit_Handler(Rabbit_Handler):
     """class that will handle communication inter services"""
 
-    def __init__(self, handle_request = None, name=None):
-        super().__init__(handle_request)
+    def __init__(self, name, handle_request = None):
+        super().__init__(name, handle_request)
         self.rabbit_Message = Fanout_Message
-        self.name = name
 
     
-    async def connect(self):
+    async def connect(self, url):
         """
         connect to the rabbitmq server and setup connection
         """
 
         #Declare connection
-        self.connection = await connect("amqp://guest:guest@localhost/")
+        self.connection = await connect(url)
 
         #declare channel
         self.channel = await self.connection.channel()
@@ -68,7 +67,7 @@ class Fanout_Rabbit_Handler(Rabbit_Handler):
         #consume messages from the queue
         await self.response_queue.consume(self.on_response, no_ack=False)
 
-        logging.info("Connected to the RMQ Broker")
+        logging.info(self.name + " Connected to the RMQ Broker")
     
     
 

@@ -52,7 +52,7 @@ class Rabbit_Message:
 
 class Rabbit_Handler:
 
-    def __init__(self, handle_request = None):
+    def __init__(self, name, handle_request = None):
 
         #map of key: request_id, value: future
         #futures are async objects that will have a value in the future        
@@ -62,15 +62,16 @@ class Rabbit_Handler:
         self.rabbit_Message = Rabbit_Message
 
         self.handle_request = handle_request
+        self.name = name
 
 
-    async def connect(self):
+    async def connect(self, url):
         """
         connect to the rabbitmq server and setup connection
         """
 
         #Declare connection
-        self.connection = await connect("amqp://guest:guest@localhost/")
+        self.connection = await connect(url)
 
         #declare channel
         self.channel = await self.connection.channel()
@@ -78,7 +79,7 @@ class Rabbit_Handler:
         #Declare exchange to where communication will be sent
         self.exchange = await self.channel.declare_exchange(name="messages", type=ExchangeType.TOPIC)
 
-        logging.info("Connected to the RMQ Broker")
+        logging.info(self.name + " Connected to the RMQ Broker")
 
 
 
@@ -103,7 +104,7 @@ class Rabbit_Handler:
 
         #get the future with key = correlationid
         if message.correlation_id in self.futures:
-            logging.info("RabbitMQ RECEIVED response: %s", response.__dict__)
+            logging.info(self.name + " RECEIVED response: %s", response.__dict__)
 
             future: asyncio.Future = self.futures.pop(message.correlation_id)
             #set a result to that future
@@ -120,7 +121,7 @@ class Rabbit_Handler:
         if request.type not in ["request", "ocpp_log"]:
             return
 
-        logging.info("RabbitMQ RECEIVED message: %s", request.__dict__)
+        logging.info(self.name + " RECEIVED request/log: %s", request.__dict__)
 
         #pass content to be handled
         response_content = await self.handle_request(request)
@@ -154,7 +155,7 @@ class Rabbit_Handler:
             return await asyncio.wait_for(future, timeout=5)
         except asyncio.TimeoutError:
             self.futures.pop(requestID)
-            logging.error("No response received")
+            logging.error(self.name + " No response received")
             return {"status":"ERROR"}
         
     async def ocpp_log(self, message):
@@ -166,7 +167,7 @@ class Rabbit_Handler:
     
     async def send_Message(self, message, requestID=None, reply_to=None, routing_key=None):
         json_message = json.dumps(message, cls=EnhancedJSONEncoder)
-        logging.info("RabbitMQ SENDING Message: %s", str(json_message))
+        logging.info(self.name + " RabbitMQ SENDING Message: %s", str(json_message))
         
         await self.exchange.publish(
             Message(

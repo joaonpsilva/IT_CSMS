@@ -17,8 +17,8 @@ async def handle_requet(request):
 
 
 async def main():
-    broker = Fanout_Rabbit_Handler(handle_requet, name="decision_point")
-    await broker.connect()
+    broker = Fanout_Rabbit_Handler("decision_point", handle_requet)
+    await broker.connect("amqp://guest:guest@localhost/")
 
     message = Fanout_Message(
         intent="request_boot_notification",

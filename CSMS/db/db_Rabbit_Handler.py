@@ -10,12 +10,12 @@ from rabbit_handler import Rabbit_Handler, Rabbit_Message
 class DB_Rabbit_Handler(Rabbit_Handler):
 
 
-    async def connect(self):
+    async def connect(self, url):
         """
         connect to the rabbitmq server and setup connection
         """
 
-        await super().connect()
+        await super().connect(url)
         
 
         #Declare queue that will receive the requests to be handled by the db

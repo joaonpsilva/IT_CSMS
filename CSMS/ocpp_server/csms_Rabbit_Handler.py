@@ -11,12 +11,12 @@ class CSMS_Rabbit_Handler(Rabbit_Handler):
     """class that will handle communication inter services"""
 
     
-    async def connect(self):
+    async def connect(self, url):
         """
         connect to the rabbitmq server and setup connection
         """
 
-        await super().connect()
+        await super().connect(url)
 
         #Declare queue that will receive the requests to be handled by the occp_server
         self.request_queue = await self.channel.declare_queue("OCCPserver_Request_Queue")

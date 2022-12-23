@@ -9,6 +9,7 @@ from sqlalchemy.orm.util import identity_key
 from ocpp.v201 import enums
 from datetime import datetime
 import traceback
+import argparse
 
 import dateutil.parser
 
@@ -74,7 +75,7 @@ class DataBase:
         """
         Function that will handle incoming requests from the api or ocpp Server
         """
-        if request.intent in self.method_mapping:
+        if request.method in self.method_mapping:
             try:
                 #call method depending on the message
                 toReturn = self.method_mapping[request.method](**request.__dict__)
@@ -88,12 +89,12 @@ class DataBase:
                 return {"status":"ERROR"}
 
 
-    async def run(self):
+    async def run(self, rabbit):
 
         #Initialize broker that will handle Rabbit coms
-        self.broker = DB_Rabbit_Handler(self.on_db_request)
+        self.broker = DB_Rabbit_Handler("db1", self.on_db_request)
         #Start listening to messages
-        await self.broker.connect()
+        await self.broker.connect(rabbit)
 
     def get_class_attributes(self, c):
         return [attr for attr in dir(c) if not callable(getattr(c, attr)) and not attr.startswith("_")]
@@ -315,8 +316,13 @@ class DataBase:
 
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
+    args = parser.parse_args()
+
     # Main part
     loop = asyncio.new_event_loop()
 
-    loop.create_task(DataBase().run())
+    loop.create_task(DataBase().run(args.rb))
     loop.run_forever()

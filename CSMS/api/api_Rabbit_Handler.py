@@ -11,12 +11,12 @@ from rabbit_handler import Rabbit_Handler, Rabbit_Message
 class API_Rabbit_Handler(Rabbit_Handler):
     
 
-    async def connect(self):
+    async def connect(self, url):
         """
         connect to the rabbitmq server and setup connection
         """
 
-        await super().connect()
+        await super().connect(url)
 
 
         self.request_queue = await self.channel.declare_queue("API_Event_Queue")

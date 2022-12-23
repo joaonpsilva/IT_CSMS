@@ -3,6 +3,7 @@ import logging
 from chargePointRepr import ChargePoint
 from csms_Rabbit_Handler import CSMS_Rabbit_Handler, Rabbit_Message
 import asyncio
+import argparse
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,25 +36,25 @@ class OCPP_Server:
         self.connected_CPs = {}
     
 
-    async def run(self):
+    async def run(self, port, rb):
         #broker handles the rabbit mq queues and communication between services
-        self.broker = CSMS_Rabbit_Handler(self.handle_api_request)
-        await self.broker.connect()
+        self.broker = CSMS_Rabbit_Handler("Ocpp_server", self.handle_api_request)
+        await self.broker.connect(rb)
 
         #set same broker for all charge point connections
         ChargePoint.broker = self.broker
         
         #start server
-        await self.start_server()
+        await self.start_server(port)
     
 
-    async def start_server(self):
+    async def start_server(self, port):
 
         BasicAuth_Custom_Handler = Basic_auth_with_broker(self.broker)
         server = await websockets.serve(
             self.on_cp_connect,
             '0.0.0.0',
-            9000,
+            port,
             subprotocols=['ocpp2.0.1'],
             create_protocol=BasicAuth_Custom_Handler
         )
@@ -143,4 +144,10 @@ class OCPP_Server:
 
 
 if __name__ == '__main__':
-    asyncio.run(OCPP_Server().run())
+    #READ ARGUMENTS
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", type=int, default = 9000, help="OCPP server port")
+    parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
+    args = parser.parse_args()
+
+    asyncio.run(OCPP_Server().run(args.p, args.rb))

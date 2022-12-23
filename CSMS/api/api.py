@@ -13,6 +13,13 @@ import logging
 from fastapi.responses import StreamingResponse
 from sse_starlette.sse import EventSourceResponse
 import json
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-p", type=int, default = 8000, help="OCPP server port")
+parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
+args = parser.parse_args()
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -283,15 +290,13 @@ async def on_event(message):
 
 
 
-
-
 @app.on_event("startup")
 async def main():
 
     global broker
-    broker = API_Rabbit_Handler(on_event)
-    await broker.connect()
+    broker = API_Rabbit_Handler("api", on_event)
+    await broker.connect(args.rb)
 
     
 if __name__ == '__main__':
-      uvicorn.run(app, host="0.0.0.0", port=8000,loop= 'asyncio')
+    uvicorn.run(app, host="0.0.0.0", port=args.p,loop= 'asyncio')
