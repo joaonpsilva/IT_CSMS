@@ -15,6 +15,33 @@ from ocpp.routing import after,on
 
 logging.basicConfig(level=logging.INFO)
 
+class Transaction:
+    def __init__(self, transaction_id):
+        self.transaction_id=transaction_id
+        self.start_idtoken = None
+        self.group_id = None
+    
+    def set_start_idtoken(self, idtoken, group_id):
+        if self.start_idtoken is None:
+            self.start_idtoken = idtoken
+    
+        if self.group_id is None:
+            self.group_id =group_id
+    
+    
+    def check_valid_stop(self, idtoken, group_id):
+        if self.start_idtoken is None:
+            return True
+        
+        if idtoken["id_token"] == self.start_idtoken["id_token"] or\
+            group_id["id_token"] == self.group_id["id_token"]:
+            return True
+        
+        return False
+
+
+    
+
 
 class ChargePoint(cp):
 
@@ -23,10 +50,13 @@ class ChargePoint(cp):
 
         self.method_mapping = {
             "request_boot_notification" : self.bootNotification,
-            "request_authorize" : self.authorize
+            "request_authorize" : self.authorize,
+            "request_start_transaction" : self.transactionEvent
         }
 
         self.accepted = False
+        
+        self.ongoing_transactions = {}
         
 
     async def run(self, rabbit):
@@ -40,6 +70,39 @@ class ChargePoint(cp):
     async def handle_request(self, request):
         if request.intent in self.method_mapping:
             return await self.method_mapping[request.intent](**request.content)
+    
+
+    async def transactionEvent(self, **kwargs):
+        #TODO ver idtokens
+        #REVIEW. This is wrong
+
+        request = call.TransactionEventPayload(**kwargs)
+        
+        transaction_id = request.transaction_info["transaction_id"]
+
+        #new transaction
+        if request.event_type == enums.TransactionEventType.started:
+            self.ongoing_transactions[transaction_id] = Transaction(transaction_id)
+
+        
+        if request.id_token is not None: 
+            auth_response = await self.authorize({"id_token": request.id_token})
+            self.ongoing_transactions[transaction_id].set_start_idtoken(request.id_token, auth_response.id_token_info)
+
+
+            if request.transaction_info["stopped_reason"] in [None, enums.ReasonType.local]:
+                #check if idtoken can stop transaction
+                #(same idtoken that started, same groupidtoken) 
+                if not self.ongoing_transactions[transaction_id].check_valid_stop(request.id_token,auth_response.id_token_info):
+                    return {"id_token_info":{"status":enums.AuthorizationStatusType.invalid}}
+
+
+        response = await self.call(request)  
+
+        #if response.id_token_info is not None:
+        #    self.ongoing_transactions[transaction_id].set_group_id(response.id_token_info["group_id_token"])
+
+        return response
     
     
     async def bootNotification(self, **kwargs):
@@ -59,6 +122,8 @@ class ChargePoint(cp):
         else:
             #Retry boot after x senconds
             loop.call_later(response.interval, loop.create_task, self.bootNotification(**kwargs))
+        
+        return response
         
 
     
@@ -104,7 +169,7 @@ class ChargePoint(cp):
     async def authorize(self, **kwargs):
 
         id_token_info = await self.authorize_with_localList(kwargs["id_token"])
-        auth_response = {"id_token_info" : id_token_info} 
+        auth_response = call_result.AuthorizePayload(id_token_info=id_token_info)
 
         if id_token_info["status"] != enums.AuthorizationStatusType.accepted:
             #Ask the CSMS
