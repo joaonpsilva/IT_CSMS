@@ -26,6 +26,6 @@ Client ocpp-----------------
 
 - remote start quem manda autorizar? remote stop cp deve verificar se transaction existe?
 
-
+- group idtoken para parar trasaction? No authorize request como sber q idtoken começou a transacao
 
 
