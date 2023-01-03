@@ -29,18 +29,21 @@ class Transaction:
             self.group_id =group_id
     
     
-    def check_valid_stop(self, idtoken, group_id):
+    def check_valid_stop_with_Idtoken(self, idtoken):
         if self.start_idtoken is None:
             return True
-        
-        if idtoken["id_token"] == self.start_idtoken["id_token"] or\
-            group_id["id_token"] == self.group_id["id_token"]:
+        if idtoken["id_token"] == self.start_idtoken["id_token"]:
             return True
         
         return False
+        
 
+    def check_valid_stop_with_GroupIdtoken(self, group_id):
+        if group_id["id_token"] == self.group_id["id_token"]:
+            return True 
+                
+        return False
 
-    
 
 
 class ChargePoint(cp):
@@ -51,7 +54,9 @@ class ChargePoint(cp):
         self.method_mapping = {
             "request_boot_notification" : self.bootNotification,
             "request_authorize" : self.authorize,
-            "request_start_transaction" : self.transactionEvent
+            "request_start_transaction" : self.transactionEvent,
+            "request_meter_values" : self.meterValues,
+            "request_status_notification" : self.statusNotification 
         }
 
         self.accepted = False
@@ -86,22 +91,30 @@ class ChargePoint(cp):
 
         
         if request.id_token is not None: 
-            auth_response = await self.authorize({"id_token": request.id_token})
-            self.ongoing_transactions[transaction_id].set_start_idtoken(request.id_token, auth_response.id_token_info)
+
+            #o decision point manda um authorize request ou sou eu q mando
+            #????
+            if request.trigger_reason == enums.TriggerReasonType.authorized:
+                auth_response = await self.authorize({"id_token": request.id_token})
+                self.ongoing_transactions[transaction_id].set_start_idtoken(request.id_token, auth_response.id_token_info)
 
 
             if request.transaction_info["stopped_reason"] in [None, enums.ReasonType.local]:
                 #check if idtoken can stop transaction
-                #(same idtoken that started, same groupidtoken) 
-                if not self.ongoing_transactions[transaction_id].check_valid_stop(request.id_token,auth_response.id_token_info):
-                    return {"id_token_info":{"status":enums.AuthorizationStatusType.invalid}}
 
+                #Compare idToken
+                if not self.ongoing_transactions[transaction_id].check_valid_stop_with_Idtoken(request.id_token):
+                    #id token is not the same
+
+                    #get info from token (1st from db then from CSMS)
+                    auth_response = await self.authorize({"id_token": request.id_token})
+
+                    #Compare groupIdToken
+                    if not self.ongoing_transactions[transaction_id].check_valid_stop_with_GroupIdtoken(auth_response.id_token_info):
+                        #Not authorized to stop transaction
+                        return {"id_token_info":{"status":enums.AuthorizationStatusType.invalid}}
 
         response = await self.call(request)  
-
-        #if response.id_token_info is not None:
-        #    self.ongoing_transactions[transaction_id].set_group_id(response.id_token_info["group_id_token"])
-
         return response
     
     
@@ -177,6 +190,15 @@ class ChargePoint(cp):
             auth_response = await self.call(request)
         
         return auth_response
+    
+
+    async def meterValues(self, **kwargs):
+        request = call.MeterValuesPayload(**kwargs)
+        return await self.call(request)
+    
+    async def statusNotification(self, **kwargs):
+        request = call.StatusNotificationPayload(**kwargs)
+        return await self.call(request)
 
 
 
@@ -212,12 +234,10 @@ class ChargePoint(cp):
 
     
     async def getLocalListVersionFromDb(self):
-    
         message = Fanout_Message(intent="SELECT", content={"table":"LocalList"})
         response = await self.broker.send_request_wait_response(message)
 
         return response["content"][-1]["version_number"]
-    
 
     @on("GetLocalListVersion")
     async def on_GetLocalListVersion(self):
@@ -239,7 +259,20 @@ class ChargePoint(cp):
                 status = enums.SendLocalListStatusType.failed
 
         return call_result.SendLocalListPayload(status=status)
+    
 
+    @on("ChangeAvailability")
+    async def on_ChangeAvailability(self, **kwargs):
+        message = Fanout_Message(intent="change_availability", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+        return call_result.ChangeAvailabilityPayload(**response)
+    
+    @on('TriggerMessage')
+    async def on_TriggerMessage(self, **kwargs):
+        message = Fanout_Message(intent="trigger_message", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+        return call_result.TriggerMessagePayload(**response)
+    
     
     @on('GetVariables')
     def on_get_variables(self,get_variable_data,**kwargs):
