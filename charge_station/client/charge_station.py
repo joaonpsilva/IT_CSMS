@@ -1,3 +1,4 @@
+#    a.machado@ua.pt
 import logging
 import asyncio
 import websockets
@@ -8,6 +9,7 @@ import sys
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
 
+from db.db_CS2 import DataBase_CP2
 from ocpp.v201 import call
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
@@ -62,6 +64,8 @@ class ChargePoint(cp):
         self.accepted = False
         
         self.ongoing_transactions = {}
+
+        self.db = DataBase_CP2()
         
 
     async def run(self, rabbit):
@@ -128,8 +132,7 @@ class ChargePoint(cp):
 
         if response.status == enums.RegistrationStatusType.accepted:
             self.accepted = True
-            #TODO status notification
-            #initiate heart beat
+            #initiate heart beat?
             loop.create_task(self.heartBeat(response.interval))
 
         else:
@@ -207,20 +210,15 @@ class ChargePoint(cp):
     
     @on('TriggerMessage')
     async def on_TriggerMessage(self, **kwargs):
-
-        #message = Fanout_Message(intent="TriggerMessage", content=kwargs)
-        #wait self.broker.ocpp_log(message)
-
-        return call_result.TriggerMessagePayload(
-            status=enums.TriggerMessageStatusType.accepted
-        )    
+        message = Fanout_Message(intent="trigger_message", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+        return call_result.RequestStopTransactionPayload(**response)
 
     @on('RequestStartTransaction')
     async def on_RequestStartTransaction(self, **kwargs):
 
         message = Fanout_Message(intent="remote_start_transaction", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
-        
         return call_result.RequestStartTransactionPayload(**response)
     
 
@@ -229,8 +227,48 @@ class ChargePoint(cp):
 
         message = Fanout_Message(intent="remote_stop_transaction", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
-
         return call_result.RequestStopTransactionPayload(**response)
+
+    
+    @on("UnlockConnector")
+    async def on_UnlockConnector(self, **kwargs):
+        message = Fanout_Message(intent="unlock_connector", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+        return call_result.RequestStopTransactionPayload(**response)
+    
+    @on("Reset")
+    async def on_Reset(self, **kwargs):
+        message = Fanout_Message(intent="reset", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+        return call_result.RequestStopTransactionPayload(**response)
+    
+
+    @on("ChangeAvailability")
+    async def on_ChangeAvailability(self, **kwargs):
+        message = Fanout_Message(intent="change_availability", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+        return call_result.RequestStopTransactionPayload(**response)
+    
+
+    @on("SetChargingProfile")
+    async def on_SetChargingProfile(self,**kwargs):
+        message = Fanout_Message(intent="set_charging_profile", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+        return call_result.RequestStopTransactionPayload(**response)
+    
+
+    @on("GetCompositeSchedule")
+    async def on_GetCompositeSchedule(self, **kwargs):
+        message = Fanout_Message(intent="get_composite_schedule", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+        return call_result.RequestStopTransactionPayload(**response)
+
+    @on("ClearChargingProfile")
+    async def on_ClearChargingProfileRequest(self, **kwargs):
+        message = Fanout_Message(intent="clear_charging_profile", content=kwargs)
+        response = await self.broker.send_request_wait_response(message)
+        return call_result.RequestStopTransactionPayload(**response)
+    
 
     
     async def getLocalListVersionFromDb(self):
@@ -276,6 +314,14 @@ class ChargePoint(cp):
     
     @on('GetVariables')
     def on_get_variables(self,get_variable_data,**kwargs):
+
+        variable = get_variable_data[0]["variable"]["name"]
+        conf = self.db.search_Variable(variable)
+        print(conf)
+
+        if conf:
+            print(conf.Value)
+
         
         get_variable_result = [
             datatypes.GetVariableResultType(
@@ -286,6 +332,11 @@ class ChargePoint(cp):
             for var in get_variable_data]
 
         return call_result.GetVariablesPayload(get_variable_result=get_variable_result)
+    
+
+    @on('SetVariables')
+    def on_set_variables(self, set_variable_data):
+        pass
 
 
     

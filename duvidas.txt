@@ -18,14 +18,13 @@ Client ocpp-----------------
 
 -rabbitmq usa reply_to e correlation_id? (se calhar não têm q lidar com multiplos requests?)
 
--Charging profiles, apenas tenho q dar forward? quem limita as cargas? 
-
--statusnotif e bootnotif sao pedidos por mim ou sao enviados pelo decision point qnd ele quiser?posso pedir status notification ou so recebo? Quando boot da pending status nao podem ser enviados
-
-- quem guarda as variaveis de configuração? se for a charging station, como é q o decision point sabe quando começar a transaçao (txstartpoint)?
-
-- remote start quem manda autorizar? remote stop cp deve verificar se transaction existe?
-
 - group idtoken para parar trasaction? No authorize request como sber q idtoken começou a transacao
 
+-requeststarttransaction deve devolver transactionID se já estiver a ocorrer. Isto é client?
+- remote start quem manda autorizar? remote stop cp deve verificar se transaction existe?
 
+- remotly unlock connector nao deve proceder se existir uma transaçao e deve responder ongoing.... Isto é client?
+
+-getvariables, formato diferente nas mensagens ocpp e na db.
+
+-xxxxxxxxxxxcomo é q o decision point sabe quando começar a transaçao (txstartpoint)?

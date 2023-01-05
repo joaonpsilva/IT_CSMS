@@ -294,16 +294,6 @@ class ChargePoint(cp):
                 )
             ]
         )
-
-    @on('GetTransactionStatus')
-    def on_GetTransactionStatus(self,**kwargs):
-
-        logging.info("Received GetTransactionStatus")
-
-        return call_result.GetTransactionStatusPayload(
-            messages_in_queue=True,
-            ongoing_indicator=True
-        )
     
 
     @on('RequestStartTransaction')
