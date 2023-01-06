@@ -315,22 +315,20 @@ class ChargePoint(cp):
     @on('GetVariables')
     def on_get_variables(self,get_variable_data,**kwargs):
 
-        variable = get_variable_data[0]["variable"]["name"]
-        conf = self.db.search_Variable(variable)
-        print(conf)
-
-        if conf:
-            print(conf.Value)
-
+        get_variable_result=[]
         
-        get_variable_result = [
-            datatypes.GetVariableResultType(
-                attribute_status= enums.GetVariableStatusType.rejected, 
-                component=var["component"],
-                variable= var["variable"],
-            )   
-            for var in get_variable_data]
+        for variable_data in get_variable_data:
+            status, value = self.db.get_Variable_in_DB(**variable_data)
 
+            get_variable_result.append(
+                datatypes.GetVariableResultType(
+                    attribute_status= status, 
+                    component=variable_data["component"],
+                    variable= variable_data["variable"],
+                    attribute_value=value
+                )   
+            )
+            
         return call_result.GetVariablesPayload(get_variable_result=get_variable_result)
     
 
