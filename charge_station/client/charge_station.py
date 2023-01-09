@@ -20,8 +20,12 @@ logging.basicConfig(level=logging.INFO)
 class Transaction:
     def __init__(self, transaction_id):
         self.transaction_id=transaction_id
+        self.evse=None
         self.start_idtoken = None
         self.group_id = None
+    
+    def set_evse(self, evse):
+        self.evse = evse
     
     def set_start_idtoken(self, idtoken, group_id):
         if self.start_idtoken is None:
@@ -117,13 +121,17 @@ class ChargePoint(cp):
                     if not self.ongoing_transactions[transaction_id].check_valid_stop_with_GroupIdtoken(auth_response.id_token_info):
                         #Not authorized to stop transaction
                         return {"id_token_info":{"status":enums.AuthorizationStatusType.invalid}}
+        
+
+        if request.evse is not None:
+            self.ongoing_transactions[transaction_id].set_evse(request.evse)
+
 
         response = await self.call(request)  
         return response
     
     
     async def bootNotification(self, **kwargs):
-        #TODO B01.FR.06
 
         request = call.BootNotificationPayload(**kwargs)
         response = await self.call(request)
@@ -132,7 +140,7 @@ class ChargePoint(cp):
 
         if response.status == enums.RegistrationStatusType.accepted:
             self.accepted = True
-            #initiate heart beat?
+            #TODO initiate heart beat?
             loop.create_task(self.heartBeat(response.interval))
 
         else:
@@ -216,6 +224,11 @@ class ChargePoint(cp):
 
     @on('RequestStartTransaction')
     async def on_RequestStartTransaction(self, **kwargs):
+        if not self.accepted:
+            return call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
+
+        #if transaction alreay on going return id
+        #will cause new transaction event requests
 
         message = Fanout_Message(intent="remote_start_transaction", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
@@ -232,6 +245,7 @@ class ChargePoint(cp):
     
     @on("UnlockConnector")
     async def on_UnlockConnector(self, **kwargs):
+        #TODO F05.FR.02   F05.FR.03
         message = Fanout_Message(intent="unlock_connector", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
         return call_result.RequestStopTransactionPayload(**response)
