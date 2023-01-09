@@ -114,11 +114,41 @@ class DataBase_CP2:
                 for attribute in var.variable_attributes:
                     if attribute.type == attribute_type:
                         value = attribute.value
+                        return enums.GetVariableStatusType.accepted, value 
+                return enums.GetVariableStatusType.not_supported_attribute_type
         
-        if value is None:
-            return enums.GetVariableStatusType.unknown_variable, None
+        return enums.GetVariableStatusType.unknown_variable, None
 
-        return enums.GetVariableStatusType.accepted, value             
+            
+
+
+    def setVariable(self, component, variable, attribute_value, attribute_type=enums.AttributeType.actual):
+        
+        if "instance" in component:
+            component.pop("instance")
+        if "instance" not in variable:
+            variable["instance"] = None
+
+        statement = sqlalchemy.select(Component).filter_by(**component)
+        try:
+            component = self.session.scalars(statement).first()
+        except:
+            return enums.SetVariableStatusType.unknown_component
+        
+        for var in component.variables:
+            if var.name == variable["name"] and var.instance == variable["instance"]:
+                for attribute in var.variable_attributes:
+                    if attribute.type == attribute_type:
+                        attribute.value = attribute_value
+                        self.session.commit()
+                        return enums.SetVariableStatusType.accepted
+                return enums.SetVariableStatusType.not_supported_attribute_type
+        
+        return enums.SetVariableStatusType.unknown_variable
+
+               
+
+
         
         
 

@@ -318,7 +318,10 @@ class ChargePoint(cp):
         get_variable_result=[]
         
         for variable_data in get_variable_data:
-            status, value = self.db.get_Variable_in_DB(**variable_data)
+            try:
+                status, value = self.db.get_Variable_in_DB(**variable_data)
+            except:
+                status, value = enums.GetVariableStatusType.rejected, None
 
             get_variable_result.append(
                 datatypes.GetVariableResultType(
@@ -334,7 +337,25 @@ class ChargePoint(cp):
 
     @on('SetVariables')
     def on_set_variables(self, set_variable_data):
-        pass
+        set_variable_result=[]
+
+        for variable_data in set_variable_data:
+            try:
+                status = self.db.setVariable(**variable_data)
+            except:
+                status = enums.SetVariableStatusType.rejected
+
+            set_variable_result.append(
+                datatypes.SetVariableResultType(
+                    attribute_status= status, 
+                    component=variable_data["component"],
+                    variable= variable_data["variable"]
+                )   
+            )
+            
+        return call_result.SetVariablesPayload(set_variable_result=set_variable_result)
+    
+
 
 
     
