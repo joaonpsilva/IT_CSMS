@@ -385,6 +385,9 @@ class ChargePoint(cp):
         return call_result.SetVariablesPayload(set_variable_result=set_variable_result)
     
 
+async def main(args):
+    cp = ChargePoint(args.cp)
+    await cp.run(args.rb, args.p, args.pw)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -394,5 +397,4 @@ if __name__ == '__main__':
     parser.add_argument("-pw", type=str, default = "passcp1", help="Cp password")
     args = parser.parse_args()
 
-    cp = ChargePoint(args.cp)
-    asyncio.run(cp.run(args.rb, args.p, args.pw))
+    asyncio.run(main(args))
