@@ -1,4 +1,3 @@
-#    a.machado@ua.pt
 import logging
 import asyncio
 import websockets
@@ -16,6 +15,8 @@ from ocpp.v201 import call, call_result, enums, datatypes
 from ocpp.routing import after,on
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger("websockets").setLevel(logging.CRITICAL)
+
 
 class Transaction:
     def __init__(self, transaction_id):
@@ -54,7 +55,7 @@ class Transaction:
 
 class ChargePoint(cp):
 
-    def __init__(self, cp_id, ws):
+    def __init__(self, cp_id, ws=None):
         super().__init__(cp_id, ws)
 
         self.method_mapping = {
@@ -70,16 +71,30 @@ class ChargePoint(cp):
         self.ongoing_transactions = {}
 
         self.db = DataBase_CP2()
-        
+    
 
-    async def run(self, rabbit):
+
+    async def run(self, rabbit, server_port, password):
+
         #broker handles the rabbit mq queues and communication between services
         self.broker = Fanout_Rabbit_Handler("OCPPclient", self.handle_request)
         await self.broker.connect(rabbit)
+        
+        #Connect to server CSMS        
+        async for websocket in websockets.connect(
+        'ws://{cp_id}:{password}@localhost:{server_port}/{cp_id}'.format(cp_id = self.id, password=password, server_port=server_port),
+            subprotocols=['ocpp2.0.1']
+        ):
+            try:
+                logging.info("Connection established with CSMS")
 
-        await self.start()
-
-    
+                self._connection = websocket
+                await self.start()
+            except websockets.ConnectionClosed:
+                logging.info("Connection Error. Trying to restore connection")
+                continue
+        
+       
     async def handle_request(self, request):
         if request.intent in self.method_mapping:
             return await self.method_mapping[request.intent](**request.content)
@@ -371,23 +386,6 @@ class ChargePoint(cp):
     
 
 
-
-    
-
-async def main(server_port, rabbit, cp_id, password):
-
-    logging.info("Trying to connect to csms with id %s", cp_id)
-
-    async with websockets.connect(
-        'ws://{cp_id}:{password}@localhost:{server_port}/{cp_id}'.format(cp_id = cp_id, password=password, server_port=server_port),
-        
-            subprotocols=['ocpp2.0.1']
-    ) as ws:
-
-        cp = ChargePoint(cp_id, ws)
-        await cp.run(rabbit)
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, default = 9000, help="OCPP server port")
@@ -396,4 +394,5 @@ if __name__ == '__main__':
     parser.add_argument("-pw", type=str, default = "passcp1", help="Cp password")
     args = parser.parse_args()
 
-    asyncio.run(main(args.p, args.rb, args.cp, args.pw))
+    cp = ChargePoint(args.cp)
+    asyncio.run(cp.run(args.rb, args.p, args.pw))
