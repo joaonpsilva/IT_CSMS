@@ -32,7 +32,7 @@ async def main():
         )
     )
 
-    await broker.ocpp_log(message)
+    await broker.send_request_wait_response(message)
 
     ########
 
@@ -44,7 +44,7 @@ async def main():
         )
     )
 
-    await broker.ocpp_log(message)
+    #await broker.send_request_wait_response(message)
 
 
 

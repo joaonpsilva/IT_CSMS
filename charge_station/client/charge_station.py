@@ -67,12 +67,15 @@ class ChargePoint(cp):
         }
 
         self.accepted = False
-        
         self.ongoing_transactions = {}
-
         self.db = DataBase_CP2()
+        self.connection_active = False
     
 
+    async def _send(self, message):
+
+        if self.connection_active:
+            super()._send(message)
 
     async def run(self, rabbit, server_port, password):
 
@@ -89,8 +92,10 @@ class ChargePoint(cp):
                 logging.info("Connection established with CSMS")
 
                 self._connection = websocket
+                self.connection_active = True
                 await self.start()
             except websockets.ConnectionClosed:
+                self.connection_active = False
                 logging.info("Connection Error. Trying to restore connection")
                 continue
         
@@ -210,7 +215,7 @@ class ChargePoint(cp):
         id_token_info = await self.authorize_with_localList(kwargs["id_token"])
         auth_response = call_result.AuthorizePayload(id_token_info=id_token_info)
 
-        if id_token_info["status"] != enums.AuthorizationStatusType.accepted:
+        if id_token_info["status"] != enums.AuthorizationStatusType.accepted and self.connection_active:
             #Ask the CSMS
             request = call.AuthorizePayload(**kwargs)
             auth_response = await self.call(request)
