@@ -28,3 +28,5 @@ Client ocpp-----------------
 -getvariables, formato diferente nas mensagens ocpp e na db.
 
 -xxxxxxxxxxxcomo é q o decision point sabe quando começar a transaçao (txstartpoint)?
+
+-quando cp offline durante x tempo tem q mandar statusnotif 
