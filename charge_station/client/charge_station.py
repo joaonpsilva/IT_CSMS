@@ -8,7 +8,7 @@ import sys
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
 
-from db.db_CS2 import DataBase_CP2
+from db.db_CS2 import DataBase_CP
 from ocpp.v201 import call
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
@@ -69,7 +69,7 @@ class ChargePoint(cp):
 
         self.status = None
         self.ongoing_transactions = {}
-        self.db = DataBase_CP2()
+        self.db = DataBase_CP()
         self.connection_active = False
         
         self.queued_messages = []

@@ -1,87 +1,35 @@
 import sqlalchemy
-from sqlalchemy import Column, ForeignKey, Integer, String, Table, Boolean, JSON, Enum, Float
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
-from ocpp.v201 import enums
+
+import logging
+logging.basicConfig(level=logging.INFO)
+
+from sqlalchemy import create_engine, update, select, delete, insert
+from sqlalchemy.orm import sessionmaker
+from db_Tables_CS import *
+import sys
+from os import path
+sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
+from fanout_Rabbit_Handler import Fanout_Rabbit_Handler
+import logging
+logging.basicConfig(level=logging.INFO)
 
 
-Base = declarative_base()
-
-class ocpp_standard_configuration(Base):
-    __tablename__ = "ocpp_standard_configuration"
-
-    NAME = Column(String, primary_key=True)
-    Accessibility = Column(String)
-    type = Column(String)
-    Unit = Column(String)
-    Value = Column(String)
-    isOcppKey = Column(Integer)
-    Public = Column(Integer)
-    OnBoot = Column(Integer)
-    inSM = Column(Integer)
-    minValue = Column(Integer)
-    maxValue = Column(Integer)
-
-
-class Component(Base):
-    __tablename__ = "Component"
-    id = Column(Integer, primary_key = True)
-
-    enabled = Column(Boolean)
-    name = Column(String)
-    evse = Column(Integer)
-
-    variables = relationship("Variable", backref="component")
-
-
-
-class Variable(Base):
-    __tablename__ = "Variable"
-    id = Column(Integer, primary_key = True)
-
-    name = Column(String)
-    instance = Column(String)
-    evse = Column(Integer)
-
-    _componentId = Column(Integer, ForeignKey("Component.id"))
-
-    variable_attributes = relationship("VariableAttribute", backref="variable")
-    variable_characteristics = relationship("VariableCharacteristics", backref="variable", uselist=False)
-
-
-class VariableAttribute(Base):
-    __tablename__ = "VariableAttribute"
-    id = Column(Integer, primary_key = True)
-
-    type = Column(Enum(enums.AttributeType), default=enums.AttributeType.actual)
-    value = Column(String(2500))
-    mutability = Column(Enum(enums.MutabilityType))
-    persistent = Column(Boolean)        #Needed?
-    constant = Column(Boolean)
-
-    _variableId = Column(Integer, ForeignKey("Variable.id"))
-
-
-class VariableCharacteristics(Base):
-    __tablename__ = "VariableCharacteristics"
-    id = Column(Integer, primary_key = True)
-
-    data_type = Column(Enum(enums.DataType))
-    min_limit = Column(Float)
-    max_limit = Column(Float)
-    valuesList = Column(JSON)
-    supports_monitoring = Column(Boolean)
-
-    _variableId = Column(Integer, ForeignKey("Variable.id"))
-
-
-
-class DataBase_CP2:
+class DataBase_CP:
     def __init__(self):
 
         self.engine = sqlalchemy.create_engine("sqlite:///DB16.db")
+        logging.info("Connected to the database")
+
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
         Base.metadata.create_all(self.engine)
+
+
+        self.table_mapping={
+            "LocalList":LocalList,
+            "IdToken":IdToken,
+            "IdTokenInfo":IdTokenInfo
+        }
 
         #c = Component(name="DeviceDataCtrlr")
         #v = Variable(name="ItemsPerMessage", instance="GetVariables",component=c)
@@ -145,6 +93,67 @@ class DataBase_CP2:
                 return enums.SetVariableStatusType.not_supported_attribute_type
         
         return enums.SetVariableStatusType.unknown_variable
+
+    
+
+    def select(self, table, filters={}, dict_format=True, **kwargs):
+        statement = select(self.table_mapping[table]).filter_by(**filters)
+        if dict_format:
+            return [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]
+        return self.session.scalars(statement).all()
+    
+    def create(self, table,values,**kwargs):
+        statement = insert(self.table_mapping[table]).values(**values)
+        self.session.execute(statement)
+    
+    def remove(self, table,filters={}, **kwargs):
+        statement = delete(self.table_mapping[table]).filter_by(**filters)
+        self.session.execute(statement)
+
+    def update(self, table, values, filters={}, **kwargs):
+        statement = update(self.table_mapping[table]).filter_by(**filters).values(**values)
+        self.session.execute(statement)
+    
+
+    def updateLocalList(self, version_number, update_type, local_authorization_list=[]):
+
+        #start transaction
+        with self.session.begin():
+            
+            current_version = self.select("LocalList")[-1]["version_number"]
+            self.update("LocalList", filters={"version_number":current_version}, values={"version_number":version_number})
+
+            if update_type == enums.UpdateType.full:
+                self.remove("IdToken")
+            
+            for auth_data in local_authorization_list:
+                if "id_token_info" in auth_data:
+                    auth_data["id_token_info"].pop("status")
+                    auth_data["id_token"]["id_token_info"] = auth_data["id_token_info"]
+
+                    id_token = IdToken(**auth_data["id_token"])
+                    self.session.merge(id_token)               
+                else:
+                    self.remove("IdToken", auth_data["id_token"])
+        
+    
+    def get_IdToken_Info(self, id_token, **kwargs):
+
+        idToken = self.session.query(IdToken).get(id_token['id_token'])
+        if idToken is None:
+            return {"id_token" : None, "id_token_info" : None}
+
+        #transform do dict
+        idToken_dict = idToken.get_dict_obj()
+
+        #get idtokeninfo from idtoken
+        idTokenInfo = idToken.id_token_info
+        #load groupid from info
+        idTokenInfo.group_id_token
+        #transform to dict
+        idTokenInfo_dict = idTokenInfo.get_dict_obj()
+        
+        return {"id_token" : idToken_dict, "id_token_info" : idTokenInfo_dict}
 
                
 
