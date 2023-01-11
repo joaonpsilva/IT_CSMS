@@ -35,6 +35,7 @@ async def main():
     await broker.send_request_wait_response(message)
 
     ########
+    input()
 
     message = Fanout_Message(
         intent="request_authorize",
@@ -44,7 +45,7 @@ async def main():
         )
     )
 
-    #await broker.send_request_wait_response(message)
+    await broker.send_request_wait_response(message)
 
 
 

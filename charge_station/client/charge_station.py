@@ -98,15 +98,15 @@ class ChargePoint(cp):
     async def call(self, payload, suppress=True):
 
         if not self.connection_active:
-            pass
+            raise ConnectionError
 
         if self.status == enums.RegistrationStatusType.pending:
             #verify if messages can be sent B02.FR.02
             if not isinstance(payload, call.NotifyReportPayload):
-                return
+                raise PermissionError
             #message was triggered    
             if not payload.__class__.__name__[:-7] in self.trigger_messages: #remove "Payload"
-                return
+                raise PermissionError
             else:
                 self.trigger_messages.remove(payload.__class__.__name__[:-7])
 
@@ -202,14 +202,17 @@ class ChargePoint(cp):
     async def bootNotification(self, **kwargs):
 
         request = call.BootNotificationPayload(**kwargs)
-        response = await self.call(request)
+
+        try:
+            response = await self.call(request)
+        except:
+            response = call_result.BootNotificationPayload(status=enums.RegistrationStatusType.pending)
 
         loop = asyncio.get_event_loop()
-        
         self.status = response.status
 
         if response.status == enums.RegistrationStatusType.accepted:
-            #TODO initiate heart beat?
+            #initiate heart beat?
             loop.create_task(self.heartBeat(response.interval))
 
         else:
