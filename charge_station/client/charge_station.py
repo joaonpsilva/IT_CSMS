@@ -13,6 +13,7 @@ from ocpp.v201 import call
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
 from ocpp.routing import after,on
+from ocpp import exceptions
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("websockets").setLevel(logging.CRITICAL)
@@ -66,16 +67,51 @@ class ChargePoint(cp):
             "request_status_notification" : self.statusNotification 
         }
 
-        self.accepted = False
+        self.status = None
         self.ongoing_transactions = {}
         self.db = DataBase_CP2()
         self.connection_active = False
+        
+        self.queued_messages = []
+        self.trigger_messages = []
     
 
-    async def _send(self, message):
+    async def _handle_call(self, msg):
+        try:
+            handlers = self.route_map[msg.action]
+            
+            #B03.FR.08
+            if self.status == enums.RegistrationStatusType.rejected:
+                if handlers['_on_action'] != self.on_TriggerMessage and \
+                msg.payload["requestedMessage"] != enums.MessageTriggerType.boot_notification:
+                    
+                    response = msg.create_call_error(exceptions.SecurityError).to_json()
+                    await self._send(response)
+                    return
+            
+        except KeyError:
+            pass
+        
+        return await super()._handle_call(msg)
 
-        if self.connection_active:
-            super()._send(message)
+
+    async def call(self, payload, suppress=True):
+
+        if not self.connection_active:
+            pass
+
+        if self.status == enums.RegistrationStatusType.pending:
+            #verify if messages can be sent B02.FR.02
+            if not isinstance(payload, call.NotifyReportPayload):
+                return
+            #message was triggered    
+            if not payload.__class__.__name__[:-7] in self.trigger_messages: #remove "Payload"
+                return
+            else:
+                self.trigger_messages.remove(payload.__class__.__name__[:-7])
+
+
+        return await super().call(payload, suppress)
 
     async def run(self, rabbit, server_port, password):
 
@@ -93,7 +129,14 @@ class ChargePoint(cp):
 
                 self._connection = websocket
                 self.connection_active = True
+
                 await self.start()
+
+                #send queued message when connection is restored
+                for message in self.queued_messages:
+                    await self.call(message)
+                self.queued_messages=[]
+
             except websockets.ConnectionClosed:
                 self.connection_active = False
                 logging.info("Connection Error. Trying to restore connection")
@@ -146,8 +189,13 @@ class ChargePoint(cp):
         if request.evse is not None:
             self.ongoing_transactions[transaction_id].set_evse(request.evse)
 
+        #if charge station is offline, store messages
+        if self.connection_active:
+            response = await self.call(request)
+        else:
+            self.queued_messages.append(request)
+            response = call_result.TransactionEventPayload()
 
-        response = await self.call(request)  
         return response
     
     
@@ -157,9 +205,10 @@ class ChargePoint(cp):
         response = await self.call(request)
 
         loop = asyncio.get_event_loop()
+        
+        self.status = response.status
 
         if response.status == enums.RegistrationStatusType.accepted:
-            self.accepted = True
             #TODO initiate heart beat?
             loop.create_task(self.heartBeat(response.interval))
 
@@ -240,11 +289,15 @@ class ChargePoint(cp):
     async def on_TriggerMessage(self, **kwargs):
         message = Fanout_Message(intent="trigger_message", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
+
+        if response["status"] == enums.TriggerMessageStatusType.accepted:
+            self.trigger_messages.append(kwargs["requested_message"])
+
         return call_result.RequestStopTransactionPayload(**response)
 
     @on('RequestStartTransaction')
     async def on_RequestStartTransaction(self, **kwargs):
-        if not self.accepted:
+        if self.status == enums.RegistrationStatusType.pending:
             return call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
 
         #if transaction alreay on going return id
