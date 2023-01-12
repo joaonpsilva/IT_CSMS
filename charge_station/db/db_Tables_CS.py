@@ -117,22 +117,12 @@ class VariableCharacteristics(Base):
 
 
 
-def create_Tables(engine):
-    #for tbl in reversed(Base.metadata.sorted_tables):
-    #    try:
-    #        engine.execute(tbl.delete())
-    #    except:
-    #        pass
-
-    #Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
-
-
-def insert_Hard_Coded(db):
-    objects=[]
+def insert_Hard_Coded(session):
+    """objects=[]
 
     objects.append(
         LocalList(version_number=0)
     )
-    db.session.add_all(objects)
-    db.session.commit()
+    session.add_all(objects)
+    session.commit()"""
+    return

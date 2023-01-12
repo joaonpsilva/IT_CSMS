@@ -8,13 +8,13 @@ import sys
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
 
-from db.db_CS2 import DataBase_CP
+from db.db_CS import DataBase_CP
 from ocpp.v201 import call
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
 from ocpp.routing import after,on
 from ocpp import exceptions
-
+import traceback
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("websockets").setLevel(logging.CRITICAL)
 
@@ -238,10 +238,9 @@ class ChargePoint(cp):
 
         #get idtoken info from db
         try:
-            message = Fanout_Message(intent="get_IdToken_Info", content={"id_token": id_token})
-            response = await self.broker.send_request_wait_response(message)
-            id_token =response["content"]["id_token"]
-            id_token_info =response["content"]["id_token_info"]
+            response = self.db.get_IdToken_Info(id_token)
+            id_token =response["id_token"]
+            id_token_info =response["id_token_info"]
             if id_token is None:
                 return {"status" : enums.AuthorizationStatusType.unknown}
 
@@ -257,6 +256,7 @@ class ChargePoint(cp):
                 id_token_info["status"] = enums.AuthorizationStatusType.expired
 
         except:
+            logging.error(traceback.format_exc())
             id_token_info = {"status": enums.AuthorizationStatusType.invalid}
         
         return id_token_info
@@ -266,6 +266,8 @@ class ChargePoint(cp):
 
         id_token_info = await self.authorize_with_localList(kwargs["id_token"])
         auth_response = call_result.AuthorizePayload(id_token_info=id_token_info)
+
+        logging.info("Local Auth result: %s", id_token_info["status"])
 
         if id_token_info["status"] != enums.AuthorizationStatusType.accepted and self.connection_active:
             #Ask the CSMS
@@ -360,28 +362,19 @@ class ChargePoint(cp):
         return call_result.RequestStopTransactionPayload(**response)
     
 
-    
-    async def getLocalListVersionFromDb(self):
-        message = Fanout_Message(intent="SELECT", content={"table":"LocalList"})
-        response = await self.broker.send_request_wait_response(message)
-
-        return response["content"][-1]["version_number"]
-
     @on("GetLocalListVersion")
     async def on_GetLocalListVersion(self):
-        return call_result.GetLocalListVersionPayload(version_number= await self.getLocalListVersionFromDb())
+        return call_result.GetLocalListVersionPayload(version_number=self.db.get_LocalList_Version())
     
     @on("SendLocalList")
     async def on_SendLocalList(self, **kwargs):
 
-        current_version = await self.getLocalListVersionFromDb()
+        current_version = self.db.get_LocalList_Version()
         if 0 >= kwargs["version_number"] <= current_version:
             status = enums.SendLocalListStatusType.version_mismatch
         else:
-            message = Fanout_Message(intent="SendLocalList", content=kwargs)
-            response = await self.broker.send_request_wait_response(message)
-
-            if response["status"] == "OK":
+            resulted = self.db.updateLocalList(**kwargs)
+            if resulted:
                 status = enums.SendLocalListStatusType.accepted
             else:
                 status = enums.SendLocalListStatusType.failed
@@ -409,7 +402,7 @@ class ChargePoint(cp):
         
         for variable_data in get_variable_data:
             try:
-                status, value = self.db.get_Variable_in_DB(**variable_data)
+                status, value = self.db.getVariable(**variable_data)
             except:
                 status, value = enums.GetVariableStatusType.rejected, None
 
