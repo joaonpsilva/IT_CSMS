@@ -1,5 +1,5 @@
 from sqlalchemy.orm import declarative_base, relationship, backref
-from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean, JSON
+from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean, JSON, BINARY
 from ocpp.v201 import enums
 
 import sys
@@ -114,6 +114,17 @@ class VariableCharacteristics(Base):
     supports_monitoring = Column(Boolean)
 
     _variableId = Column(Integer, ForeignKey("Variable.id"))
+
+
+#str to str?
+#getattr(call, "AuthorizePayload")
+
+class QueuedMessages(Base):
+    __tablename__ = "QueuedMessages"
+
+    id = Column(Integer, primary_key = True)
+    message_type = Column(String)
+    payload = Column(JSON)
 
 
 
