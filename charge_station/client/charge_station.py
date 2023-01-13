@@ -82,9 +82,8 @@ class ChargePoint(cp):
             
             #B03.FR.08
             if self.status == enums.RegistrationStatusType.rejected:
-                if handlers['_on_action'] != self.on_TriggerMessage and \
-                msg.payload["requestedMessage"] != enums.MessageTriggerType.boot_notification:
-                    
+                if not (handlers['_on_action'] == self.on_TriggerMessage and \
+                msg.payload["requestedMessage"] == enums.MessageTriggerType.boot_notification):
                     response = msg.create_call_error(exceptions.SecurityError).to_json()
                     await self._send(response)
                     return
@@ -99,19 +98,23 @@ class ChargePoint(cp):
 
         if not self.connection_active:
             raise ConnectionError
-
-        if self.status == enums.RegistrationStatusType.pending:
-            #verify if messages can be sent B02.FR.02
-            if not isinstance(payload, call.NotifyReportPayload):
+        
+        if not isinstance(payload, call.BootNotificationPayload):
+            if self.status is None or self.status == enums.RegistrationStatusType.rejected:
                 raise PermissionError
-            #message was triggered    
-            if not payload.__class__.__name__[:-7] in self.trigger_messages: #remove "Payload"
-                raise PermissionError
-            else:
-                self.trigger_messages.remove(payload.__class__.__name__[:-7])
 
+            if self.status == enums.RegistrationStatusType.pending:
+                #verify if messages can be sent B02.FR.02
+                if not isinstance(payload, call.NotifyReportPayload):
+                    raise PermissionError
+                #message was triggered    
+                if not payload.__class__.__name__[:-7] in self.trigger_messages: #remove "Payload"
+                    raise PermissionError
+                else:
+                    self.trigger_messages.remove(payload.__class__.__name__[:-7])
 
         return await super().call(payload, suppress)
+
 
     async def run(self, rabbit, server_port, password):
 
@@ -133,9 +136,7 @@ class ChargePoint(cp):
                 await self.start()
 
                 #send queued message when connection is restored
-                for message in self.queued_messages:
-                    await self.call(message)
-                self.queued_messages=[]
+                self.send_queued_messages()
 
             except websockets.ConnectionClosed:
                 self.connection_active = False
@@ -146,7 +147,20 @@ class ChargePoint(cp):
     async def handle_request(self, request):
         if request.intent in self.method_mapping:
             return await self.method_mapping[request.intent](**request.content)
+        
     
+    async def send_queued_messages(self):
+        while not self.queued_messages.empty:
+            if not self.connection_active:
+                break
+
+            message = self.queued_messages[0]
+            try:
+                await self.call(message)
+                self.queued_messages.pop(0)
+            except:
+                pass
+            
 
     async def transactionEvent(self, **kwargs):
         #TODO ver idtokens
@@ -190,13 +204,19 @@ class ChargePoint(cp):
             self.ongoing_transactions[transaction_id].set_evse(request.evse)
 
         #if charge station is offline, store messages
-        if self.connection_active:
+        try:
+            assert(self.connection_active)
+            assert(self.status == enums.RegistrationStatusType.accepted)
+            
             response = await self.call(request)
-        else:
+        except:
+
+            request.offline = True
             self.queued_messages.append(request)
             response = call_result.TransactionEventPayload()
 
         return response
+
     
     
     async def bootNotification(self, **kwargs):
