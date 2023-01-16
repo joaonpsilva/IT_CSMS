@@ -36,29 +36,6 @@ class DataBase_CP:
         }
 
     
-    def select(self, table, filters={}, dict_format=True, **kwargs):
-        statement = select(self.table_mapping[table]).filter_by(**filters)
-        if dict_format:
-            return [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]
-        return self.session.scalars(statement).all()
-    
-    def create(self, table,values,**kwargs):
-        statement = insert(self.table_mapping[table]).values(**values)
-        self.session.execute(statement)
-        self.session.commit()
-    
-    def remove(self, table,filters={}, **kwargs):
-        statement = delete(self.table_mapping[table]).filter_by(**filters)
-        self.session.execute(statement)
-        self.session.commit()
-
-    def update(self, table, values, filters={}, **kwargs):
-        statement = update(self.table_mapping[table]).filter_by(**filters).values(**values)
-        self.session.execute(statement)
-        self.session.commit()
-
-
-    
     def getVariable(self, component, variable, attribute_type=enums.AttributeType.actual):
         
         if "instance" in component:
@@ -120,7 +97,10 @@ class DataBase_CP:
         #with self.session.begin():
             
             current_version = self.get_LocalList_Version()
-            self.update("LocalList", filters={"version_number":current_version}, values={"version_number":version_number})
+            
+            statement = update(LocalList).filter_by(version_number=current_version).values(version_number=version_number)
+            self.session.execute(statement)
+
 
             if update_type == enums.UpdateType.full:
                 self.session.execute(delete(GroupIdToken))
@@ -135,8 +115,10 @@ class DataBase_CP:
                     id_token = IdToken(**auth_data["id_token"])
                     self.session.merge(id_token)               
                 else:
-                    self.remove("IdToken", auth_data["id_token"])
-                                        
+                    id_token = self.session.query(IdToken).filter_by(**auth_data["id_token"]).first()
+                    self.session.delete(id_token)
+
+
             self.session.commit()
             return True
         except:
