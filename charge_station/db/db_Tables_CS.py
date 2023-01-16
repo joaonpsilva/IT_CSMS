@@ -1,6 +1,6 @@
 from sqlalchemy.orm import declarative_base, relationship, backref
 from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean, JSON, BINARY
-from ocpp.v201 import enums
+from ocpp.v201 import enums, call
 
 import sys
 from os import path
@@ -116,8 +116,6 @@ class VariableCharacteristics(Base):
     _variableId = Column(Integer, ForeignKey("Variable.id"))
 
 
-#str to str?
-#getattr(call, "AuthorizePayload")
 
 class QueuedMessages(Base):
     __tablename__ = "QueuedMessages"
@@ -125,6 +123,9 @@ class QueuedMessages(Base):
     id = Column(Integer, primary_key = True)
     message_type = Column(String)
     payload = Column(JSON)
+
+    def to_ocppPayload(self):
+        return getattr(call, self.message_type)(**self.payload)
 
 
 

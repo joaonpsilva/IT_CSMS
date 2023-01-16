@@ -121,6 +121,8 @@ class ChargePoint(cp):
         #broker handles the rabbit mq queues and communication between services
         self.broker = Fanout_Rabbit_Handler("OCPPclient", self.handle_request)
         await self.broker.connect(rabbit)
+
+        self.queued_messages = self.db.get_Queued_Messages()
         
         #Connect to server CSMS        
         async for websocket in websockets.connect(
@@ -135,9 +137,6 @@ class ChargePoint(cp):
 
                 await self.start()
 
-                #send queued message when connection is restored
-                self.send_queued_messages()
-
             except websockets.ConnectionClosed:
                 self.connection_active = False
                 logging.info("Connection Error. Trying to restore connection")
@@ -150,7 +149,7 @@ class ChargePoint(cp):
         
     
     async def send_queued_messages(self):
-        while not self.queued_messages.empty:
+        while len(self.queued_messages) > 0:
             if not self.connection_active:
                 break
 
@@ -159,7 +158,7 @@ class ChargePoint(cp):
                 await self.call(message)
                 self.queued_messages.pop(0)
             except:
-                pass
+                logging.error(traceback.format_exc())
             
 
     async def transactionEvent(self, **kwargs):
@@ -207,12 +206,13 @@ class ChargePoint(cp):
         try:
             assert(self.connection_active)
             assert(self.status == enums.RegistrationStatusType.accepted)
-            
+
             response = await self.call(request)
         except:
 
             request.offline = True
             self.queued_messages.append(request)
+
             response = call_result.TransactionEventPayload()
 
         return response
@@ -234,6 +234,9 @@ class ChargePoint(cp):
         if response.status == enums.RegistrationStatusType.accepted:
             #initiate heart beat?
             loop.create_task(self.heartBeat(response.interval))
+
+            #send queued message when connection is restored
+            await self.send_queued_messages()
 
         else:
             #Retry boot after x senconds

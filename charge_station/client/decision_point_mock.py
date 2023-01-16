@@ -3,6 +3,7 @@ import asyncio
 import websockets
 from os import path
 import sys
+from datetime import datetime
 
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
@@ -44,7 +45,21 @@ async def main():
             id_token=datatypes.IdTokenType(id_token = "123456789", type=enums.IdTokenType.iso14443)
         )
     )
+    await broker.send_request_wait_response(message)
 
+    ########
+    input()
+    message = Fanout_Message(
+        intent="request_start_transaction",
+        type="REQUEST",
+        content=call.TransactionEventPayload(
+            event_type=enums.TransactionEventType.started,
+            timestamp=datetime.utcnow().isoformat(),
+            trigger_reason=enums.TriggerReasonType.ev_detected,
+            seq_no=1,
+            transaction_info=datatypes.TransactionType(transaction_id="jkhsdalkvsdj")
+        )
+    )
     await broker.send_request_wait_response(message)
 
 

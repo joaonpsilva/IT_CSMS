@@ -97,7 +97,7 @@ class DataBase_CP:
         #with self.session.begin():
             
             current_version = self.get_LocalList_Version()
-            
+
             statement = update(LocalList).filter_by(version_number=current_version).values(version_number=version_number)
             self.session.execute(statement)
 
@@ -149,4 +149,21 @@ class DataBase_CP:
     def get_LocalList_Version(self):
         locallist = self.session.scalars(select(LocalList)).first()
         return locallist.version_number
+    
+
+    def store_Queued_Messages(self, queued_messages):
+        for m in queued_messages:
+            m = QueuedMessages(message_type=m.__class__.__name__, payload=m.__dict__)
+            self.session.add(m)
+        self.session.commit()
+    
+
+    def get_Queued_Messages(self):
+        to_return = []
+        for m in self.session.scalars(select(QueuedMessages)).all():
+            to_return.append(m.to_ocppPayload())
+            self.session.delete(m)
+        
+        self.session.commit()
+        return to_return
 

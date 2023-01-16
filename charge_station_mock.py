@@ -82,17 +82,6 @@ class ChargePoint(cp):
         response = await self.call(request)
     
 
-    async def transactionEventRequest(self):
-        request = call.TransactionEventPayload(
-            event_type=enums.TransactionEventType.started,
-            timestamp=datetime.utcnow().isoformat(),
-            trigger_reason=enums.TriggerReasonType.ev_detected,
-            seq_no=1,
-            transaction_info=datatypes.TransactionType(
-                id="123"
-            )
-        )
-        response = await self.call(request)
 
     
     async def authorizeRequest(self):
