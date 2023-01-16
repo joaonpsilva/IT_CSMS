@@ -82,7 +82,7 @@ class ChargePoint(cp):
                 id_token_info["status"] =  enums.AuthorizationStatusType.not_at_this_location
 
             #evse_id needs to be empty if allowed for all charging station
-            message = Rabbit_Message(method="SELECT", cp_id=self.id, content={"table": "EVSE", "filters":{"cp_id" : self.id}})
+            message = Rabbit_Message(method="select", cp_id=self.id, content={"table": "EVSE", "filters":{"cp_id" : self.id}})
             response = await ChargePoint.broker.send_request_wait_response(message)
             total_evses = len(response["content"])
             if total_evses == len(id_token_info["evse_id"]):
@@ -511,7 +511,7 @@ class ChargePoint(cp):
 
         if payload["update_type"] == enums.UpdateType.full:
             #Get id tokens from DB
-            message = Rabbit_Message(method="SELECT", cp_id=self.id, content={"table":"IdToken"})
+            message = Rabbit_Message(method="select", cp_id=self.id, content={"table":"IdToken"})
             response = await ChargePoint.broker.send_request_wait_response(message)
             if response["status"] != "OK":
                 raise ValueError("DB ERROR")
