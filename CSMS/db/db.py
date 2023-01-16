@@ -58,18 +58,18 @@ class DataBase:
         """
         Function that will handle incoming requests from the api or ocpp Server
         """
-        if request.method in self.method_mapping:
-            try:
-                #call method depending on the message
-                toReturn = getattr(self, request.method)(**request.__dict__)
-                #commit possible changes
-                self.session.commit()
+        try:
+            #call method depending on the message
+            toReturn = getattr(self, request.method)(**request.__dict__)
+            #commit possible changes
+            self.session.commit()
 
-                return {"status":"OK", "content":toReturn}
-            except Exception as e:
-                self.session.rollback()
-                logging.error(traceback.format_exc())
-                return {"status":"ERROR"}
+            return {"status":"OK", "content":toReturn}
+        except Exception as e:
+
+            self.session.rollback()
+            logging.error(traceback.format_exc())
+            return {"status":"ERROR"}
 
 
     async def run(self, rabbit):
