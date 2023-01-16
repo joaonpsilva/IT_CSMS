@@ -12,6 +12,7 @@ sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 from fanout_Rabbit_Handler import Fanout_Rabbit_Handler
 import logging
 logging.basicConfig(level=logging.INFO)
+import traceback
 
 
 class DataBase_CP:
@@ -30,7 +31,8 @@ class DataBase_CP:
         self.table_mapping={
             "LocalList":LocalList,
             "IdToken":IdToken,
-            "IdTokenInfo":IdTokenInfo
+            "IdTokenInfo":IdTokenInfo,
+            "GroupIdToken":GroupIdToken
         }
 
     
@@ -121,7 +123,9 @@ class DataBase_CP:
             self.update("LocalList", filters={"version_number":current_version}, values={"version_number":version_number})
 
             if update_type == enums.UpdateType.full:
-                self.remove("IdToken")
+                self.session.execute(delete(GroupIdToken))
+                self.session.execute(delete(IdTokenInfo))
+                self.session.execute(delete(IdToken))
             
             for auth_data in local_authorization_list:
                 if "id_token_info" in auth_data:
@@ -132,10 +136,11 @@ class DataBase_CP:
                     self.session.merge(id_token)               
                 else:
                     self.remove("IdToken", auth_data["id_token"])
-                            
+                                        
             self.session.commit()
             return True
         except:
+            logging.error(traceback.format_exc())
             self.session.rollback()
             return False
         

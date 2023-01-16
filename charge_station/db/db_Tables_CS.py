@@ -22,7 +22,7 @@ class IdToken(CustomBase):
 
     version_number = Column(Integer, ForeignKey('LocalList.version_number'))
 
-    id_token_info = relationship("IdTokenInfo", backref=backref("id_token", uselist=False), uselist=False)
+    id_token_info = relationship("IdTokenInfo", cascade="all,delete-orphan", backref=backref("id_token", uselist=False), uselist=False)
 
 
 class GroupIdToken(CustomBase):
@@ -40,7 +40,7 @@ class IdTokenInfo(CustomBase):
     language2 = Column(String(8))
     evse_id = Column(JSON)
 
-    _id_token = Column(String(36), ForeignKey("IdToken.id_token",ondelete='CASCADE'), primary_key=True)
+    _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
     
     _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
     group_id_token = relationship("GroupIdToken", backref="id_token_info", uselist=False)
