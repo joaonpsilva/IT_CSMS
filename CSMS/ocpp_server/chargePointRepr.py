@@ -35,30 +35,6 @@ class ChargePoint(cp):
     def __init__(self, id, connection, response_timeout=30):
         super().__init__(id, connection, response_timeout)
 
-        self.method_mapping = {
-            "GET_VARIABLES" : self.getVariables,
-            "GET_TRANSACTION_STATUS" : self.getTransactionStatus,
-            "SET_VARIABLES" : self.setVariables,
-            "REQUEST_START_TRANSACTION" : self.requestStartTransaction,
-            "REQUEST_STOP_TRANSACTION" : self.requestStopTransaction,
-            "TRIGGER_MESSAGE" : self.triggerMessage,
-            "SET_CHARGING_PROFILE" : self.setChargingProfile,
-            "GET_COMPOSITE_SCHEDULE" : self.getCompositeSchedule,
-            "GET_CHARGING_PROFILES" : self.getChargingProfiles,
-            "CLEAR_CHARGING_PROFILE": self.clearChargingProfile,
-            "GET_BASE_REPORT" : self.getBaseReport,
-            "CHANGE_AVAILABILITY" : self.changeAvailability,
-            "SET_VARIABLE_MONITORING" : self.setVariableMonitoring,
-            "CLEAR_VARIABLE_MONITORING" : self.clearVariableMonitoring,
-            "RESET" : self.reset,
-            "SEND_AUTHORIZATION_LIST" : self.send_auhorization_list,
-            "SET_DISPLAY_MESSAGE" : self.setDisplayMessage,
-            "GET_DISPLAY_MESSAGES" : self.getDisplayMessages,
-            "CLEAR_DISPLAY_MESSAGE" : self.clearDisplayMessage,
-            "UNLOCK_CONNECTOR" : self.unlockConnector
-        }
-
-        
         self.max_get_messages=None
 
         self.loop = asyncio.get_running_loop()
@@ -68,9 +44,10 @@ class ChargePoint(cp):
     
     
     async def send_CP_Message(self, method, content={}, **kwargs):
-        """Funtion will use the mapping defined in method_mapping to call the correct function"""
+        """Funtion will use the mapping to call the correct function"""
         try:
-            return "OK", await self.method_mapping[method](payload=content)
+            #print(getattr(self, "getVariables"))
+            return "OK", await getattr(self, method)(payload=content)
         except ValueError as ve:
             return "VAL_ERROR", ve.args[0]
         except Exception as e:
@@ -126,7 +103,7 @@ class ChargePoint(cp):
 
     async def guarantee_transaction_integrity(self, transaction_id):
 
-        message = Rabbit_Message(method="VERIFY_RECEIVED_ALL_TRANSACTION", cp_id=self.id, content={"transaction_id" : transaction_id})
+        message = Rabbit_Message(method="verify_received_all_transaction", cp_id=self.id, content={"transaction_id" : transaction_id})
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if response["status"] == "OK":
@@ -318,7 +295,7 @@ class ChargePoint(cp):
                 payload.charging_profile["transaction_id"] = response.transaction_id
                 
                 m = {"evse_id": payload.evse_id, "charging_profile":payload.charging_profile}
-                message = Rabbit_Message(method="SetChargingProfile", cp_id=self.id, content=m)
+                message = Rabbit_Message(method="setChargingProfile", cp_id=self.id, content=m)
                 await ChargePoint.broker.ocpp_log(message)
 
         return response                
@@ -365,7 +342,7 @@ class ChargePoint(cp):
         #K01.FR.06, K01.FR.39
         #relevant = {"evse_id": payload["evse_id"]}
         #relevant["charging_profile"] = {key: value for key, value in payload["charging_profile"].items() if key in ["id", "stack_level", "charging_profile_purpose", "valid_from", "valid_to"]}
-        #message = ChargePoint.broker.build_message("VERIFY_CHARGING_PROFILE_CONFLICTS", self.id, relevant)
+        #message = ChargePoint.broker.build_message("verify_charging_profile_conflicts", self.id, relevant)
         #response = await ChargePoint.broker.send_request_wait_response(message)
         #if len(response["content"]["conflict_ids"]) != 0:
         #    return "profile conflicts with existing profile"
@@ -430,7 +407,7 @@ class ChargePoint(cp):
 
         #send profile to the db
         if response.status == enums.ChargingProfileStatus.accepted:
-            message = Rabbit_Message(method="SetChargingProfile", cp_id=self.id, content=payload)
+            message = Rabbit_Message(method="setChargingProfile", cp_id=self.id, content=payload)
             await ChargePoint.broker.ocpp_log(message)
         
         return response

@@ -26,10 +26,10 @@ class DB_Tables(str, Enum):
 
 
 class Operation(str, Enum):
-    SELECT="SELECT"
-    CREATE="CREATE"
-    REMOVE="REMOVE"
-    UPDATE="UPDATE"
+    SELECT="select"
+    CREATE="create"
+    REMOVE="remove"
+    UPDATE="update"
 
 @dataclass
 class CRUD_Payload:

@@ -19,7 +19,7 @@ def Basic_auth_with_broker(broker):
 
 
             content = {"CP_ID" : username,"password": password}
-            message = Rabbit_Message(origin = "ocppserver", destination="db1", method = "VERIFY_PASSWORD", cp_id=username, content=content)
+            message = Rabbit_Message(origin = "ocppserver", destination="db1", method = "verify_password", cp_id=username, content=content)
             response =  await self.broker.send_request_wait_response(message)
             if response["status"] == "OK":
                 return response["content"]['approved']

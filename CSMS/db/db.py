@@ -35,23 +35,6 @@ class DataBase:
         insert_Hard_Coded(self)
 
 
-        #map incoming messages to methods
-        self.method_mapping={
-            "BootNotification" : self.BootNotification,
-            "StatusNotification" : self.StatusNotification,
-            "MeterValues" : self.MeterValues,
-            "get_IdToken_Info" : self.get_IdToken_Info,
-            "TransactionEvent" : self.TransactionEvent,
-            "VERIFY_PASSWORD" : self.verify_password,
-            "VERIFY_RECEIVED_ALL_TRANSACTION" : self.verify_received_all_transaction,
-            "VERIFY_CHARGING_PROFILE_CONFLICTS" : self.verify_charging_profile_conflicts,
-            "SetChargingProfile" : self.setChargingProfile,
-            "SELECT" : self.select,
-            "CREATE" : self.create,
-            "REMOVE" : self.remove,
-            "UPDATE" : self.update
-        }
-
         self.table_mapping={
             "Modem":Modem,
             "Charge_Point":Charge_Point,
@@ -78,7 +61,7 @@ class DataBase:
         if request.method in self.method_mapping:
             try:
                 #call method depending on the message
-                toReturn = self.method_mapping[request.method](**request.__dict__)
+                toReturn = getattr(self, request.method)(**request.__dict__)
                 #commit possible changes
                 self.session.commit()
 
