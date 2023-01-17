@@ -59,14 +59,6 @@ class ChargePoint(cp):
     def __init__(self, cp_id, ws=None):
         super().__init__(cp_id, ws)
 
-        self.method_mapping = {
-            "request_boot_notification" : self.bootNotification,
-            "request_authorize" : self.authorize,
-            "request_start_transaction" : self.transactionEvent,
-            "request_meter_values" : self.meterValues,
-            "request_status_notification" : self.statusNotification 
-        }
-
         self.status = None
         self.ongoing_transactions = {}
         self.db = DataBase_CP()
@@ -144,8 +136,17 @@ class ChargePoint(cp):
         
        
     async def handle_request(self, request):
-        if request.intent in self.method_mapping:
-            return await self.method_mapping[request.intent](**request.content)
+        try:
+            method = getattr(self, request.intent)
+        except:
+            return 
+
+        try:
+            return await method(**request.content)
+        except:
+            logging.error(traceback.format_exc())
+
+            
         
     
     async def send_queued_messages(self):
@@ -161,7 +162,7 @@ class ChargePoint(cp):
                 logging.error(traceback.format_exc())
             
 
-    async def transactionEvent(self, **kwargs):
+    async def request_transaction(self, **kwargs):
         #TODO ver idtokens
         #REVIEW. This is wrong
 
@@ -179,7 +180,7 @@ class ChargePoint(cp):
             #o decision point manda um authorize request ou sou eu q mando
             #????
             if request.trigger_reason == enums.TriggerReasonType.authorized:
-                auth_response = await self.authorize({"id_token": request.id_token})
+                auth_response = await self.request_authorize({"id_token": request.id_token})
                 self.ongoing_transactions[transaction_id].set_start_idtoken(request.id_token, auth_response.id_token_info)
 
 
@@ -191,7 +192,7 @@ class ChargePoint(cp):
                     #id token is not the same
 
                     #get info from token (1st from db then from CSMS)
-                    auth_response = await self.authorize({"id_token": request.id_token})
+                    auth_response = await self.request_authorize({"id_token": request.id_token})
 
                     #Compare groupIdToken
                     if not self.ongoing_transactions[transaction_id].check_valid_stop_with_GroupIdtoken(auth_response.id_token_info):
@@ -219,7 +220,7 @@ class ChargePoint(cp):
 
     
     
-    async def bootNotification(self, **kwargs):
+    async def request_boot_notification(self, **kwargs):
 
         request = call.BootNotificationPayload(**kwargs)
 
@@ -240,7 +241,7 @@ class ChargePoint(cp):
 
         else:
             #Retry boot after x senconds
-            loop.call_later(response.interval, loop.create_task, self.bootNotification(**kwargs))
+            loop.call_later(response.interval, loop.create_task, self.request_boot_notification(**kwargs))
         
         return response
         
@@ -285,7 +286,7 @@ class ChargePoint(cp):
         return id_token_info
         
     
-    async def authorize(self, **kwargs):
+    async def request_authorize(self, **kwargs):
 
         id_token_info = await self.authorize_with_localList(kwargs["id_token"])
         auth_response = call_result.AuthorizePayload(id_token_info=id_token_info)
@@ -300,11 +301,11 @@ class ChargePoint(cp):
         return auth_response
     
 
-    async def meterValues(self, **kwargs):
+    async def request_meter_values(self, **kwargs):
         request = call.MeterValuesPayload(**kwargs)
         return await self.call(request)
     
-    async def statusNotification(self, **kwargs):
+    async def request_status_notification(self, **kwargs):
         request = call.StatusNotificationPayload(**kwargs)
         return await self.call(request)
 

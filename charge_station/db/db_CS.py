@@ -26,15 +26,7 @@ class DataBase_CP:
         Base.metadata.create_all(self.engine)
 
         insert_Hard_Coded(self.session)
-
-
-        self.table_mapping={
-            "LocalList":LocalList,
-            "IdToken":IdToken,
-            "IdTokenInfo":IdTokenInfo,
-            "GroupIdToken":GroupIdToken
-        }
-
+        
     
     def getVariable(self, component, variable, attribute_type=enums.AttributeType.actual):
         

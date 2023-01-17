@@ -50,7 +50,7 @@ async def main():
     ########
     input()
     message = Fanout_Message(
-        intent="request_start_transaction",
+        intent="request_transaction",
         type="REQUEST",
         content=call.TransactionEventPayload(
             event_type=enums.TransactionEventType.started,
