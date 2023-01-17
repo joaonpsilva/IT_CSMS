@@ -22,19 +22,58 @@ logging.getLogger("websockets").setLevel(logging.CRITICAL)
 class Transaction:
     def __init__(self, transaction_id):
         self.transaction_id=transaction_id
-        self.evse=None
-        self.start_idtoken = None
-        self.group_id = None
+
+        self._start_idToken = None
+        self._group_idToken = None
+        self._evseId=None
+        self._connectorId=None
+        self._authorized = False
     
-    def set_evse(self, evse):
-        self.evse = evse
+    @property
+    def authorized(self):
+        return self._authorized
+
+    @authorized.setter
+    def authorized(self, value):
+        self._authorized = value
+
     
-    def set_start_idtoken(self, idtoken, group_id):
-        if self.start_idtoken is None:
-            self.start_idtoken = idtoken
+    @property
+    def evseId(self):
+        return self._evseId
+
+    @evseId.setter
+    def evseId(self, value):
+        self._evseId = value
     
-        if self.group_id is None:
-            self.group_id =group_id
+
+    @property
+    def connectorId(self):
+        return self._connectorId
+
+    @connectorId.setter
+    def connectorId(self, value):
+        self._connectorId = value
+
+
+    @property
+    def start_idToken(self):
+        return self._start_idToken
+
+    @start_idToken.setter
+    def start_idToken(self, value):
+        if self._start_idToken is None:
+            self._start_idToken = value
+    
+
+    @property
+    def group_idToken(self):
+        return self._group_idToken
+
+    @group_idToken.setter
+    def group_idToken(self, value):
+        if self._group_idToken is None:
+            self._group_idToken = value
     
     
     def check_valid_stop_with_Idtoken(self, idtoken):
@@ -60,10 +99,11 @@ class ChargePoint(cp):
         super().__init__(cp_id, ws)
 
         self.status = None
-        self.ongoing_transactions = {}
         self.db = DataBase_CP()
         self.connection_active = False
-        
+
+        self.ongoing_transactions = {}
+        self.known_evses = {}
         self.queued_messages = []
         self.trigger_messages = []
     
@@ -168,40 +208,62 @@ class ChargePoint(cp):
 
         request = call.TransactionEventPayload(**kwargs)
         
-        transaction_id = request.transaction_info["transaction_id"]
-
         #new transaction
-        if request.event_type == enums.TransactionEventType.started:
-            self.ongoing_transactions[transaction_id] = Transaction(transaction_id)
+        transaction_id = request.transaction_info["transaction_id"]
+        if transaction_id not in self.ongoing_transactions:
+            transaction = Transaction(transaction_id)
+            self.ongoing_transactions[transaction_id] = transaction
+        else:
+            transaction = self.ongoing_transactions[transaction_id]
 
-        
+
         if request.id_token is not None: 
-
             #o decision point manda um authorize request ou sou eu q mando
             #????
             if request.trigger_reason == enums.TriggerReasonType.authorized:
                 auth_response = await self.request_authorize({"id_token": request.id_token})
-                self.ongoing_transactions[transaction_id].set_start_idtoken(request.id_token, auth_response.id_token_info)
+
+                transaction.authorized = True
+                transaction.start_idToken = request.id_token
+                transaction.group_idToken = auth_response.id_token_info
 
 
             if request.transaction_info["stopped_reason"] in [None, enums.ReasonType.local]:
                 #check if idtoken can stop transaction
 
                 #Compare idToken
-                if not self.ongoing_transactions[transaction_id].check_valid_stop_with_Idtoken(request.id_token):
+                if not transaction.check_valid_stop_with_Idtoken(request.id_token):
                     #id token is not the same
 
                     #get info from token (1st from db then from CSMS)
                     auth_response = await self.request_authorize({"id_token": request.id_token})
 
                     #Compare groupIdToken
-                    if not self.ongoing_transactions[transaction_id].check_valid_stop_with_GroupIdtoken(auth_response.id_token_info):
+                    if not transaction.check_valid_stop_with_GroupIdtoken(auth_response.id_token_info):
                         #Not authorized to stop transaction
                         return {"id_token_info":{"status":enums.AuthorizationStatusType.invalid}}
         
 
         if request.evse is not None:
-            self.ongoing_transactions[transaction_id].set_evse(request.evse)
+            evseId = request.evse["id"]
+            connectorId = request.evse["connector_id"] if "connector_id" in request.evse else None
+
+            transaction.evseId = evseId
+            transaction.connectorId = connectorId
+
+            #add transaction to evse dict
+            self.known_evses[evseId][connectorId] = transaction
+        
+
+        if request.event_type == enums.TransactionEventType.ended:
+            #delete from ongoing trans
+            self.ongoing_transactions.pop(transaction_id)
+
+            #delete from evse map
+            evseId = transaction.evseId
+            connectorId = transaction.connectorId
+            self.known_evses[evseId][connectorId] = None
+
 
         #if charge station is offline, store messages
         try:
@@ -305,7 +367,18 @@ class ChargePoint(cp):
         request = call.MeterValuesPayload(**kwargs)
         return await self.call(request)
     
+
     async def request_status_notification(self, **kwargs):
+        evse = kwargs["evse_id"]
+        connector = kwargs["connector_id"]
+
+        if evse not in self.known_evses:
+            self.known_evses[evse] = {}
+
+        if connector not in self.known_evses[evse]:
+            self.known_evses[evse][connector] = None
+
+
         request = call.StatusNotificationPayload(**kwargs)
         return await self.call(request)
 
@@ -347,7 +420,16 @@ class ChargePoint(cp):
     
     @on("UnlockConnector")
     async def on_UnlockConnector(self, **kwargs):
-        #TODO F05.FR.02   F05.FR.03
+        #F05.FR.03
+        if kwargs["evse_id"] not in self.known_evses or kwargs["connector_id"] not in self.known_evses[kwargs["evse_id"]]:
+            return call_result.RequestStopTransactionPayload(status=enums.UnlockStatusType.unknown_connector)
+
+        #F05.FR.02
+        transaction = self.known_evses[kwargs["evse_id"]][kwargs["connector_id"]]
+        if transaction and transaction.authorized:
+            return call_result.RequestStopTransactionPayload(status=enums.UnlockStatusType.ongoing_authorized_transaction)
+
+
         message = Fanout_Message(intent="unlock_connector", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
         return call_result.RequestStopTransactionPayload(**response)
