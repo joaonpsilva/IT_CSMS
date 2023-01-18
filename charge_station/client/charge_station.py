@@ -46,6 +46,15 @@ class ChargePoint(cp):
                     await self._send(response)
                     return
             
+            #B02.FR.01 B02.FR.02, Should return security error?
+            elif self.status == enums.RegistrationStatusType.pending:
+                if handlers['_on_action'] not in [self.on_set_variables, self.on_get_variables,
+                    self.on_GetBaseReport, self.on_GetReport, self.on_TriggerMessage]:
+                    response = msg.create_call_error(exceptions.SecurityError).to_json()
+                    await self._send(response)
+                    return
+
+
         except KeyError:
             pass
         
@@ -215,7 +224,7 @@ class ChargePoint(cp):
         try:
             response = await self.call(request)
         except:
-            response = call_result.BootNotificationPayload(status=enums.RegistrationStatusType.pending)
+            response = call_result.BootNotificationPayload(status=enums.RegistrationStatusType.rejected)
 
         loop = asyncio.get_event_loop()
         self.status = response.status
@@ -425,6 +434,15 @@ class ChargePoint(cp):
         message = Fanout_Message(intent="trigger_message", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
         return call_result.TriggerMessagePayload(**response)
+    
+
+    @on("GetBaseReport")
+    async def on_GetBaseReport(self, request_id,**kwargs):
+        pass
+
+    @on("GetReport")
+    async def on_GetReport(self, **kwargs):
+        pass
     
     
     @on('GetVariables')
