@@ -8,6 +8,16 @@ class Transaction:
         self._connectorId=None
         self._authorized = False
     
+
+    @property
+    def transaction_id(self):
+        return self._transaction_id
+
+    @transaction_id.setter
+    def transaction_id(self, value):
+        self._transaction_id = value
+
+    
     @property
     def authorized(self):
         return self._authorized

@@ -187,7 +187,7 @@ class ChargePoint(cp):
             transaction.connectorId = connectorId
 
             #add transaction to evse dict
-            self.known_evses[evseId][connectorId] = transaction
+            self.known_evses[evseId]["transaction"] = transaction
         
 
         if request.event_type == enums.TransactionEventType.ended:
@@ -197,7 +197,7 @@ class ChargePoint(cp):
             #delete from evse map
             evseId = transaction.evseId
             connectorId = transaction.connectorId
-            self.known_evses[evseId][connectorId] = None
+            self.known_evses[evseId]["transaction"] = None
 
 
         #if charge station is offline, store messages
@@ -308,10 +308,10 @@ class ChargePoint(cp):
         connector = kwargs["connector_id"]
 
         if evse not in self.known_evses:
-            self.known_evses[evse] = {}
+            self.known_evses[evse] = {"connectors":set(), "transaction":None}
 
-        if connector not in self.known_evses[evse]:
-            self.known_evses[evse][connector] = None
+        if connector not in self.known_evses[evse]["connectors"]:
+            self.known_evses[evse]["connectors"].add(connector)
 
 
         request = call.StatusNotificationPayload(**kwargs)
@@ -334,14 +334,38 @@ class ChargePoint(cp):
 
     @on('RequestStartTransaction')
     async def on_RequestStartTransaction(self, **kwargs):
+
+        #B02.FR.05
         if self.status == enums.RegistrationStatusType.pending:
             return call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
 
-        #if transaction alreay on going return id
-        #will cause new transaction event requests
 
+        #F01.FR.01
+        #Is this my responsability??
+        authorize_remote_start = bool(self.db.getVariable(
+            component=datatypes.ComponentType(name="AuthCtrlr"),
+            variable=datatypes.VariableType(name="AuthorizeRemoteStart")
+            ))
+        
+        if authorize_remote_start:
+            idToken = {"id_token" : kwargs["id_token"]}
+            idTokenInfo = await self.request_authorize(idToken)
+            
+            if idTokenInfo.status != enums.AuthorizationStatusType.accepted:
+                return call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
+
+        #Send message to decision Point
         message = Fanout_Message(intent="remote_start_transaction", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
+        
+        #If transaction already occuring return transaction ID
+        try:
+            if response["transaction_id"] is None:
+                response["transaction_id"] = self.known_evses[kwargs["evse_id"]]["transaction"].transaction_id
+        except:
+            pass
+
+
         return call_result.RequestStartTransactionPayload(**response)
     
 
@@ -356,12 +380,12 @@ class ChargePoint(cp):
     @on("UnlockConnector")
     async def on_UnlockConnector(self, **kwargs):
         #F05.FR.03
-        if kwargs["evse_id"] not in self.known_evses or kwargs["connector_id"] not in self.known_evses[kwargs["evse_id"]]:
+        if kwargs["evse_id"] not in self.known_evses or kwargs["connector_id"] not in self.known_evses[kwargs["evse_id"]]["connectors"]:
             return call_result.RequestStopTransactionPayload(status=enums.UnlockStatusType.unknown_connector)
 
         #F05.FR.02
-        transaction = self.known_evses[kwargs["evse_id"]][kwargs["connector_id"]]
-        if transaction and transaction.authorized:
+        transaction = self.known_evses[kwargs["evse_id"]]["transaction"]
+        if transaction and transaction.connectorId == kwargs["connector_id"] and transaction.authorized:
             return call_result.RequestStopTransactionPayload(status=enums.UnlockStatusType.ongoing_authorized_transaction)
 
 
