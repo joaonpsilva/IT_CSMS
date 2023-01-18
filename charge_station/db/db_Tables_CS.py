@@ -70,10 +70,16 @@ class Component(Base):
 
     enabled = Column(Boolean)
     name = Column(String)
-    evse = Column(Integer)
+    evse_id = Column(Integer)
+    connector_id = Column(Integer)
 
     variables = relationship("Variable", backref="component")
 
+    def __init__(self, evse=None, **kwargs):
+        if evse:
+            kwargs["evse_id"] = evse["id"]
+            kwargs["connector_id"] = evse["connector_id"]
+            super().__init__(**kwargs)
 
 
 class Variable(Base):

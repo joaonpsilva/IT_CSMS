@@ -13,7 +13,7 @@ from fanout_Rabbit_Handler import Fanout_Rabbit_Handler
 import logging
 logging.basicConfig(level=logging.INFO)
 import traceback
-
+import copy
 
 class DataBase_CP:
     def __init__(self):
@@ -29,16 +29,29 @@ class DataBase_CP:
         
     
     def getVariable(self, component, variable, attribute_type=enums.AttributeType.actual):
+        component = copy.deepcopy(component)
+        variable = copy.deepcopy(variable)
+
+        if not isinstance(component, dict):
+            component = component.__dict__
+        if not isinstance(variable, dict):
+            variable = variable.__dict__
         
         if "instance" in component:
             component.pop("instance")
         if "instance" not in variable:
             variable["instance"] = None
+        
+        if "evse" in component:
+            evse = component.pop("evse")
+            component["evse_id"] = evse["id"]
+            component["connector_id"] = evse["connector_id"]
 
-        statement = sqlalchemy.select(Component).filter_by(**component)
 
         try:
+            statement = sqlalchemy.select(Component).filter_by(**component)
             component = self.session.scalars(statement).first()
+            assert(component is not None)
         except:
             return enums.GetVariableStatusType.unknown_component, None
 
@@ -55,17 +68,31 @@ class DataBase_CP:
 
             
     def setVariable(self, component, variable, attribute_value, attribute_type=enums.AttributeType.actual):
+        component = copy.deepcopy(component)
+        variable = copy.deepcopy(variable)
+
+        if not isinstance(component, dict):
+            component = component.__dict__
+        if not isinstance(variable, dict):
+            variable = variable.__dict__
         
         if "instance" in component:
             component.pop("instance")
         if "instance" not in variable:
             variable["instance"] = None
+        
+        if "evse" in component:
+            evse = component.pop("evse")
+            component["evse_id"] = evse["id"]
+            component["connector_id"] = evse["connector_id"]
 
-        statement = sqlalchemy.select(Component).filter_by(**component)
+
         try:
+            statement = sqlalchemy.select(Component).filter_by(**component)
             component = self.session.scalars(statement).first()
+            assert(component is not None)
         except:
-            return enums.SetVariableStatusType.unknown_component
+            return enums.GetVariableStatusType.unknown_component
         
         for var in component.variables:
             if var.name == variable["name"] and var.instance == variable["instance"]:

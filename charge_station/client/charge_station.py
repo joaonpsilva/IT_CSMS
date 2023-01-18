@@ -351,12 +351,12 @@ class ChargePoint(cp):
 
             #F01.FR.01
             #Is this my responsability??
-            authorize_remote_start = bool(self.db.getVariable(
+            status, authorize_remote_start = self.db.getVariable(
                 component=datatypes.ComponentType(name="AuthCtrlr"),
                 variable=datatypes.VariableType(name="AuthorizeRemoteStart")
-                ))
+                )
             
-            if authorize_remote_start:
+            if status == enums.GetVariableStatusType.accepted and bool(authorize_remote_start):
                 idToken = {"id_token" : kwargs["id_token"]}
                 idTokenInfo = await self.request_authorize(idToken)
                 
@@ -369,16 +369,17 @@ class ChargePoint(cp):
             response = call_result.RequestStartTransactionPayload(**response)
         
         except:
+            logging.error(traceback.format_exc())
             response = call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
         
         #If transaction already occuring return transaction ID
         try:
-            if response["transaction_id"] is None:
-                response["transaction_id"] = self.known_evses[kwargs["evse_id"]]["transaction"].transaction_id
+            if response.transaction_id is None:
+                response.transaction_id = self.known_evses[kwargs["evse_id"]]["transaction"].transaction_id
         except:
             pass
-
-        return call_result.RequestStartTransactionPayload(**response)
+        
+        return response
     
 
     @on('RequestStopTransaction')
@@ -490,6 +491,7 @@ class ChargePoint(cp):
             try:
                 status, value = self.db.getVariable(**variable_data)
             except:
+                logging.error(traceback.format_exc())
                 status, value = enums.GetVariableStatusType.rejected, None
 
             get_variable_result.append(

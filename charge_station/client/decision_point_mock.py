@@ -50,6 +50,18 @@ async def main():
     ########
     input()
     message = Fanout_Message(
+        intent="request_status_notification",
+        type="REQUEST",
+        content=call.StatusNotificationPayload(
+            timestamp=datetime.utcnow().isoformat(),
+            evse_id=1,
+            connector_id=1,
+            connector_status=enums.ConnectorStatusType.occupied
+        )
+    )
+    await broker.send_request_wait_response(message)
+
+    message = Fanout_Message(
         intent="request_transaction",
         type="REQUEST",
         content=call.TransactionEventPayload(
@@ -57,7 +69,8 @@ async def main():
             timestamp=datetime.utcnow().isoformat(),
             trigger_reason=enums.TriggerReasonType.ev_detected,
             seq_no=1,
-            transaction_info=datatypes.TransactionType(transaction_id="jkhsdalkvsdj")
+            transaction_info=datatypes.TransactionType(transaction_id="jkhsdalkvsdj"),
+            evse=datatypes.EVSEType(id=1)
         )
     )
     await broker.send_request_wait_response(message)
