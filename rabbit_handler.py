@@ -156,7 +156,7 @@ class Rabbit_Handler:
         except asyncio.TimeoutError:
             self.futures.pop(requestID)
             logging.error(self.name + " No response received")
-            return {"status":"ERROR"}
+            raise TimeoutError
         
     async def ocpp_log(self, message):
         message.type = "ocpp_log"

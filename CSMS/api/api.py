@@ -40,7 +40,11 @@ def choose_status(response):
 
 async def send_request(method, CP_Id=None, payload=None, destination="ocppserver"):
     message = Rabbit_Message(method=method, content=payload,cp_id = CP_Id, origin="api", destination=destination)
-    response = await broker.send_request_wait_response(message)
+    try:
+        response = await broker.send_request_wait_response(message)
+    except TimeoutError:
+        response = {"status":"ERROR", "content": "TimedOut"}
+
     stat = choose_status(response)
     return response, stat
 

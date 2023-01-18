@@ -17,13 +17,12 @@ def Basic_auth_with_broker(broker):
             self.user = username
             self.password = password
 
-
-            content = {"CP_ID" : username,"password": password}
-            message = Rabbit_Message(origin = "ocppserver", destination="db1", method = "verify_password", cp_id=username, content=content)
-            response =  await self.broker.send_request_wait_response(message)
-            if response["status"] == "OK":
+            try:
+                content = {"CP_ID" : username,"password": password}
+                message = Rabbit_Message(origin = "ocppserver", destination="db1", method = "verify_password", cp_id=username, content=content)
+                response =  await self.broker.send_request_wait_response(message)
                 return response["content"]['approved']
-            else:
+            except:
                 return False
 
     return BasicAuth
@@ -124,7 +123,10 @@ class OCPP_Server:
                 return {"status" : "OK", "content": list(self.connected_CPs.keys())}
             
             if request.method == "GET_TRANSACTION_STATUS":
-                cp_id = await self.get_cpID_by_TransactionId(request.content["transaction_id"])
+                try:
+                    cp_id = await self.get_cpID_by_TransactionId(request.content["transaction_id"])
+                except:
+                    return {"status":"VAL_ERROR", "content": "Unknown Transaction"}
 
 
         if cp_id in self.connected_CPs:

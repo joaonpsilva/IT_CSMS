@@ -324,39 +324,52 @@ class ChargePoint(cp):
     
     @on('TriggerMessage')
     async def on_TriggerMessage(self, **kwargs):
-        message = Fanout_Message(intent="trigger_message", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
+        try:
+            message = Fanout_Message(intent="trigger_message", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
 
-        if response["status"] == enums.TriggerMessageStatusType.accepted:
-            self.trigger_messages.append(kwargs["requested_message"])
+            if response["status"] == enums.TriggerMessageStatusType.accepted:
+                self.trigger_messages.append(kwargs["requested_message"])
+            
+            response = call_result.TriggerMessagePayload(**response)
+        
+        except:
+            response = call_result.TriggerMessagePayload(status=enums.TriggerMessageStatusType.rejected)
 
-        return call_result.RequestStopTransactionPayload(**response)
+        return response
+
 
     @on('RequestStartTransaction')
     async def on_RequestStartTransaction(self, **kwargs):
 
-        #B02.FR.05
-        if self.status == enums.RegistrationStatusType.pending:
-            return call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
+        try:
 
-
-        #F01.FR.01
-        #Is this my responsability??
-        authorize_remote_start = bool(self.db.getVariable(
-            component=datatypes.ComponentType(name="AuthCtrlr"),
-            variable=datatypes.VariableType(name="AuthorizeRemoteStart")
-            ))
-        
-        if authorize_remote_start:
-            idToken = {"id_token" : kwargs["id_token"]}
-            idTokenInfo = await self.request_authorize(idToken)
-            
-            if idTokenInfo.status != enums.AuthorizationStatusType.accepted:
+            #B02.FR.05
+            if self.status == enums.RegistrationStatusType.pending:
                 return call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
 
-        #Send message to decision Point
-        message = Fanout_Message(intent="remote_start_transaction", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
+
+            #F01.FR.01
+            #Is this my responsability??
+            authorize_remote_start = bool(self.db.getVariable(
+                component=datatypes.ComponentType(name="AuthCtrlr"),
+                variable=datatypes.VariableType(name="AuthorizeRemoteStart")
+                ))
+            
+            if authorize_remote_start:
+                idToken = {"id_token" : kwargs["id_token"]}
+                idTokenInfo = await self.request_authorize(idToken)
+                
+                if idTokenInfo.status != enums.AuthorizationStatusType.accepted:
+                    return call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
+
+            #Send message to decision Point
+            message = Fanout_Message(intent="remote_start_transaction", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            response = call_result.RequestStartTransactionPayload(**response)
+        
+        except:
+            response = call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
         
         #If transaction already occuring return transaction ID
         try:
@@ -364,7 +377,6 @@ class ChargePoint(cp):
                 response["transaction_id"] = self.known_evses[kwargs["evse_id"]]["transaction"].transaction_id
         except:
             pass
-
 
         return call_result.RequestStartTransactionPayload(**response)
     
