@@ -344,8 +344,7 @@ class ChargePoint(cp):
 
         try:
             #B02.FR.05
-            if self.status == enums.RegistrationStatusType.pending:
-                return call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
+            assert(self.status == enums.RegistrationStatusType.accepted)
 
             #Send message to decision Point
             message = Fanout_Message(intent="remote_start_transaction", content=kwargs)
@@ -369,9 +368,18 @@ class ChargePoint(cp):
     @on('RequestStopTransaction')
     async def on_RequestStopTransaction(self, **kwargs):
 
-        message = Fanout_Message(intent="remote_stop_transaction", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
-        return call_result.RequestStopTransactionPayload(**response)
+
+        try:
+            #F03.FR.08
+            assert(kwargs["transaction_id"] in self.ongoing_transactions)
+
+            message = Fanout_Message(intent="remote_stop_transaction", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            response = call_result.RequestStopTransactionPayload(**response)
+        except:
+            response = call_result.RequestStopTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
+
+            return response
 
     
     @on("UnlockConnector")
