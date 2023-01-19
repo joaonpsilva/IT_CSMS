@@ -125,6 +125,9 @@ class ChargePoint(cp):
         
     
     async def send_queued_messages(self):
+
+        logging.info("Checking for Queued Messages to Send")
+
         while len(self.queued_messages) > 0:
             if not self.connection_active:
                 break
@@ -135,6 +138,9 @@ class ChargePoint(cp):
                 self.queued_messages.pop(0)
             except:
                 logging.error(traceback.format_exc())
+        
+        logging.info("No more Queued Messages")
+
             
 
     async def request_transaction(self, **kwargs):
@@ -351,6 +357,8 @@ class ChargePoint(cp):
             response = await self.broker.send_request_wait_response(message)
             response = call_result.RequestStartTransactionPayload(**response)
         
+        except AssertionError:
+            response = call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
         except:
             logging.error(traceback.format_exc())
             response = call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
