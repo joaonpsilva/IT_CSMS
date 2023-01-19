@@ -515,6 +515,22 @@ class ChargePoint(cp):
         return call_result.SetVariablesPayload(set_variable_result=set_variable_result)
     
 
+    @on('GetTransactionStatus')
+    def on_GetTransactionStatus(self, transaction_id):
+
+        on_going = transaction_id in self.ongoing_transactions
+        
+        messages_in_queue = False
+        for message in self.queued_messages:
+            if isinstance(message, call.TransactionEventPayload):
+                if message.transaction_info["transaction_id"] == transaction_id:
+                    messages_in_queue = True
+                    break
+        
+        return call_result.GetTransactionStatusPayload(messages_in_queue=messages_in_queue, ongoing_indicator=on_going)
+    
+    
+
 async def main(args):
     cp = ChargePoint(args.cp)
     await cp.run(args.rb, args.p, args.pw)
