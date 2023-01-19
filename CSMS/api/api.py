@@ -242,7 +242,7 @@ async def getTransactions(transactionId: str, r: Response):
 
 @app.get("/getConnected_ChargePoints/")
 async def getConnected_ChargePoints(r: Response):
-    response, stat = await send_request("GET_CONNECTED_CPS")
+    response, stat = await send_request("get_connected_cps")
     r.status_code = stat
     return response
 

@@ -119,10 +119,10 @@ class OCPP_Server:
 
         if cp_id is None:
             #api wants to know current connected cps
-            if request.method == "GET_CONNECTED_CPS":
+            if request.method == "get_connected_cps":
                 return {"status" : "OK", "content": list(self.connected_CPs.keys())}
             
-            if request.method == "GET_TRANSACTION_STATUS":
+            if request.method == "getTransactionStatus":
                 try:
                     cp_id = await self.get_cpID_by_TransactionId(request.content["transaction_id"])
                 except:
@@ -138,7 +138,7 @@ class OCPP_Server:
     
 
     async def get_cpID_by_TransactionId(self, transaction_id):
-        message = Rabbit_Message(method="SELECT", content={"table":"Transaction_Event", "filters": {"transaction_id" : transaction_id}})
+        message = Rabbit_Message(method="select", content={"table":"Transaction_Event", "filters": {"transaction_id" : transaction_id}})
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if len(response["content"]) > 0:
