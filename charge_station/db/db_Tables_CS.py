@@ -70,6 +70,7 @@ class Component(Base):
 
     enabled = Column(Boolean)
     name = Column(String)
+    instance = Column(String)
     evse_id = Column(Integer)
     connector_id = Column(Integer)
 

@@ -14,6 +14,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 import traceback
 import copy
+from ocpp.v201 import call, call_result, enums, datatypes
+
 
 class DataBase_CP:
     def __init__(self):
@@ -26,86 +28,73 @@ class DataBase_CP:
         Base.metadata.create_all(self.engine)
 
         insert_Hard_Coded(self.session)
-        
+            
     
     def getVariable(self, component, variable, attribute_type=enums.AttributeType.actual):
-        component = copy.deepcopy(component)
-        variable = copy.deepcopy(variable)
-
-        if not isinstance(component, dict):
-            component = component.__dict__
-        if not isinstance(variable, dict):
-            variable = variable.__dict__
-        
-        if "instance" in component:
-            component.pop("instance")
-        if "instance" not in variable:
-            variable["instance"] = None
-        
-        if "evse" in component:
-            evse = component.pop("evse")
-            component["evse_id"] = evse["id"]
-            component["connector_id"] = evse["connector_id"]
-
-
         try:
+            component = datatypes.ComponentType(**component).__dict__
+            variable = datatypes.VariableType(**variable).__dict__
+            
+            evse = component.pop("evse")
+            if evse:
+                component["evse_id"] = evse["id"]
+                component["connector_id"] = evse["connector_id"]
+
+
             statement = sqlalchemy.select(Component).filter_by(**component)
             component = self.session.scalars(statement).first()
-            assert(component is not None)
-        except:
-            return enums.GetVariableStatusType.unknown_component, None
+            if component is None:
+                return enums.GetVariableStatusType.unknown_component, None
 
-        value =None
-        for var in component.variables:
-            if var.name == variable["name"] and var.instance == variable["instance"]:
-                for attribute in var.variable_attributes:
-                    if attribute.type == attribute_type:
-                        value = attribute.value
-                        return enums.GetVariableStatusType.accepted, value 
-                return enums.GetVariableStatusType.not_supported_attribute_type
+            value =None
+            for var in component.variables:
+                if var.name == variable["name"] and var.instance == variable["instance"]:
+                    for attribute in var.variable_attributes:
+                        if attribute.type == attribute_type:
+                            value = attribute.value
+                            return enums.GetVariableStatusType.accepted, value 
+                    return enums.GetVariableStatusType.not_supported_attribute_type
+            
+            return enums.GetVariableStatusType.unknown_variable, None
         
-        return enums.GetVariableStatusType.unknown_variable, None
+        except:
+            logging.error(traceback.format_exc())
+            return enums.GetVariableStatusType.rejected, None
+
 
             
     def setVariable(self, component, variable, attribute_value, attribute_type=enums.AttributeType.actual):
-        component = copy.deepcopy(component)
-        variable = copy.deepcopy(variable)
-
-        if not isinstance(component, dict):
-            component = component.__dict__
-        if not isinstance(variable, dict):
-            variable = variable.__dict__
-        
-        if "instance" in component:
-            component.pop("instance")
-        if "instance" not in variable:
-            variable["instance"] = None
-        
-        if "evse" in component:
-            evse = component.pop("evse")
-            component["evse_id"] = evse["id"]
-            component["connector_id"] = evse["connector_id"]
-
-
         try:
+            
+            component = datatypes.ComponentType(**component).__dict__
+            variable = datatypes.VariableType(**variable).__dict__
+            
+            evse = component.pop("evse")
+            if evse:
+                component["evse_id"] = evse["id"]
+                component["connector_id"] = evse["connector_id"]
+
             statement = sqlalchemy.select(Component).filter_by(**component)
             component = self.session.scalars(statement).first()
-            assert(component is not None)
-        except:
-            return enums.GetVariableStatusType.unknown_component
-        
-        for var in component.variables:
-            if var.name == variable["name"] and var.instance == variable["instance"]:
-                for attribute in var.variable_attributes:
-                    if attribute.type == attribute_type:
-                        attribute.value = attribute_value
-                        self.session.commit()
-                        return enums.SetVariableStatusType.accepted
-                return enums.SetVariableStatusType.not_supported_attribute_type
-        
-        self.session.commit()
+            if component is None:
+                return enums.GetVariableStatusType.unknown_component
+            
+            for var in component.variables:
+                if var.name == variable["name"] and var.instance == variable["instance"]:
+                    for attribute in var.variable_attributes:
+                        if attribute.type == attribute_type:
+                            attribute.value = attribute_value
+                            self.session.commit()
+                            return enums.SetVariableStatusType.accepted
+                    return enums.SetVariableStatusType.not_supported_attribute_type
+            
+            self.session.commit()
 
-        return enums.SetVariableStatusType.unknown_variable
+            return enums.SetVariableStatusType.unknown_variable
+        except:
+            logging.error(traceback.format_exc())
+            return enums.GetVariableStatusType.rejected
+
 
 
 

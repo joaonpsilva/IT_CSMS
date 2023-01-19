@@ -343,25 +343,9 @@ class ChargePoint(cp):
     async def on_RequestStartTransaction(self, **kwargs):
 
         try:
-
             #B02.FR.05
             if self.status == enums.RegistrationStatusType.pending:
                 return call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
-
-
-            #F01.FR.01
-            #Is this my responsability??
-            status, authorize_remote_start = self.db.getVariable(
-                component=datatypes.ComponentType(name="AuthCtrlr"),
-                variable=datatypes.VariableType(name="AuthorizeRemoteStart")
-                )
-            
-            if status == enums.GetVariableStatusType.accepted and bool(authorize_remote_start):
-                idToken = {"id_token" : kwargs["id_token"]}
-                idTokenInfo = await self.request_authorize(idToken)
-                
-                if idTokenInfo.status != enums.AuthorizationStatusType.accepted:
-                    return call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
 
             #Send message to decision Point
             message = Fanout_Message(intent="remote_start_transaction", content=kwargs)
@@ -488,11 +472,7 @@ class ChargePoint(cp):
         get_variable_result=[]
         
         for variable_data in get_variable_data:
-            try:
-                status, value = self.db.getVariable(**variable_data)
-            except:
-                logging.error(traceback.format_exc())
-                status, value = enums.GetVariableStatusType.rejected, None
+            status, value = self.db.getVariable(**variable_data)
 
             get_variable_result.append(
                 datatypes.GetVariableResultType(
