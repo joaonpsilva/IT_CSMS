@@ -153,6 +153,9 @@ class DataBase_CP:
         
     
     def get_IdToken_Info(self, id_token, **kwargs):
+        """
+        Receives id_token and returns id_token_info
+        """
 
         idToken = self.session.query(IdToken).get(id_token['id_token'])
         if idToken is None:
