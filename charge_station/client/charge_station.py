@@ -449,29 +449,35 @@ class ChargePoint(cp):
 
     @on("ChangeAvailability")
     async def on_ChangeAvailability(self, **kwargs):
-        message = Fanout_Message(intent="change_availability", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
-        return call_result.RequestStopTransactionPayload(**response)
+
+        try:
+            message = Fanout_Message(intent="change_availability", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            response = call_result.ChangeAvailabilityPayload(**response)
+        except TimeoutError:
+            response = call_result.ChangeAvailabilityPayload(status=enums.ChangeAvailabilityStatusType.rejected)
+            
+        return response
     
 
     @on("SetChargingProfile")
     async def on_SetChargingProfile(self,**kwargs):
         message = Fanout_Message(intent="set_charging_profile", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
-        return call_result.RequestStopTransactionPayload(**response)
+        return call_result.SetChargingProfilePayload(**response)
     
 
     @on("GetCompositeSchedule")
     async def on_GetCompositeSchedule(self, **kwargs):
         message = Fanout_Message(intent="get_composite_schedule", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
-        return call_result.RequestStopTransactionPayload(**response)
+        return call_result.GetCompositeSchedulePayload(**response)
 
     @on("ClearChargingProfile")
     async def on_ClearChargingProfileRequest(self, **kwargs):
         message = Fanout_Message(intent="clear_charging_profile", content=kwargs)
         response = await self.broker.send_request_wait_response(message)
-        return call_result.RequestStopTransactionPayload(**response)
+        return call_result.ClearChargingProfilePayload(**response)
     
 
     @on("GetLocalListVersion")
@@ -494,18 +500,6 @@ class ChargePoint(cp):
         return call_result.SendLocalListPayload(status=status)
     
 
-    @on("ChangeAvailability")
-    async def on_ChangeAvailability(self, **kwargs):
-        message = Fanout_Message(intent="change_availability", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
-        return call_result.ChangeAvailabilityPayload(**response)
-    
-    @on('TriggerMessage')
-    async def on_TriggerMessage(self, **kwargs):
-        message = Fanout_Message(intent="trigger_message", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
-        return call_result.TriggerMessagePayload(**response)
-    
 
     @on("GetBaseReport")
     async def on_GetBaseReport(self, request_id,**kwargs):
