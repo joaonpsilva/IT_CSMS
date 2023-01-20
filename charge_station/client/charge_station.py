@@ -111,9 +111,15 @@ class ChargePoint(cp):
         
        
     async def handle_request(self, request):
+        """
+        CallBack function that is called when a request is received on RabbitMq
+        """
+
         try:
+            #Check if method requested is implemented
             method = getattr(self, request.intent)
         except:
+            #Ignore the request
             return 
 
         try:
@@ -125,13 +131,19 @@ class ChargePoint(cp):
         
     
     async def send_queued_messages(self):
+        """
+        Function to be called once connection is established
+        Sends all messages stored in message queue
+        """
 
         logging.info("Checking for Queued Messages to Send")
 
+        #While there are still queued messages
         while len(self.queued_messages) > 0:
             if not self.connection_active:
                 break
-
+            
+            #pick a message and try to send it
             message = self.queued_messages[0]
             try:
                 await self.call(message)
@@ -144,6 +156,9 @@ class ChargePoint(cp):
             
 
     async def request_transaction(self, **kwargs):
+        """
+        Handle TransactionEvent from RabbitMq
+        """
         #TODO ver idtokens
         #REVIEW. This is wrong
 
@@ -186,6 +201,7 @@ class ChargePoint(cp):
         
 
         if request.evse is not None:
+            #Save information regarding evse
             evseId = request.evse["id"]
             connectorId = request.evse["connector_id"] if "connector_id" in request.evse else None
 
@@ -206,14 +222,15 @@ class ChargePoint(cp):
             self.known_evses[evseId]["transaction"] = None
 
 
-        #if charge station is offline, store messages
+        #Try to send event to the CSMS
         try:
             assert(self.connection_active)
             assert(self.status == enums.RegistrationStatusType.accepted)
 
             response = await self.call(request)
         except:
-
+            
+            #Store request in message queue that will be sent once connection is restored
             request.offline = True
             self.queued_messages.append(request)
 
@@ -224,6 +241,7 @@ class ChargePoint(cp):
     
     
     async def request_boot_notification(self, **kwargs):
+        """Handle BootNotification from RabbitMq"""
 
         request = call.BootNotificationPayload(**kwargs)
 
@@ -258,6 +276,11 @@ class ChargePoint(cp):
     
 
     async def authorize_with_localList(self, id_token):
+        """
+        Authorize IdToken using local authorization list
+
+        returns idTokenInfo
+        """
 
         #no authorization
         if id_token["type"] == enums.IdTokenType.no_authorization:
@@ -290,6 +313,11 @@ class ChargePoint(cp):
         
     
     async def request_authorize(self, **kwargs):
+        """
+        Authorize IdToken
+        Tries to authorize with local list first
+        If failed, send AuthorizeRequest to the CSMS
+        """
 
         id_token_info = await self.authorize_with_localList(kwargs["id_token"])
         auth_response = call_result.AuthorizePayload(id_token_info=id_token_info)
@@ -330,7 +358,11 @@ class ChargePoint(cp):
     
     @on('TriggerMessage')
     async def on_TriggerMessage(self, **kwargs):
+        
         try:
+            #Forward message to RabbitMq
+            #If no response, reject the request
+
             message = Fanout_Message(intent="trigger_message", content=kwargs)
             response = await self.broker.send_request_wait_response(message)
 
@@ -339,7 +371,7 @@ class ChargePoint(cp):
             
             response = call_result.TriggerMessagePayload(**response)
         
-        except:
+        except TimeoutError:
             response = call_result.TriggerMessagePayload(status=enums.TriggerMessageStatusType.rejected)
 
         return response
@@ -357,10 +389,7 @@ class ChargePoint(cp):
             response = await self.broker.send_request_wait_response(message)
             response = call_result.RequestStartTransactionPayload(**response)
         
-        except AssertionError:
-            response = call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
-        except:
-            logging.error(traceback.format_exc())
+        except (AssertionError,TimeoutError) :
             response = call_result.RequestStartTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
         
         #If transaction already occuring return transaction ID
@@ -376,7 +405,6 @@ class ChargePoint(cp):
     @on('RequestStopTransaction')
     async def on_RequestStopTransaction(self, **kwargs):
 
-
         try:
             #F03.FR.08
             assert(kwargs["transaction_id"] in self.ongoing_transactions)
@@ -384,27 +412,33 @@ class ChargePoint(cp):
             message = Fanout_Message(intent="remote_stop_transaction", content=kwargs)
             response = await self.broker.send_request_wait_response(message)
             response = call_result.RequestStopTransactionPayload(**response)
-        except:
+
+        except (AssertionError,TimeoutError):
             response = call_result.RequestStopTransactionPayload(status=enums.RequestStartStopStatusType.rejected)
 
-            return response
+        return response
 
     
     @on("UnlockConnector")
     async def on_UnlockConnector(self, **kwargs):
         #F05.FR.03
         if kwargs["evse_id"] not in self.known_evses or kwargs["connector_id"] not in self.known_evses[kwargs["evse_id"]]["connectors"]:
-            return call_result.RequestStopTransactionPayload(status=enums.UnlockStatusType.unknown_connector)
+            return call_result.UnlockConnectorPayload(status=enums.UnlockStatusType.unknown_connector)
 
         #F05.FR.02
         transaction = self.known_evses[kwargs["evse_id"]]["transaction"]
         if transaction and transaction.connectorId == kwargs["connector_id"] and transaction.authorized:
-            return call_result.RequestStopTransactionPayload(status=enums.UnlockStatusType.ongoing_authorized_transaction)
+            return call_result.UnlockConnectorPayload(status=enums.UnlockStatusType.ongoing_authorized_transaction)
 
-
-        message = Fanout_Message(intent="unlock_connector", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
-        return call_result.RequestStopTransactionPayload(**response)
+        try:
+            message = Fanout_Message(intent="unlock_connector", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            call_result.UnlockConnectorPayload(**response)
+            
+        except TimeoutError:
+            response = call_result.UnlockConnectorPayload(status=enums.UnlockStatusType.unlock_failed)
+            
+        return response
     
     @on("Reset")
     async def on_Reset(self, **kwargs):

@@ -31,7 +31,10 @@ class DataBase_CP:
             
     
     def getVariable(self, component, variable, attribute_type=enums.AttributeType.actual):
+        """Get Variable according to ocpp 2.0.1 from DB"""
+
         try:
+            #get component and variablein dict format with all fields
             component = datatypes.ComponentType(**component).__dict__
             variable = datatypes.VariableType(**variable).__dict__
             
@@ -40,12 +43,13 @@ class DataBase_CP:
                 component["evse_id"] = evse["id"]
                 component["connector_id"] = evse["connector_id"]
 
-
+            #get component
             statement = sqlalchemy.select(Component).filter_by(**component)
             component = self.session.scalars(statement).first()
             if component is None:
                 return enums.GetVariableStatusType.unknown_component, None
 
+            #iterate through component variables and return the correct one
             value =None
             for var in component.variables:
                 if var.name == variable["name"] and var.instance == variable["instance"]:
@@ -64,8 +68,10 @@ class DataBase_CP:
 
             
     def setVariable(self, component, variable, attribute_value, attribute_type=enums.AttributeType.actual):
-        try:
-            
+        """Get Variable according to ocpp 2.0.1 from DB"""
+
+        try:      
+            #get component and variablein dict format with all fields
             component = datatypes.ComponentType(**component).__dict__
             variable = datatypes.VariableType(**variable).__dict__
             
@@ -74,11 +80,13 @@ class DataBase_CP:
                 component["evse_id"] = evse["id"]
                 component["connector_id"] = evse["connector_id"]
 
+            #get component
             statement = sqlalchemy.select(Component).filter_by(**component)
             component = self.session.scalars(statement).first()
             if component is None:
                 return enums.GetVariableStatusType.unknown_component
             
+            #iterate through component variables and update the correct one
             for var in component.variables:
                 if var.name == variable["name"] and var.instance == variable["instance"]:
                     for attribute in var.variable_attributes:
@@ -88,8 +96,6 @@ class DataBase_CP:
                             return enums.SetVariableStatusType.accepted
                     return enums.SetVariableStatusType.not_supported_attribute_type
             
-            self.session.commit()
-
             return enums.SetVariableStatusType.unknown_variable
         except:
             logging.error(traceback.format_exc())
@@ -97,25 +103,33 @@ class DataBase_CP:
 
 
 
-
-
     def updateLocalList(self, version_number, update_type, local_authorization_list=[]):
-        try:
-        #start transaction
-        #with self.session.begin():
-            
-            current_version = self.get_LocalList_Version()
+        """
+        Update local authorization list
 
+        update type can be:
+        full: replace list with the one provided
+        differential: add or remove items
+
+        """
+        try:
+            
+            #Update list version
+            current_version = self.get_LocalList_Version()
             statement = update(LocalList).filter_by(version_number=current_version).values(version_number=version_number)
             self.session.execute(statement)
 
-
+            #if update is full, delete all authorization information
             if update_type == enums.UpdateType.full:
                 self.session.execute(delete(GroupIdToken))
                 self.session.execute(delete(IdTokenInfo))
                 self.session.execute(delete(IdToken))
             
+            #iterate over the provided idtokens and add them or remove them from the localauthlist
             for auth_data in local_authorization_list:
+                
+                #if idtokeninfo is present add idtoken
+                #if not, remove it
                 if "id_token_info" in auth_data:
                     auth_data["id_token_info"].pop("status")
                     auth_data["id_token"]["id_token_info"] = auth_data["id_token_info"]
@@ -131,6 +145,9 @@ class DataBase_CP:
             return True
         except:
             logging.error(traceback.format_exc())
+
+            #rollback to previous save point
+            #either implement whole list or nothing
             self.session.rollback()
             return False
         
