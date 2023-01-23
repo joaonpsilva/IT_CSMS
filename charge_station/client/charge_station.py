@@ -128,8 +128,6 @@ class ChargePoint(cp):
             logging.error(traceback.format_exc())
 
             
-        
-    
     async def send_queued_messages(self):
         """
         Function to be called once connection is established
@@ -154,7 +152,6 @@ class ChargePoint(cp):
         logging.info("No more Queued Messages")
 
             
-
     async def request_transaction(self, **kwargs):
         """Handle TransactionEvent from RabbitMq"""
         #TODO REVIEW authorization
@@ -199,7 +196,6 @@ class ChargePoint(cp):
             evseId = transaction.evseId
             self.known_evses[evseId]["transaction"] = None
 
-
         #Try to send event to the CSMS
         try:
             assert(self.connection_active)
@@ -211,7 +207,6 @@ class ChargePoint(cp):
             self.queued_messages.append(request)
             response = call_result.TransactionEventPayload()
         
-
         if request.id_token is not None and response.id_token_info["status"] == enums.AuthorizationStatusType.accepted:
             transaction.authorized = True
             transaction.start_idToken = request.id_token
@@ -219,7 +214,6 @@ class ChargePoint(cp):
 
         return response
 
-    
     
     async def request_boot_notification(self, **kwargs):
         """Handle BootNotification from RabbitMq"""
@@ -247,8 +241,7 @@ class ChargePoint(cp):
         
         return response
         
-
-    
+  
     async def heartBeat(self, interval):
         while True:
             request = call.HeartbeatPayload()
@@ -332,9 +325,6 @@ class ChargePoint(cp):
         request = call.StatusNotificationPayload(**kwargs)
         return await self.call(request)
 
-
-
-
     #---------------------------------------------------------------------------------
     
     @on('TriggerMessage')
@@ -414,7 +404,7 @@ class ChargePoint(cp):
         try:
             message = Fanout_Message(intent="unlock_connector", content=kwargs)
             response = await self.broker.send_request_wait_response(message)
-            call_result.UnlockConnectorPayload(**response)
+            response = call_result.UnlockConnectorPayload(**response)
             
         except TimeoutError:
             response = call_result.UnlockConnectorPayload(status=enums.UnlockStatusType.unlock_failed)
@@ -423,9 +413,15 @@ class ChargePoint(cp):
     
     @on("Reset")
     async def on_Reset(self, **kwargs):
-        message = Fanout_Message(intent="reset", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
-        return call_result.RequestStopTransactionPayload(**response)
+
+        try:
+            message = Fanout_Message(intent="reset", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            response =  call_result.ResetPayload(**response)
+        except TimeoutError:
+            response = call_result.ResetPayload(status=enums.ResetStatusType.rejected)
+            
+        return response
     
 
     @on("ChangeAvailability")
@@ -443,27 +439,47 @@ class ChargePoint(cp):
 
     @on("SetChargingProfile")
     async def on_SetChargingProfile(self,**kwargs):
-        message = Fanout_Message(intent="set_charging_profile", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
-        return call_result.SetChargingProfilePayload(**response)
-    
+        try:
+            message = Fanout_Message(intent="set_charging_profile", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            response = call_result.SetChargingProfilePayload(**response)
+        except:
+            response = call_result.SetChargingProfilePayload(status=enums.ChargingProfileStatus.rejected)
+
+        return response
+
 
     @on("GetCompositeSchedule")
     async def on_GetCompositeSchedule(self, **kwargs):
-        message = Fanout_Message(intent="get_composite_schedule", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
-        return call_result.GetCompositeSchedulePayload(**response)
+        try:
+            message = Fanout_Message(intent="get_composite_schedule", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            response = call_result.GetCompositeSchedulePayload(**response)
+        except:
+            response = call_result.GetCompositeSchedulePayload(status=enums.GenericStatusType.rejected)
+
+        return response
+
 
     @on("ClearChargingProfile")
     async def on_ClearChargingProfileRequest(self, **kwargs):
-        message = Fanout_Message(intent="clear_charging_profile", content=kwargs)
-        response = await self.broker.send_request_wait_response(message)
-        return call_result.ClearChargingProfilePayload(**response)
+        try:
+            message = Fanout_Message(intent="clear_charging_profile", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            response = call_result.ClearChargingProfilePayload(**response)
+        except:
+            response = call_result.ClearChargingProfilePayload(status=enums.ClearChargingProfileStatusType.unknown)
+
+        return response
     
 
     @on("GetLocalListVersion")
     async def on_GetLocalListVersion(self):
-        return call_result.GetLocalListVersionPayload(version_number=self.db.get_LocalList_Version())
+        try:
+            version = self.db.get_LocalList_Version()
+        except:
+            version = 0
+        return call_result.GetLocalListVersionPayload(version_number=version)
     
     @on("SendLocalList")
     async def on_SendLocalList(self, **kwargs):
