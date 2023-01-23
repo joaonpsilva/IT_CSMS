@@ -156,14 +156,11 @@ class ChargePoint(cp):
             
 
     async def request_transaction(self, **kwargs):
-        """
-        Handle TransactionEvent from RabbitMq
-        """
-        #TODO ver idtokens
-        #REVIEW. This is wrong
+        """Handle TransactionEvent from RabbitMq"""
+        #TODO REVIEW authorization
 
         request = call.TransactionEventPayload(**kwargs)
-        
+
         #new transaction
         transaction_id = request.transaction_info["transaction_id"]
         if transaction_id not in self.ongoing_transactions:
@@ -172,44 +169,26 @@ class ChargePoint(cp):
         else:
             transaction = self.ongoing_transactions[transaction_id]
 
+        #user localy stops transaction 
+        if request.id_token is not None and request.transaction_info["stopped_reason"] in [None, enums.ReasonType.local]:
+            #check if idtoken can stop transaction
 
-        if request.id_token is not None: 
-            #o decision point manda um authorize request ou sou eu q mando
-            #????
-            if request.trigger_reason == enums.TriggerReasonType.authorized:
+            if not transaction.check_valid_stop_with_Idtoken(request.id_token): #id token is not the same
+                
+                #get info from token (1st from db then from CSMS)
                 auth_response = await self.request_authorize({"id_token": request.id_token})
 
-                transaction.authorized = True
-                transaction.start_idToken = request.id_token
-                transaction.group_idToken = auth_response.id_token_info
-
-
-            if request.transaction_info["stopped_reason"] in [None, enums.ReasonType.local]:
-                #check if idtoken can stop transaction
-
-                #Compare idToken
-                if not transaction.check_valid_stop_with_Idtoken(request.id_token):
-                    #id token is not the same
-
-                    #get info from token (1st from db then from CSMS)
-                    auth_response = await self.request_authorize({"id_token": request.id_token})
-
-                    #Compare groupIdToken
-                    if not transaction.check_valid_stop_with_GroupIdtoken(auth_response.id_token_info):
-                        #Not authorized to stop transaction
-                        return {"id_token_info":{"status":enums.AuthorizationStatusType.invalid}}
+                if not transaction.check_valid_stop_with_GroupIdtoken(auth_response.id_token_info): #Compare groupIdToken
+                    #Not authorized to stop transaction
+                    return {"id_token_info":{"status":enums.AuthorizationStatusType.invalid}}
         
-
         if request.evse is not None:
             #Save information regarding evse
-            evseId = request.evse["id"]
-            connectorId = request.evse["connector_id"] if "connector_id" in request.evse else None
-
-            transaction.evseId = evseId
-            transaction.connectorId = connectorId
+            transaction.evseId = request.evse["id"]
+            transaction.connectorId = request.evse["connector_id"] if "connector_id" in request.evse else None
 
             #add transaction to evse dict
-            self.known_evses[evseId]["transaction"] = transaction
+            self.known_evses[request.evse["id"]]["transaction"] = transaction
         
 
         if request.event_type == enums.TransactionEventType.ended:
@@ -218,7 +197,6 @@ class ChargePoint(cp):
 
             #delete from evse map
             evseId = transaction.evseId
-            connectorId = transaction.connectorId
             self.known_evses[evseId]["transaction"] = None
 
 
@@ -226,15 +204,18 @@ class ChargePoint(cp):
         try:
             assert(self.connection_active)
             assert(self.status == enums.RegistrationStatusType.accepted)
-
             response = await self.call(request)
         except:
-            
             #Store request in message queue that will be sent once connection is restored
             request.offline = True
             self.queued_messages.append(request)
-
             response = call_result.TransactionEventPayload()
+        
+
+        if request.id_token is not None and response.id_token_info["status"] == enums.AuthorizationStatusType.accepted:
+            transaction.authorized = True
+            transaction.start_idToken = request.id_token
+            transaction.group_idToken = response.id_token_info["group_id_token"]
 
         return response
 
