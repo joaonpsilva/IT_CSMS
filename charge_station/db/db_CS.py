@@ -180,6 +180,8 @@ class DataBase_CP:
     
 
     def store_Queued_Messages(self, queued_messages):
+        logging.info("Storing queued messages")
+
         for m in queued_messages:
             m = QueuedMessages(message_type=m.__class__.__name__, payload=m.__dict__)
             self.session.add(m)
@@ -187,6 +189,8 @@ class DataBase_CP:
     
 
     def get_Queued_Messages(self):
+        logging.info("Reading queued messages")
+
         to_return = []
         for m in self.session.scalars(select(QueuedMessages)).all():
             to_return.append(m.to_ocppPayload())

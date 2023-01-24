@@ -19,6 +19,11 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("websockets").setLevel(logging.CRITICAL)
 from Transaction import Transaction
 
+import signal
+
+
+
+
 class ChargePoint(cp):
 
     def __init__(self, cp_id, ws=None):
@@ -32,7 +37,14 @@ class ChargePoint(cp):
         self.known_evses = {}
         self.queued_messages = []
         self.trigger_messages = []
+
     
+    def shut_down(self, sig, frame):
+        self.db.store_Queued_Messages(self.queued_messages)
+
+        logging.info("Shuting down")
+        sys.exit(0)
+
 
     async def _handle_call(self, msg):
         try:
@@ -411,6 +423,7 @@ class ChargePoint(cp):
             
         return response
     
+    
     @on("Reset")
     async def on_Reset(self, **kwargs):
 
@@ -566,6 +579,10 @@ class ChargePoint(cp):
 
 async def main(args):
     cp = ChargePoint(args.cp)
+
+    #shut down handler
+    signal.signal(signal.SIGINT, cp.shut_down)
+
     await cp.run(args.rb, args.p, args.pw)
 
 if __name__ == '__main__':
