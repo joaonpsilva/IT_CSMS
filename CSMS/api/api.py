@@ -168,6 +168,13 @@ async def GetTransactionStatus(transaction_id: str, r: Response):
     return response
 
 
+@app.post("/ReserveNow/{CP_Id}", status_code=200)
+async def GetTransactionStatus(CP_Id: str, payload: payloads.ReserveNowPayload, r: Response):
+    response, stat = await send_request("reserveNow", CP_Id, payload)
+    r.status_code = stat
+    return response
+
+
 
 @app.post("/SetDisplayMessage/{CP_Id}", status_code=200)
 async def SetDisplayMessage(CP_Id: str, payload: payloads.SetDisplayMessagePayload, r: Response):

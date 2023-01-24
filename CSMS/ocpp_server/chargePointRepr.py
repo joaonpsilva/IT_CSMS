@@ -481,6 +481,7 @@ class ChargePoint(cp):
         result = {"set_monitoring_result" : [var for r in results for var in r.set_monitoring_result]}
 
         return result
+
     
     async def clearVariableMonitoring(self, payload):
 
@@ -576,6 +577,14 @@ class ChargePoint(cp):
     
     async def unlockConnector(self, payload):
         request = call.UnlockConnectorPayload(**payload)
+        return await self.call(request)
+    
+
+    async def reserveNow(self, payload):
+        request = call.ReserveNowPayload(**payload)
+        if request.id is None: 
+            request.id = ChargePoint.new_requestId()
+
         return await self.call(request)
 
 
