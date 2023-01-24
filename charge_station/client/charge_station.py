@@ -485,6 +485,17 @@ class ChargePoint(cp):
 
         return response
     
+    @on("GetChargingProfiles")
+    async def on_GetChargingProfiles(self, **kwargs):
+        try:
+            message = Fanout_Message(intent="get_charging_profiles", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            response = call_result.GetChargingProfilesPayload(**response)
+        except:
+            response = call_result.GetChargingProfilesPayload(status=enums.GenericStatusType.rejected)
+
+        return response
+    
 
     @on("GetLocalListVersion")
     async def on_GetLocalListVersion(self):
