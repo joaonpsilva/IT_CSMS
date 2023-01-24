@@ -26,11 +26,11 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 broker = None
 
-def choose_status(response):
+def choose_status(stat):
     try:
-        if response["status"] == "OK":
+        if stat == "OK":
             return status.HTTP_200_OK
-        elif response["status"] == "VAL_ERROR":
+        elif stat == "VAL_ERROR":
             return status.HTTP_400_BAD_REQUEST
     except:
         pass
@@ -43,12 +43,9 @@ async def send_request(method, CP_Id=None, payload=None, destination="ocppserver
     try:
         response = await broker.send_request_wait_response(message)
     except TimeoutError:
-        response = {"status":"ERROR", "content": "TimedOut"}
+        response = {"status":"ERROR", "content": None}
 
-    stat = choose_status(response)
-    return response, stat
-
-
+    return response["content"], choose_status(response["status"])
 
 
 @app.post("/ChangeAvailability/{CP_Id}", status_code=200)
