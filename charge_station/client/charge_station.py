@@ -586,6 +586,23 @@ class ChargePoint(cp):
         
         return call_result.GetTransactionStatusPayload(messages_in_queue=messages_in_queue, ongoing_indicator=on_going)
     
+
+    @on("ReserveNow")
+    def on_ReserveNow(self, **kwargs):
+        pass
+
+    @on("CancelReservation")
+    def on_CancelReservation(self, **kwargs):
+        pass
+    
+    @on("SetVariableMonitoring")
+    async def on_SetVariableMonitoring(self, set_monitoring_data, **kwargs):
+        pass
+    
+    @on("ClearVariableMonitoring")
+    async def on_ClearVariableMonitoring(self, id, **kwargs):
+        pass
+    
     
 
 async def main(args):
