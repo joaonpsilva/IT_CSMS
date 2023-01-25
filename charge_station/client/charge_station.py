@@ -520,16 +520,6 @@ class ChargePoint(cp):
 
         return call_result.SendLocalListPayload(status=status)
     
-
-
-    @on("GetBaseReport")
-    async def on_GetBaseReport(self, request_id,**kwargs):
-        pass
-
-    @on("GetReport")
-    async def on_GetReport(self, **kwargs):
-        pass
-    
     
     @on('GetVariables')
     def on_get_variables(self,get_variable_data,**kwargs):
@@ -585,6 +575,18 @@ class ChargePoint(cp):
                     break
         
         return call_result.GetTransactionStatusPayload(messages_in_queue=messages_in_queue, ongoing_indicator=on_going)
+    
+
+    @on("GetBaseReport")
+    async def on_GetBaseReport(self, **kwargs):
+        try:
+            message = Fanout_Message(intent="get_base_report", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            response = call_result.GetBaseReportPayload(**response)
+        except:
+            response = call_result.GetBaseReportPayload(status=enums.GenericDeviceModelStatusType.rejected)
+
+        return response
     
 
     @on("ReserveNow")
