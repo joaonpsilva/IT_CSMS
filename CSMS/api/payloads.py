@@ -102,11 +102,6 @@ class Get15118EVCertificatePayload:
 
 @dataclass
 class GetBaseReportPayload:
-    request_id: int
-    report_base: str
-
-@dataclass  #OPTIONAL ID
-class GetBaseReport_Payload:
     report_base: enums.ReportBaseType
     request_id: Optional[int] = None
 
@@ -293,17 +288,8 @@ class ReportChargingProfilesPayload:
     tbc: Optional[bool] = None
 
 
-@dataclass
-class RequestStartTransactionPayload:
-    id_token: Dict
-    remote_start_id: int
-    evse_id: Optional[int] = None
-    group_id_token: Optional[Dict] = None
-    charging_profile: Optional[Dict] = None
-
-
 @dataclass  #OPTIONAL REMOTE START ID
-class RequestStartTransaction_Payload:
+class RequestStartTransactionPayload:
     id_token: datatypes.IdTokenType
     remote_start_id: Optional[int] = None
     evse_id: Optional[int] = None

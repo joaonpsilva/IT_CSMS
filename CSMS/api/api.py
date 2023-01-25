@@ -76,7 +76,7 @@ async def SetVariables(CP_Id: str, payload: payloads.SetVariablesPayload, r: Res
 
 
 @app.post("/RequestStartTransaction/{CP_Id}", status_code=200)
-async def RequestStartTransaction(CP_Id: str, payload: payloads.RequestStartTransaction_Payload, r: Response):
+async def RequestStartTransaction(CP_Id: str, payload: payloads.RequestStartTransactionPayload, r: Response):
     response, stat = await send_request("requestStartTransaction", CP_Id, payload)
     r.status_code = stat
     return response
@@ -127,7 +127,7 @@ async def ClearChargingProfile(CP_Id: str, payload: payloads.ClearChargingProfil
 
 
 @app.post("/GetBaseReport/{CP_Id}", status_code=200)
-async def GetBaseReport(CP_Id: str, payload: payloads.GetBaseReport_Payload, r: Response):
+async def GetBaseReport(CP_Id: str, payload: payloads.GetBaseReportPayload, r: Response):
     response, stat = await send_request("getBaseReport", CP_Id, payload)
     r.status_code = stat
     return response

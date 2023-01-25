@@ -17,17 +17,12 @@ logging.basicConfig(level=logging.INFO)
 class ChargePoint(cp):
 
     broker = None
-    remoteStartId = 0
     request_Id = 0
 
     def read_variables():
-        #TODO read variables (remoteStartId) from file
+        #TODO read variables (request_Id) from file
         pass
 
-    def new_remoteStartId():
-        ChargePoint.remoteStartId += 1
-        return ChargePoint.remoteStartId
-    
     def new_requestId():
         ChargePoint.request_Id += 1
         return ChargePoint.request_Id
@@ -278,7 +273,7 @@ class ChargePoint(cp):
 
         #creating an id for the request
         if payload.remote_start_id is None:
-            payload.remote_start_id = ChargePoint.new_remoteStartId()
+            payload.remote_start_id = ChargePoint.new_requestId()
 
         response = await self.call(payload)
 
@@ -439,6 +434,9 @@ class ChargePoint(cp):
 
 
     async def getBaseReport(self, payload):
+        if request.request_id is None: 
+            request.request_id = ChargePoint.new_requestId()
+
         request = call.GetBaseReportPayload(**payload)
         return await self.async_request(request)
 
