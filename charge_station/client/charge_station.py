@@ -590,8 +590,15 @@ class ChargePoint(cp):
     
 
     @on("ReserveNow")
-    def on_ReserveNow(self, **kwargs):
-        pass
+    async def on_ReserveNow(self, **kwargs):
+        try:
+            message = Fanout_Message(intent="get_base_report", content=kwargs)
+            response = await self.broker.send_request_wait_response(message)
+            response = call_result.ReserveNowPayload(**response)
+        except:
+            response = call_result.ReserveNowPayload(status=enums.ReserveNowStatusType.rejected)
+
+        return response
 
     @on("CancelReservation")
     def on_CancelReservation(self, **kwargs):

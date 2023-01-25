@@ -208,11 +208,17 @@ class IdToken(CustomBase):
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
 
+    def __init__(self, additional_info=None, **kwargs):
+        super().__init__(**kwargs)
+
 
 class GroupIdToken(CustomBase):
     __tablename__ = "GroupIdToken"
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
+
+    def __init__(self, additional_info=None, **kwargs):
+        super().__init__(**kwargs)
 
 
 class IdTokenInfo(CustomBase):
