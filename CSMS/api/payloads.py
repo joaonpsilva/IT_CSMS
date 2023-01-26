@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 import datatypes
 from ocpp.v201 import enums
+import datetime
 
 @dataclass
 class AuthorizePayload:
@@ -310,12 +311,12 @@ class ReservationStatusUpdatePayload:
 
 @dataclass
 class ReserveNowPayload:
-    id: int
-    expiry_date_time: str
-    id_token: Dict
-    connector_type: Optional[str] = None
+    expiry_date_time: datetime.datetime
+    id_token: datatypes.IdTokenType
+    id: Optional[int] = None
+    connector_type: Optional[enums.ConnectorType] = None
     evse_id: Optional[int] = None
-    group_id_token: Optional[Dict] = None
+    group_id_token: Optional[datatypes.IdTokenType] = None
 
 
 @dataclass
