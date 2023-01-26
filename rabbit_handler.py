@@ -135,7 +135,7 @@ class Rabbit_Handler:
             
 
         
-    async def send_request_wait_response(self, message):
+    async def send_request_wait_response(self, message, timeout=5):
         """
         Send a request and wait for response
         """
@@ -152,7 +152,7 @@ class Rabbit_Handler:
 
         #wait for the future to have a value and then return it
         try:
-            return await asyncio.wait_for(future, timeout=5)
+            return await asyncio.wait_for(future, timeout=timeout)
         except asyncio.TimeoutError:
             self.futures.pop(requestID)
             logging.error(self.name + " No response received")
