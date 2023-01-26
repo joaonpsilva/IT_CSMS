@@ -17,15 +17,6 @@ import copy
 from ocpp.v201 import call, call_result, enums, datatypes
 
 
-@event.listens_for(IdToken, 'before_delete')
-def event_before_delete(mapper, connection, id_token):
-
-    print(len(id_token.id_token_info.group_id_token.id_token_infos))
-    #if not parent.children:
-        # you should probably use your own exception class here
-    #    raise IntegrityError("Parent without children not allowed")
-    
-
 class DataBase_CP:
     def __init__(self):
 

@@ -456,7 +456,7 @@ class ChargePoint(cp):
             message = Fanout_Message(intent="set_charging_profile", content=kwargs)
             response = await self.broker.send_request_wait_response(message)
             response = call_result.SetChargingProfilePayload(**response)
-        except:
+        except TimeoutError:
             response = call_result.SetChargingProfilePayload(status=enums.ChargingProfileStatus.rejected)
 
         return response
@@ -468,7 +468,7 @@ class ChargePoint(cp):
             message = Fanout_Message(intent="get_composite_schedule", content=kwargs)
             response = await self.broker.send_request_wait_response(message)
             response = call_result.GetCompositeSchedulePayload(**response)
-        except:
+        except TimeoutError:
             response = call_result.GetCompositeSchedulePayload(status=enums.GenericStatusType.rejected)
 
         return response
@@ -480,7 +480,7 @@ class ChargePoint(cp):
             message = Fanout_Message(intent="clear_charging_profile", content=kwargs)
             response = await self.broker.send_request_wait_response(message)
             response = call_result.ClearChargingProfilePayload(**response)
-        except:
+        except TimeoutError:
             response = call_result.ClearChargingProfilePayload(status=enums.ClearChargingProfileStatusType.unknown)
 
         return response
@@ -491,7 +491,7 @@ class ChargePoint(cp):
             message = Fanout_Message(intent="get_charging_profiles", content=kwargs)
             response = await self.broker.send_request_wait_response(message)
             response = call_result.GetChargingProfilesPayload(**response)
-        except:
+        except TimeoutError:
             response = call_result.GetChargingProfilesPayload(status=enums.GenericStatusType.rejected)
 
         return response
@@ -583,7 +583,7 @@ class ChargePoint(cp):
             message = Fanout_Message(intent="get_base_report", content=kwargs)
             response = await self.broker.send_request_wait_response(message)
             response = call_result.GetBaseReportPayload(**response)
-        except:
+        except TimeoutError:
             response = call_result.GetBaseReportPayload(status=enums.GenericDeviceModelStatusType.rejected)
 
         return response
@@ -592,10 +592,17 @@ class ChargePoint(cp):
     @on("ReserveNow")
     async def on_ReserveNow(self, **kwargs):
         try:
+            status, value = self.db.getVariable({"name":"ReservationCtrlr"}, {"name":"Available"})
+            if status == enums.GetVariableStatusType.accepted:
+                if value != "True":
+                    logging.info("CP not accepting reservations")
+                    raise ValueError
+
             message = Fanout_Message(intent="get_base_report", content=kwargs)
-            response = await self.broker.send_request_wait_response(message)
+            response = await self.broker.send_request_wait_response(message, timeout=2)
             response = call_result.ReserveNowPayload(**response)
-        except:
+
+        except (TimeoutError, ValueError):
             response = call_result.ReserveNowPayload(status=enums.ReserveNowStatusType.rejected)
 
         return response

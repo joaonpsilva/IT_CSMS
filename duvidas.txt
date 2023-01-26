@@ -4,12 +4,6 @@ billing? total cost transaction? charge profile tem charge tariff?
 Transaction id podem ser iguais de cp para cp?
 transaction ocorre toda no mesmo evse
 Notify event? tem tbc e seq no mas pode ter events diferentes
-como funciona getvariables, devo pedir logo tudo no bootnotif
-
-
-api 100% transaprent, alguns parametros query (transaction_id), os dois modos
-csms deve retornar a api oq? reposta ocpp ou resposta com conteudi util?
-store all idtoken - evse permissions
 
 
 
@@ -20,13 +14,15 @@ Client ocpp-----------------
 
 - group idtoken para parar trasaction? No authorize request como sber q idtoken começou a transacao
 
--requeststarttransaction deve devolver transactionID se já estiver a ocorrer. Isto é client?
 - remote start quem manda autorizar? remote stop cp deve verificar se transaction existe?
 
-- remotly unlock connector nao deve proceder se existir uma transaçao e deve responder ongoing.... Isto é client?
-
--getvariables, formato diferente nas mensagens ocpp e na db.
-
--xxxxxxxxxxxcomo é q o decision point sabe quando começar a transaçao (txstartpoint)?
-
 -quando cp offline durante x tempo tem q mandar statusnotif 
+
+
+-Reservation
+
+devo ser eu a inserir reservations na Base de Dados? Ou apenas devo encaminhar?
+
+reservation deve fazer um status notification quando acabar.
+
+há cenarios q eu não consigo implementar: reserve now com connectorType.

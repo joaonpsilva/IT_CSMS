@@ -22,7 +22,6 @@ class IdToken(CustomBase):
     version_number = Column(Integer, ForeignKey('LocalList.version_number'))
 
     id_token_info = relationship("IdTokenInfo", cascade="all,delete-orphan", backref=backref("id_token", uselist=False), uselist=False)
-    reservarion = relationship("Reservation", cascade="all,delete-orphan", backref=backref("id_token", uselist=False))
 
     def __init__(self, additional_info=None, **kwargs):
         super().__init__(**kwargs)
@@ -52,6 +51,7 @@ class IdTokenInfo(CustomBase):
     group_id_token = relationship("GroupIdToken", backref="id_token_infos", uselist=False)
 
 
+
 class Reservation(CustomBase):
     __tablename__ = "Reservation"
 
@@ -59,11 +59,10 @@ class Reservation(CustomBase):
     expiry_date_time = Column(DateTime)
     connector_type = Column(Enum(enums.ConnectorType))
     evse_id = Column(Integer)
-    _id_token = Column(String(36), ForeignKey("IdToken.id_token"))
-    _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
 
-    group_id_token = relationship("GroupIdToken", backref="reservations", uselist=False)
-
+    #if foreign key to idtoken, might attemp to remove idtoken from locallist and screw a possible reservation for that idtoken 
+    id_token = Column(JSON)
+    group_id_token = Column(JSON)
 
 
 ############
