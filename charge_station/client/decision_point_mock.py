@@ -14,7 +14,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 async def handle_requet(request):
-    print(request)
+    if "request_" not in request.intent:
+        return request.content
 
 
 async def main():
@@ -62,7 +63,7 @@ async def main():
     await broker.send_request_wait_response(message)
 
     message = Fanout_Message(
-        intent="request_transaction",
+        intent="request_transaction_event",
         type="REQUEST",
         content=call.TransactionEventPayload(
             event_type=enums.TransactionEventType.started,

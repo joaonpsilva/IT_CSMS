@@ -164,7 +164,7 @@ class ChargePoint(cp):
         logging.info("No more Queued Messages")
 
             
-    async def request_transaction(self, **kwargs):
+    async def request_transaction_event(self, **kwargs):
         """Handle TransactionEvent from RabbitMq"""
         #TODO REVIEW authorization
 

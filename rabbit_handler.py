@@ -48,6 +48,21 @@ class Rabbit_Message:
         self.type = "response"
         self.content = None
         return self
+
+
+class Fanout_Message(Rabbit_Message):
+    def __init__(self, intent = None, type = None,content = None):
+        self.intent = intent
+        self.type = type
+        self.content = content
+    
+    def routing_key(self):
+        return ''
+    
+    def prepare_Response(self):
+        self.type = "response"
+        self.content = None
+        return self
     
 
 class Rabbit_Handler:
@@ -100,7 +115,9 @@ class Rabbit_Handler:
 
         if response.type != "response":
             return
-
+        
+        if not message.correlation_id:
+            message.correlation_id = response.intent
 
         #get the future with key = correlationid
         if message.correlation_id in self.futures:
@@ -142,7 +159,11 @@ class Rabbit_Handler:
         message.type = "request"
 
         #create an ID for the request
-        requestID = str(uuid.uuid4())
+        if isinstance(message, Fanout_Message):
+            requestID = message.intent
+        else:
+            requestID = str(uuid.uuid4())
+
         #create a future and introduce it in the request map
         future = self.loop.create_future()
         self.futures[requestID] = future
@@ -158,12 +179,11 @@ class Rabbit_Handler:
             logging.error(self.name + " No response received")
             raise TimeoutError
         
+
     async def ocpp_log(self, message):
         message.type = "ocpp_log"
         await self.send_Message(message)
 
-    
-    
     
     async def send_Message(self, message, requestID=None, reply_to=None, routing_key=None):
         json_message = json.dumps(message, cls=EnhancedJSONEncoder)

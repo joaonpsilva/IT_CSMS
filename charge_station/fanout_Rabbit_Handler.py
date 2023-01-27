@@ -1,32 +1,13 @@
 import sys
 from aio_pika import ExchangeType, Message, connect
-import asyncio
-import uuid
-import json
-from aio_pika.abc import (
-    AbstractChannel, AbstractConnection, AbstractIncomingMessage, AbstractQueue,
-)
+
 from os import path
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
-from rabbit_handler import Rabbit_Handler, EnhancedJSONEncoder, Rabbit_Message
+from rabbit_handler import Rabbit_Handler, Fanout_Message
 
 import logging
 logging.basicConfig(level=logging.INFO)
 
-
-class Fanout_Message(Rabbit_Message):
-    def __init__(self, intent = None, type = None,content = None):
-        self.intent = intent
-        self.type = type
-        self.content = content
-    
-    def routing_key(self):
-        return ''
-    
-    def prepare_Response(self):
-        self.type = "response"
-        self.content = None
-        return self
 
 
 class Fanout_Rabbit_Handler(Rabbit_Handler):
@@ -68,9 +49,3 @@ class Fanout_Rabbit_Handler(Rabbit_Handler):
         await self.response_queue.consume(self.on_response, no_ack=False)
 
         logging.info(self.name + " Connected to the RMQ Broker")
-    
-    
-
-    async def ocpp_log(self, message):
-        message.type = "request"
-        await self.send_Message(message)
