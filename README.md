@@ -32,9 +32,18 @@ ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password
 update mysql.user set host = '%' where user='root';
 flush privileges;
 
-### Intall locally
+-----Start
+sudo docker start mysql_CSMS
+
+### Or Intall locally
 
 https://dev.to/gsudarshan/how-to-install-mysql-and-workbench-on-ubuntu-20-04-localhost-5828
 
 if workbench installed with snap (allow manager to connect):  
 sudo snap connect mysql-workbench-community:password-manager-service :password-manager-service
+
+## CSMS
+
+python3 CSMS/api/api.py
+python3 CSMS/ocpp_server/ocpp_server.py
+python3 CSMS/db/db.py
