@@ -22,6 +22,8 @@ class ChargePoint(cp):
     def __init__(self, cp_id, ws=None):
         super().__init__(cp_id, ws)
         self.connection_active = False
+        
+        self.implemented_actions = dict(self.route_map)
 
     
     def shut_down(self, sig, frame):
@@ -95,21 +97,31 @@ class ChargePoint(cp):
                 message = Fanout_Message(intent=intent, content=kwargs)
 
                 #send message
-                response = await self.broker.send_request_wait_response(message)
+                response = await self.broker.send_request_wait_response(message, timeout=2)
 
                 #get correct payload
                 response = getattr(call_result, self.action + "Payload")(**response)
             
             except:
-                response = getattr(call_result, self.action + "Payload")(status="rejected")
+                payload_type = getattr(call_result, self.action + "Payload")
+
+                if payload_type == call_result.UnlockConnectorPayload:
+                    response = payload_type(status="UnlockFailed")
+                elif payload_type == call_result.ClearChargingProfilePayload:
+                    response = payload_type(status="Unknown")
+                elif payload_type == call_result.SendLocalListPayload:
+                    response = payload_type(status="Failed")
+                else:
+                    response = payload_type(status="Rejected")
                 
             return response
 
 
     async def _handle_call(self, msg):
 
-        message_handler = self.Ocpp_Message_Handler(msg.action, self.broker)
-        self.route_map[msg.action] = {'_skip_schema_validation': False, '_on_action': message_handler.handle_message}
+        if msg.action not in self.implemented_actions:
+            message_handler = self.Ocpp_Message_Handler(msg.action, self.broker)
+            self.route_map[msg.action] = {'_skip_schema_validation': False, '_on_action': message_handler.handle_message}
         
         await super()._handle_call(msg)
 
