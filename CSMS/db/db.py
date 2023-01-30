@@ -65,6 +65,10 @@ class DataBase:
             self.session.commit()
 
             return {"status":"OK", "content":toReturn}
+        
+        except AttributeError:
+            pass
+        
         except Exception as e:
 
             self.session.rollback()
@@ -78,9 +82,6 @@ class DataBase:
         self.broker = DB_Rabbit_Handler("db1", self.on_db_request)
         #Start listening to messages
         await self.broker.connect(rabbit)
-
-    def get_class_attributes(self, c):
-        return [attr for attr in dir(c) if not callable(getattr(c, attr)) and not attr.startswith("_")]
     
 
     def select(self, content, **kwargs):
