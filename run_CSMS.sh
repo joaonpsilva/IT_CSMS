@@ -15,5 +15,7 @@ break
 fi
 done
 
+sleep 1
+
 
 

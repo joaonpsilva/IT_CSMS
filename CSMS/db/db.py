@@ -10,6 +10,7 @@ from ocpp.v201 import enums
 from datetime import datetime
 import traceback
 import argparse
+import signal
 
 import dateutil.parser
 
@@ -52,6 +53,10 @@ class DataBase:
             "ChargingSchedule":ChargingSchedule,
             "EventData":EventData,
             }
+    
+    def shut_down(self, sig, frame):
+        logging.info("DB Shuting down")
+        sys.exit(0)
 
 
     async def on_db_request(self, request):
@@ -308,5 +313,11 @@ if __name__ == '__main__':
     # Main part
     loop = asyncio.new_event_loop()
 
-    loop.create_task(DataBase().run(args.rb))
+    #init db
+    db = DataBase()
+
+    #shut down handler
+    signal.signal(signal.SIGINT, db.shut_down)
+
+    loop.create_task(db.run(args.rb))
     loop.run_forever()

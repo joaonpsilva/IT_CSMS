@@ -4,6 +4,8 @@ from chargePointRepr import ChargePoint
 from csms_Rabbit_Handler import CSMS_Rabbit_Handler, Rabbit_Message
 import asyncio
 import argparse
+import signal
+import sys
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,6 +35,10 @@ class OCPP_Server:
     def __init__(self):
         self.broker = None
         self.connected_CPs = {}
+    
+    def shut_down(self, sig, frame):
+        logging.info("OCPP Server Shuting down")
+        sys.exit(0)
     
 
     async def run(self, port, rb):
@@ -152,4 +158,10 @@ if __name__ == '__main__':
     parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
     args = parser.parse_args()
 
-    asyncio.run(OCPP_Server().run(args.p, args.rb))
+    #init server
+    ocpp_server = OCPP_Server()
+    
+    #shut down handler
+    signal.signal(signal.SIGINT, ocpp_server.shut_down)
+
+    asyncio.run(ocpp_server.run(args.p, args.rb))
