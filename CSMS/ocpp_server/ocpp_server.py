@@ -7,7 +7,16 @@ import argparse
 import signal
 import sys
 
-logging.basicConfig(level=logging.INFO)
+LOGGER = logging.getLogger("Ocpp_server")
+LOGGER.setLevel(logging.DEBUG)
+
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+LOGGER.addHandler(ch)
 
 def Basic_auth_with_broker(broker):
     class BasicAuth(websockets.BasicAuthWebSocketServerProtocol):
@@ -37,7 +46,7 @@ class OCPP_Server:
         self.connected_CPs = {}
     
     def shut_down(self, sig, frame):
-        logging.info("OCPP Server Shuting down")
+        LOGGER.info("OCPP Server Shuting down")
         sys.exit(0)
     
 
@@ -63,7 +72,7 @@ class OCPP_Server:
             subprotocols=['ocpp2.0.1'],
             create_protocol=BasicAuth_Custom_Handler
         )
-        logging.info("WebSocket Server Started")
+        LOGGER.info("WebSocket Server Started")
 
         await server.wait_closed()
 
@@ -73,17 +82,17 @@ class OCPP_Server:
             requested_protocols = websocket.request_headers[
                 'Sec-WebSocket-Protocol']
         except KeyError:
-            logging.info("Client hasn't requested any Subprotocol. "
+            LOGGER.info("Client hasn't requested any Subprotocol. "
                     "Closing Connection")
             return await websocket.close()
 
         if websocket.subprotocol:
-            logging.info("Protocols Matched: %s", websocket.subprotocol)
+            LOGGER.info("Protocols Matched: %s", websocket.subprotocol)
         else:
             # In the websockets lib if no subprotocols are supported by the
             # client and the server, it proceeds without a subprotocol,
             # so we have to manually close the connection.
-            logging.warning('Protocols Mismatched | Expected Subprotocols: %s,'
+            LOGGER.warning('Protocols Mismatched | Expected Subprotocols: %s,'
                             ' but client supports  %s | Closing connection',
                             websocket.available_subprotocols,
                             requested_protocols)
@@ -97,7 +106,7 @@ class OCPP_Server:
         charge_point_id = path.strip('/')
 
         if charge_point_id in self.connected_CPs:
-            logging.warning("Id already taken | Closing connection")
+            LOGGER.warning("Id already taken | Closing connection")
             return await websocket.close()
         
         await self.verify_protocols(websocket)
@@ -111,7 +120,7 @@ class OCPP_Server:
         try:
             await cp.start()
         except websockets.exceptions.WebSocketException:
-            logging.warning("CP closed the connection")
+            LOGGER.warning("CP closed the connection")
 
         #when cp ends remove from connections
         self.connected_CPs.pop(charge_point_id)
@@ -144,7 +153,7 @@ class OCPP_Server:
     
 
     async def get_cpID_by_TransactionId(self, transaction_id):
-        message = Rabbit_Message(method="select", content={"table":"Transaction_Event", "filters": {"transaction_id" : transaction_id}})
+        message = Rabbit_Message(method="select", content={"table":"Transaction", "filters": {"transaction_id" : transaction_id}})
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if len(response["content"]) > 0:

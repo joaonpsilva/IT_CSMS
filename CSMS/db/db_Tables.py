@@ -224,6 +224,8 @@ class GroupIdToken(CustomBase):
 class IdTokenInfo(CustomBase):
     __tablename__ = "IdTokenInfo"
 
+    valid = Column(Boolean)
+
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
     id_token = relationship("IdToken", backref=backref("id_token_info", uselist=False), uselist=False)
 
@@ -253,6 +255,9 @@ class Transaction(CustomBase):
     stopped_reason = Column(Enum(enums.ReasonType))
     remote_start_id = Column(Integer, unique=True)
 
+    cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
+    charge_Point = relationship("Charge_Point", backref="transaction", uselist=False)
+
     
 
 class Transaction_Event(CustomBase):
@@ -271,20 +276,20 @@ class Transaction_Event(CustomBase):
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"))
     id_token = relationship("IdToken", backref="transaction_event", uselist=False)
 
-    #CP, EVSE, Connector
-    cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
+    #EVSE, Connector
+    #No foreign key? correct?
     connector_id = Column(Integer)
     evse_id = Column(Integer)
 
+    """
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                 [ "EVSE.cp_id", "EVSE.evse_id"]),
                 ForeignKeyConstraint(["cp_id", "evse_id", "connector_id"],
                                 [ "Connector.cp_id", "Connector.evse_id", "Connector.connector_id"]),{})
 
-    Charge_Point = relationship("Charge_Point", backref="transaction", uselist=False)
     evse = relationship("EVSE", backref=backref("transaction", overlaps="Charge_Point,transaction"), uselist=False, overlaps="Charge_Point,transaction")
     connector = relationship("Connector", backref=backref("transaction", overlaps="Charge_Point,evse,transaction"), uselist=False, overlaps="Charge_Point,evse,transaction")
-
+    """
 
     #Transaction
     transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"), primary_key = True)
@@ -411,6 +416,7 @@ def insert_Hard_Coded(db):
             id_token=id_Token, 
             language1="PT", 
             group_id_token=group_id_token,
+            valid=True
             #cache_expiry_date_time = datetime.utcnow().isoformat()
             )
     info.evse.append(evse)

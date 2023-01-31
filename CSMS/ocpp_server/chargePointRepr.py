@@ -11,7 +11,7 @@ from sys import getsizeof
 import traceback
 from csms_Rabbit_Handler import Rabbit_Message
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s-%(message)s")
 
 
 class ChargePoint(cp):
@@ -70,7 +70,10 @@ class ChargePoint(cp):
             assert(id_token["type"] == id_token["type"])
 
             #If id token is valid and known, check status
-            id_token_info["status"] =  enums.AuthorizationStatusType.accepted
+            if not id_token_info.pop("valid"): 
+                return {"status" : enums.AuthorizationStatusType.blocked}
+            
+            id_token_info["status"] = enums.AuthorizationStatusType.accepted
 
             #check if is allowed to charge at this CP
             if evse_id is not None and evse_id not in id_token_info["evse_id"]:

@@ -210,14 +210,12 @@ class DataBase:
             if not exists:
                 content.pop("id_token")
 
-        #introduce cp_id in message, decide if is EVSE or connector
-        if "evse" in content:
-            content["evse"]["cp_id"] = cp_id
-            if "connector_id" in content["evse"]:
-                content["evse"]["evse_id"] = content["evse"].pop("id")
-                content["connector"] = content.pop("evse")
-        else:
-            content["cp_id"] = cp_id 
+        #introduce cp_id in message, store evse_id and connector_id in better format
+        if "evse" in content and content["evse"]:
+            content["evse"]["evse_id"] = content["evse"].pop("id")
+            content = {**content, **content.pop("evse")}
+        content["transaction_info"]["cp_id"] = cp_id
+
 
         #check if there is a more recent event. (Dont update transaction)
         transaction = self.session.query(Transaction).get(content["transaction_info"]["transaction_id"])

@@ -371,7 +371,7 @@ class ChargePoint(cp):
         charge_profile = {
                         "id": 0,
                         "stack_level": 0,
-                        "charging_profile_purpose": "ChargingStationExternalConstraints",
+                        "charging_profile_purpose": "TxDefaultProfile",
                         "charging_profile_kind": "Absolute",
                         "charging_schedule": [
                         {
@@ -389,7 +389,7 @@ class ChargePoint(cp):
             request_id = request_id,
             charging_limit_source = enums.ChargingLimitSourceType.cso,
             tbc = True,
-            evse_id = 0,
+            evse_id = 1,
             charging_profile = [charge_profile]
         )
 

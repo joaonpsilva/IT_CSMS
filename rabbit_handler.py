@@ -78,6 +78,7 @@ class Rabbit_Handler:
 
         self.handle_request = handle_request
         self.name = name
+        self.logger = logging.getLogger(name)
 
 
     async def connect(self, url):
@@ -94,7 +95,7 @@ class Rabbit_Handler:
         #Declare exchange to where communication will be sent
         self.exchange = await self.channel.declare_exchange(name="messages", type=ExchangeType.TOPIC)
 
-        logging.info(self.name + " Connected to the RMQ Broker")
+        self.logger.info(self.name + " Connected to the RMQ Broker")
 
 
 
@@ -121,7 +122,7 @@ class Rabbit_Handler:
 
         #get the future with key = correlationid
         if message.correlation_id in self.futures:
-            logging.info(self.name + " RECEIVED response: %s", response.__dict__)
+            self.logger.info(self.name + " RECEIVED response: %s", response.__dict__)
 
             future: asyncio.Future = self.futures.pop(message.correlation_id)
             #set a result to that future
@@ -138,7 +139,7 @@ class Rabbit_Handler:
         if request.type not in ["request", "ocpp_log"]:
             return
 
-        logging.info(self.name + " RECEIVED request/log: %s", request.__dict__)
+        self.logger.info(self.name + " RECEIVED request/log: %s", request.__dict__)
 
         #pass content to be handled
         response_content = await self.handle_request(request)
@@ -176,7 +177,7 @@ class Rabbit_Handler:
             return await asyncio.wait_for(future, timeout=timeout)
         except asyncio.TimeoutError:
             self.futures.pop(requestID)
-            logging.error(self.name + " No response received")
+            self.logger.error(self.name + " No response received")
             raise TimeoutError
         
 
@@ -187,7 +188,7 @@ class Rabbit_Handler:
     
     async def send_Message(self, message, requestID=None, reply_to=None, routing_key=None):
         json_message = json.dumps(message, cls=EnhancedJSONEncoder)
-        logging.info(self.name + " RabbitMQ SENDING Message: %s", str(json_message))
+        self.logger.info(self.name + " RabbitMQ SENDING Message: %s", str(json_message))
         
         await self.exchange.publish(
             Message(
