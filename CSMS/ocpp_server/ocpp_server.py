@@ -1,13 +1,19 @@
 import websockets
 import logging
 from chargePointRepr import ChargePoint
-from csms_Rabbit_Handler import CSMS_Rabbit_Handler, Rabbit_Message
+
+import sys
+from os import path
+sys.path.append( path.dirname(path.dirname( path.dirname( path.abspath(__file__) ) ) ))
+from rabbit_handler import Rabbit_Handler, Rabbit_Message
+
+
 import asyncio
 import argparse
 import signal
 import sys
 
-LOGGER = logging.getLogger("Ocpp_server")
+LOGGER = logging.getLogger("Ocpp_Server")
 LOGGER.setLevel(logging.DEBUG)
 
 # create console handler with a higher log level
@@ -16,6 +22,7 @@ ch.setLevel(logging.INFO)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
+
 LOGGER.addHandler(ch)
 
 def Basic_auth_with_broker(broker):
@@ -30,7 +37,7 @@ def Basic_auth_with_broker(broker):
 
             try:
                 content = {"CP_ID" : username,"password": password}
-                message = Rabbit_Message(origin = "ocppserver", destination="db1", method = "verify_password", cp_id=username, content=content)
+                message = Rabbit_Message(destination="SQL_DB", method = "verify_password", cp_id=username, content=content)
                 response =  await self.broker.send_request_wait_response(message)
                 return response["content"]['approved']
             except:
@@ -52,8 +59,8 @@ class OCPP_Server:
 
     async def run(self, port, rb):
         #broker handles the rabbit mq queues and communication between services
-        self.broker = CSMS_Rabbit_Handler("Ocpp_server", self.handle_api_request)
-        await self.broker.connect(rb)
+        self.broker = Rabbit_Handler("Ocpp_Server", self.handle_api_request)
+        await self.broker.connect(rb, receive_logs=False)
 
         #set same broker for all charge point connections
         ChargePoint.broker = self.broker

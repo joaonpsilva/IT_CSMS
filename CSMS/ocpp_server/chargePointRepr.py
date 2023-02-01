@@ -11,7 +11,8 @@ from sys import getsizeof
 import traceback
 from csms_Rabbit_Handler import Rabbit_Message
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s-%(message)s")
+
+
 
 
 class ChargePoint(cp):
@@ -36,6 +37,18 @@ class ChargePoint(cp):
         self.out_of_order_transaction = set([])
         self.multiple_response_requests = {}
         self.wait_start_transaction = {}
+
+        self.logger = logging.getLogger(self.id)
+        self.logger.setLevel(logging.DEBUG)
+
+        # create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+        # create formatter and add it to the handlers
+        formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+
+        self.logger.addHandler(ch)
     
     
     async def send_CP_Message(self, method, content={}, **kwargs):
@@ -46,7 +59,7 @@ class ChargePoint(cp):
         except ValueError as ve:
             return "VAL_ERROR", ve.args[0]
         except Exception as e:
-            logging.error(traceback.format_exc())
+            self.logger.error(traceback.format_exc())
             return "ERROR", None
         
     
@@ -57,7 +70,7 @@ class ChargePoint(cp):
         
         try:
             #get info from db
-            message = Rabbit_Message(method="get_IdToken_Info", cp_id=self.id, content={"id_token": id_token})
+            message = Rabbit_Message(method="get_IdToken_Info", cp_id=self.id, content={"id_token": id_token},destination="SQL_DB")
             response = await ChargePoint.broker.send_request_wait_response(message)
             id_token =response["content"]["id_token"]
             id_token_info =response["content"]["id_token_info"]
@@ -80,7 +93,7 @@ class ChargePoint(cp):
                 id_token_info["status"] =  enums.AuthorizationStatusType.not_at_this_location
 
             #evse_id needs to be empty if allowed for all charging station
-            message = Rabbit_Message(method="select", cp_id=self.id, content={"table": "EVSE", "filters":{"cp_id" : self.id}})
+            message = Rabbit_Message(method="select", cp_id=self.id, content={"table": "EVSE", "filters":{"cp_id" : self.id}}, destination="SQL_DB")
             response = await ChargePoint.broker.send_request_wait_response(message)
             total_evses = len(response["content"])
             if total_evses == len(id_token_info["evse_id"]):
@@ -94,21 +107,21 @@ class ChargePoint(cp):
             return id_token_info
             
         except:
-            logging.error(traceback.format_exc())
+            self.logger.error(traceback.format_exc())
             return {"status" : enums.AuthorizationStatusType.invalid}
 
 
 
     async def guarantee_transaction_integrity(self, transaction_id):
 
-        message = Rabbit_Message(method="verify_received_all_transaction", cp_id=self.id, content={"transaction_id" : transaction_id})
+        message = Rabbit_Message(method="verify_received_all_transaction", cp_id=self.id, content={"transaction_id" : transaction_id}, destination="SQL_DB")
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if response["status"] == "OK":
 
             if response["content"]["status"] == "OK":
                 return True
-            logging.info("DB could not identify transaction")
+            self.logger.info("DB could not identify transaction")
             return False
         
         raise ValueError("DB ERROR")
@@ -132,7 +145,7 @@ class ChargePoint(cp):
                 #if no response assume high number
                 self.max_get_messages = 9999
 
-            logging.info("Max number of getvariables supported is %d", self.max_get_messages)
+            self.logger.info("Max number of getvariables supported is %d", self.max_get_messages)
 
         return self.max_get_messages
 
@@ -513,7 +526,7 @@ class ChargePoint(cp):
 
         if payload["update_type"] == enums.UpdateType.full:
             #Get id tokens from DB
-            message = Rabbit_Message(method="select", cp_id=self.id, content={"table":"IdToken"})
+            message = Rabbit_Message(method="select", cp_id=self.id, content={"table":"IdToken"}, destination="SQL_DB")
             response = await ChargePoint.broker.send_request_wait_response(message)
             if response["status"] != "OK":
                 raise ValueError("DB ERROR")
@@ -678,11 +691,11 @@ class ChargePoint(cp):
                 try:
                     all_messages_received = await self.guarantee_transaction_integrity(transaction_id)
                 except ValueError as ve:
-                    logging.error("Cannot verify received all transaction messages " + ve.args[0])
+                    self.logger.error("Cannot verify received all transaction messages " + ve.args[0])
                     return
 
                 if not all_messages_received:
-                    logging.info("Messages lost for transaction %s", transaction_id)
+                    self.logger.info("Messages lost for transaction %s", transaction_id)
     
 
     def received_message_async_request(self, message):

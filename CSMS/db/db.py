@@ -1,5 +1,10 @@
 import asyncio
-from db_Rabbit_Handler import DB_Rabbit_Handler
+
+import sys
+from os import path
+sys.path.append( path.dirname(path.dirname( path.dirname( path.abspath(__file__) ) ) ))
+from rabbit_handler import Rabbit_Handler, Rabbit_Message
+
 import logging
 from sqlalchemy import create_engine, update, select, delete, insert
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
@@ -14,7 +19,18 @@ import signal
 
 import dateutil.parser
 
-logging.basicConfig(level=logging.INFO)
+
+LOGGER = logging.getLogger("SQL_DB")
+LOGGER.setLevel(logging.DEBUG)
+
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+
+LOGGER.addHandler(ch)
 
 
 class DataBase:
@@ -23,7 +39,7 @@ class DataBase:
 
         #MySql engine
         self.engine = create_engine("mysql+pymysql://root:password123@localhost:3306/csms_db")
-        logging.info("Connected to the database")
+        LOGGER.info("Connected to the database")
 
         #Create new sqlachemy session
         Session = sessionmaker(bind=self.engine)
@@ -55,7 +71,7 @@ class DataBase:
             }
     
     def shut_down(self, sig, frame):
-        logging.info("DB Shuting down")
+        LOGGER.info("DB Shuting down")
         sys.exit(0)
 
 
@@ -77,16 +93,16 @@ class DataBase:
         except Exception as e:
 
             self.session.rollback()
-            logging.error(traceback.format_exc())
+            LOGGER.error(traceback.format_exc())
             return {"status":"ERROR"}
 
 
     async def run(self, rabbit):
 
         #Initialize broker that will handle Rabbit coms
-        self.broker = DB_Rabbit_Handler("db1", self.on_db_request)
+        self.broker = Rabbit_Handler("SQL_DB", self.on_db_request)
         #Start listening to messages
-        await self.broker.connect(rabbit)
+        await self.broker.connect(rabbit, receive_responses=False)
     
 
     def select(self, content, **kwargs):

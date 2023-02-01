@@ -1,6 +1,11 @@
 import uvicorn
 from fastapi import FastAPI, Depends, Query, Response, status, Request
-from api_Rabbit_Handler import API_Rabbit_Handler, Rabbit_Message
+
+import sys
+from os import path
+sys.path.append( path.dirname(path.dirname( path.dirname( path.abspath(__file__) ) ) ))
+from rabbit_handler import Rabbit_Handler, Rabbit_Message
+
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 from ocpp.v201 import call, call_result, enums
@@ -20,7 +25,17 @@ parser.add_argument("-p", type=int, default = 8000, help="OCPP server port")
 parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
 args = parser.parse_args()
 
-logging.basicConfig(level=logging.INFO)
+LOGGER = logging.getLogger("api")
+LOGGER.setLevel(logging.DEBUG)
+
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+
+LOGGER.addHandler(ch)
 
 
 app = FastAPI()
@@ -38,7 +53,7 @@ def choose_status(stat):
     return status.HTTP_500_INTERNAL_SERVER_ERROR
     
 
-async def send_request(method, CP_Id=None, payload=None, destination="ocppserver"):
+async def send_request(method, CP_Id=None, payload=None, destination="Ocpp_Server"):
     message = Rabbit_Message(method=method, content=payload,cp_id = CP_Id, origin="api", destination=destination)
     try:
         response = await broker.send_request_wait_response(message)
@@ -302,8 +317,8 @@ async def on_event(message):
 async def main():
 
     global broker
-    broker = API_Rabbit_Handler("api", on_event)
-    await broker.connect(args.rb)
+    broker = Rabbit_Handler("API", on_event)
+    await broker.connect(args.rb, receive_requests=False)
 
     
 if __name__ == '__main__':
