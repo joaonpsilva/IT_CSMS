@@ -227,9 +227,13 @@ class DataBase:
                 content.pop("id_token")
 
         #introduce cp_id in message, store evse_id and connector_id in better format
+        LOGGER.info(content)
         if "evse" in content and content["evse"]:
             content["evse"]["evse_id"] = content["evse"].pop("id")
-            content = {**content, **content.pop("evse")}
+            evse = content.pop("evse")
+            content = {**content, **evse}
+        LOGGER.info(content)
+        
         content["transaction_info"]["cp_id"] = cp_id
 
 
