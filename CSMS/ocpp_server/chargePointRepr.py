@@ -9,9 +9,11 @@ import logging
 import dateutil.parser
 from sys import getsizeof
 import traceback
-from csms_Rabbit_Handler import Rabbit_Message
 
-
+import sys
+from os import path
+sys.path.append( path.dirname(path.dirname( path.dirname( path.abspath(__file__) ) ) ))
+from rabbit_handler import Topic_Message
 
 
 
@@ -70,7 +72,7 @@ class ChargePoint(cp):
         
         try:
             #get info from db
-            message = Rabbit_Message(method="get_IdToken_Info", cp_id=self.id, content={"id_token": id_token},destination="SQL_DB")
+            message = Topic_Message(method="get_IdToken_Info", cp_id=self.id, content={"id_token": id_token},destination="SQL_DB")
             response = await ChargePoint.broker.send_request_wait_response(message)
             id_token =response["content"]["id_token"]
             id_token_info =response["content"]["id_token_info"]
@@ -93,7 +95,7 @@ class ChargePoint(cp):
                 id_token_info["status"] =  enums.AuthorizationStatusType.not_at_this_location
 
             #evse_id needs to be empty if allowed for all charging station
-            message = Rabbit_Message(method="select", cp_id=self.id, content={"table": "EVSE", "filters":{"cp_id" : self.id}}, destination="SQL_DB")
+            message = Topic_Message(method="select", cp_id=self.id, content={"table": "EVSE", "filters":{"cp_id" : self.id}}, destination="SQL_DB")
             response = await ChargePoint.broker.send_request_wait_response(message)
             total_evses = len(response["content"])
             if total_evses == len(id_token_info["evse_id"]):
@@ -114,7 +116,7 @@ class ChargePoint(cp):
 
     async def guarantee_transaction_integrity(self, transaction_id):
 
-        message = Rabbit_Message(method="verify_received_all_transaction", cp_id=self.id, content={"transaction_id" : transaction_id}, destination="SQL_DB")
+        message = Topic_Message(method="verify_received_all_transaction", cp_id=self.id, content={"transaction_id" : transaction_id}, destination="SQL_DB")
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if response["status"] == "OK":
@@ -306,7 +308,7 @@ class ChargePoint(cp):
                 payload.charging_profile["transaction_id"] = response.transaction_id
                 
                 m = {"evse_id": payload.evse_id, "charging_profile":payload.charging_profile}
-                message = Rabbit_Message(method="setChargingProfile", cp_id=self.id, content=m)
+                message = Topic_Message(method="setChargingProfile", cp_id=self.id, content=m)
                 await ChargePoint.broker.ocpp_log(message)
 
         return response                
@@ -418,7 +420,7 @@ class ChargePoint(cp):
 
         #send profile to the db
         if response.status == enums.ChargingProfileStatus.accepted:
-            message = Rabbit_Message(method="setChargingProfile", cp_id=self.id, content=payload)
+            message = Topic_Message(method="setChargingProfile", cp_id=self.id, content=payload)
             await ChargePoint.broker.ocpp_log(message)
         
         return response
@@ -476,7 +478,7 @@ class ChargePoint(cp):
         if request.charging_profile_id is None and (request.charging_profile_criteria is None or all(v is None for v in request.charging_profile_criteria.values())):
             raise ValueError("Specify at least 1 field")
             
-        message = Rabbit_Message(method="clearChargingProfile", cp_id=self.id, content=payload)
+        message = Topic_Message(method="clearChargingProfile", cp_id=self.id, content=payload)
         await ChargePoint.broker.ocpp_log(message)
 
         return await self.call(request)
@@ -526,7 +528,7 @@ class ChargePoint(cp):
 
         if payload["update_type"] == enums.UpdateType.full:
             #Get id tokens from DB
-            message = Rabbit_Message(method="select", cp_id=self.id, content={"table":"IdToken"}, destination="SQL_DB")
+            message = Topic_Message(method="select", cp_id=self.id, content={"table":"IdToken"}, destination="SQL_DB")
             response = await ChargePoint.broker.send_request_wait_response(message)
             if response["status"] != "OK":
                 raise ValueError("DB ERROR")
@@ -611,7 +613,7 @@ class ChargePoint(cp):
         kwargs["timestamp"] = datetime.utcnow().isoformat()
 
         #inform db that new cp has connected
-        message = Rabbit_Message(method="BootNotification", cp_id=self.id, content=kwargs)
+        message = Topic_Message(method="BootNotification", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
 
         return call_result.BootNotificationPayload(
@@ -624,7 +626,7 @@ class ChargePoint(cp):
     async def on_StatusNotification(self, **kwargs):
 
         #inform db that new cp has connected
-        message = Rabbit_Message(method="StatusNotification", cp_id=self.id, content=kwargs)
+        message = Topic_Message(method="StatusNotification", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
         
         return call_result.StatusNotificationPayload()
@@ -633,7 +635,7 @@ class ChargePoint(cp):
     @on('MeterValues')
     async def on_MeterValues(self, **kwargs):
 
-        message = Rabbit_Message(method="MeterValues", cp_id=self.id, content=kwargs)
+        message = Topic_Message(method="MeterValues", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
         return call_result.MeterValuesPayload()
 
@@ -641,7 +643,7 @@ class ChargePoint(cp):
     @on('Authorize')
     async def on_Authorize(self, **kwargs):
 
-        message = Rabbit_Message(method="Authorize", cp_id=self.id, content=kwargs)
+        message = Topic_Message(method="Authorize", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
         
         #authorize id_token
@@ -651,7 +653,7 @@ class ChargePoint(cp):
     @on('TransactionEvent')
     async def on_TransactionEvent(self, **kwargs):
         
-        message = Rabbit_Message(method="TransactionEvent", cp_id=self.id, content=kwargs)
+        message = Topic_Message(method="TransactionEvent", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
 
         transaction_response = call_result.TransactionEventPayload()
@@ -709,7 +711,7 @@ class ChargePoint(cp):
     
     @on("ReportChargingProfiles")
     async def on_reportChargingProfiles(self, **kwargs):
-        message = Rabbit_Message(method="ReportChargingProfiles", cp_id=self.id, content=kwargs)
+        message = Topic_Message(method="ReportChargingProfiles", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
 
         self.received_message_async_request(kwargs)        
@@ -718,7 +720,7 @@ class ChargePoint(cp):
 
     @on("NotifyReport")
     async def on_notifyReport(self, **kwargs):
-        message = Rabbit_Message(method="NotifyReport", cp_id=self.id, content=kwargs)
+        message = Topic_Message(method="NotifyReport", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
 
         self.received_message_async_request(kwargs)  
@@ -726,7 +728,7 @@ class ChargePoint(cp):
     
     @on("NotifyDisplayMessages")
     async def on_NotifyDisplayMessages(self, **kwargs):
-        message = Rabbit_Message(method="NotifyDisplayMessages", cp_id=self.id, content=kwargs)
+        message = Topic_Message(method="NotifyDisplayMessages", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
 
         self.received_message_async_request(kwargs)  
@@ -734,7 +736,7 @@ class ChargePoint(cp):
 
     @on("NotifyEvent")
     async def on_notifyEvent(self, **kwargs):
-        message = Rabbit_Message(method="NotifyEvent", cp_id=self.id, content=kwargs)
+        message = Topic_Message(method="NotifyEvent", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
         return call_result.NotifyEventPayload()
 

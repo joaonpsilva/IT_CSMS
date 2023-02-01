@@ -4,7 +4,7 @@ from fastapi import FastAPI, Depends, Query, Response, status, Request
 import sys
 from os import path
 sys.path.append( path.dirname(path.dirname( path.dirname( path.abspath(__file__) ) ) ))
-from rabbit_handler import Rabbit_Handler, Rabbit_Message
+from rabbit_handler import Rabbit_Handler, Topic_Message
 
 from pydantic import BaseModel
 from typing import Dict, List, Optional
@@ -54,7 +54,7 @@ def choose_status(stat):
     
 
 async def send_request(method, CP_Id=None, payload=None, destination="Ocpp_Server"):
-    message = Rabbit_Message(method=method, content=payload,cp_id = CP_Id, origin="api", destination=destination)
+    message = Topic_Message(method=method, content=payload,cp_id = CP_Id, origin="api", destination=destination)
     try:
         response = await broker.send_request_wait_response(message)
     except TimeoutError:

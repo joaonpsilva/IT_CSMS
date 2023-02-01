@@ -23,8 +23,14 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return o.__dict__
         return super().default(o)
 
-
 class Rabbit_Message:
+    def routing_key(self):
+        raise NotImplementedError
+    def prepare_Response(self):
+        raise NotImplementedError
+
+
+class Topic_Message(Rabbit_Message):
     def __init__(self, destination = None, origin = None, method = None,type = None,content = None,cp_id = None):
         self.destination = destination
         self.origin = origin
@@ -74,7 +80,7 @@ class Rabbit_Handler:
         self.futures: MutableMapping[str, asyncio.Future] = {}
         self.loop = asyncio.get_running_loop()
 
-        self.rabbit_Message = Rabbit_Message
+        self.rabbit_Message = Topic_Message
 
         self.handle_request = handle_request
         self.name = name
@@ -181,7 +187,7 @@ class Rabbit_Handler:
         """
         Send a request and wait for response
         """
-        if isinstance(message, Rabbit_Message):
+        if isinstance(message, Topic_Message):
             message.origin = self.name
         message.type = "request"
 
@@ -208,7 +214,7 @@ class Rabbit_Handler:
         
 
     async def ocpp_log(self, message):
-        if isinstance(message, Rabbit_Message):
+        if isinstance(message, Topic_Message):
             message.origin = self.name
         message.type = "ocpp_log"
         await self.send_Message(message)

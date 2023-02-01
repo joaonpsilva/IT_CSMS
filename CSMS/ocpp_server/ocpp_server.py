@@ -5,7 +5,7 @@ from chargePointRepr import ChargePoint
 import sys
 from os import path
 sys.path.append( path.dirname(path.dirname( path.dirname( path.abspath(__file__) ) ) ))
-from rabbit_handler import Rabbit_Handler, Rabbit_Message
+from rabbit_handler import Rabbit_Handler, Topic_Message
 
 
 import asyncio
@@ -37,7 +37,7 @@ def Basic_auth_with_broker(broker):
 
             try:
                 content = {"CP_ID" : username,"password": password}
-                message = Rabbit_Message(destination="SQL_DB", method = "verify_password", cp_id=username, content=content)
+                message = Topic_Message(destination="SQL_DB", method = "verify_password", cp_id=username, content=content)
                 response =  await self.broker.send_request_wait_response(message)
                 return response["content"]['approved']
             except:
@@ -160,7 +160,7 @@ class OCPP_Server:
     
 
     async def get_cpID_by_TransactionId(self, transaction_id):
-        message = Rabbit_Message(method="select", content={"table":"Transaction", "filters": {"transaction_id" : transaction_id}})
+        message = Topic_Message(method="select", content={"table":"Transaction", "filters": {"transaction_id" : transaction_id}})
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if len(response["content"]) > 0:

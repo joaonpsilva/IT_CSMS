@@ -3,7 +3,7 @@ import asyncio
 import sys
 from os import path
 sys.path.append( path.dirname(path.dirname( path.dirname( path.abspath(__file__) ) ) ))
-from rabbit_handler import Rabbit_Handler, Rabbit_Message
+from rabbit_handler import Rabbit_Handler
 
 import logging
 from sqlalchemy import create_engine, update, select, delete, insert
