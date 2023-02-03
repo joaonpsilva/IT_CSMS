@@ -209,7 +209,7 @@ class Rabbit_Handler:
             return await asyncio.wait_for(future, timeout=timeout)
         except asyncio.TimeoutError:
             self.futures.pop(requestID)
-            self.logger.error("No response received")
+            self.logger.info("No response received")
             raise TimeoutError
         
 

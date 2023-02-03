@@ -60,6 +60,7 @@ class DataBase:
             "MeterValue":MeterValue,
             "SignedMeterValue":SignedMeterValue,
             "SampledValue":SampledValue,
+            "User": User,
             "IdToken":IdToken,
             "GroupIdToken":GroupIdToken,
             "IdTokenInfo":IdTokenInfo,
@@ -80,16 +81,19 @@ class DataBase:
         Function that will handle incoming requests from the api or ocpp Server
         """
         try:
-            #call method depending on the message
-            toReturn = getattr(self, request.method)(**request.__dict__)
+            #get method depending on the message
+            method = getattr(self, request.method)
+        except AttributeError:
+            return
+
+        try:
+            #call method
+            toReturn = method(cp_id=request.cp_id, **request.content)
             #commit possible changes
             self.session.commit()
-
+            
             return {"status":"OK", "content":toReturn}
-        
-        except AttributeError:
-            pass
-        
+
         except Exception as e:
 
             self.session.rollback()
@@ -105,42 +109,50 @@ class DataBase:
         await self.broker.connect(rabbit, receive_responses=False)
     
 
-    def select(self, content, **kwargs):
-        if "filters" not in content:
-            content["filters"] = {}
-        statement = select(self.table_mapping[content["table"]]).filter_by(**content["filters"])
+    def select(self, table, filters = {}, **kwargs):
+        statement = select(self.table_mapping[table]).filter_by(**filters)
         return [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]
     
-    def create(self, content, **kwargs):
-        statement = insert(self.table_mapping[content["table"]]).values(**content["values"])
-        self.session.execute(statement)
+    def create(self, table, values={}, **kwargs):
+        obj = self.table_mapping[table](**values)
+        self.session.add(obj)
     
-    def remove(self, content, **kwargs):
-        if "filters" not in content:
-            content["filters"] = {}
-        statement = delete(self.table_mapping[content["table"]]).filter_by(**content["filters"])
+    def remove(self, table, filters ={}, **kwargs):
+        statement = delete(self.table_mapping[table]).filter_by(**filters)
         self.session.execute(statement)
 
-    def update(self, content, **kwargs):
-        if "filters" not in content:
-            content["filters"] = {}
-        statement = update(self.table_mapping[content["table"]]).filter_by(**content["filters"]).values(**content["values"])
+    def update(self, table, filters={},values={}, **kwargs):
+        statement = update(self.table_mapping[table]).filter_by(**filters).values(**values)
         self.session.execute(statement)
 
 
+    
+    def login(self, email, password, **kwargs):
+        user = self.session.query(User).filter_by(email=email).first()
 
-    def verify_password(self, cp_id, content, **kwargs):
-        charge_point = self.session.query(Charge_Point).get(cp_id)
+        try:
+            assert(user.verify_password(password))
 
-        result = False
-        if charge_point is not None:
-            result = charge_point.verify_password(content["password"])
+            response = {"u_id" : user.id}
+            if user.id_token:
+                response["card_id_token"] = user.id_token.id_token
 
-        return {"approved" : result}
+            return response
+        except:
+            return {}
 
 
+    def verify_password(self, CP_ID, password, **kwargs):
+        charge_point = self.session.query(Charge_Point).get(CP_ID)
 
-    def BootNotification(self, cp_id, content, **kwargs):
+        try:
+            return {"approved" : charge_point.verify_password(password)}
+        
+        except:
+            return {"approved" : False}
+
+
+    def BootNotification(self, cp_id, **content):
 
         content["charging_station"]["cp_id"] = cp_id
         bootNotification = BootNotification(**content)
@@ -157,7 +169,7 @@ class DataBase:
         self.session.merge(statusNotification)
         
 
-    def MeterValues(self, cp_id, content, **kwargs): 
+    def MeterValues(self, cp_id, **content): 
         
         evse_id = content["evse_id"]
 
@@ -170,10 +182,10 @@ class DataBase:
             self.session.add(meter_value)
 
     
-    def get_IdToken_Info(self, content, cp_id, **kwargs):
+    def get_IdToken_Info(self, cp_id, id_token, **kwargs):
 
         #get Idtoken fromdb
-        idToken = self.session.query(IdToken).get(content['id_token']["id_token"])
+        idToken = self.session.query(IdToken).get(id_token["id_token"])
         if idToken is None:
             return {"id_token" : None, "id_token_info" : None}
         
@@ -193,13 +205,12 @@ class DataBase:
     
 
 
-    def verify_received_all_transaction(self, cp_id, content, **kwargs):
+    def verify_received_all_transaction(self, cp_id, transaction_id, **kwargs):
         
         response = {"status" : "OK"}
         try:
-            assert("transaction_id" in content)
             
-            transaction = self.session.query(Transaction).get(content["transaction_id"])
+            transaction = self.session.query(Transaction).get(transaction_id)
             assert(transaction is not None)
 
             transaction_events = sorted(transaction.transaction_event, key=lambda t : t.seq_no)
@@ -215,7 +226,7 @@ class DataBase:
 
 
 
-    def TransactionEvent(self, cp_id, content, **kwargs):
+    def TransactionEvent(self, cp_id, **content):
         
         #If message contains idtoken
         if "id_token" in content:
@@ -251,7 +262,7 @@ class DataBase:
         self.session.merge(transaction_event)
     
 
-    def setChargingProfile(self, cp_id, content, **kwargs):
+    def setChargingProfile(self, cp_id, **content):
         
         self.session.query(ChargingProfile).filter(ChargingProfile.id==content["charging_profile"]["id"]).delete()
         # for schedule in content["charging_profile"]["charging_schedule"]:
@@ -285,7 +296,7 @@ class DataBase:
         return False
     
 
-    def verify_charging_profile_conflicts(self, cp_id, content, **kwargs):
+    def verify_charging_profile_conflicts(self, cp_id, **content):
 
         charging_profile = ChargingProfile(**content["charging_profile"])
 

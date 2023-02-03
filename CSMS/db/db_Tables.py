@@ -6,9 +6,10 @@ from passlib.context import CryptContext
 import sys
 from os import path
 sys.path.append( path.dirname(path.dirname( path.dirname( path.abspath(__file__) ) ) ))
-
-
 from database_Base import *
+
+
+
 
 PASSLIB_CONTEXT = CryptContext(
     # in a new application with no previous schemes, start with pbkdf2 SHA512
@@ -16,18 +17,12 @@ PASSLIB_CONTEXT = CryptContext(
     deprecated="auto",
 )
 
+def generate_hash(password):
+    """Generate a secure password hash from a new password"""
+    return PASSLIB_CONTEXT.hash(password.encode("utf8"))
 
 
 
-evse_idTokens = Table(
-    'evse_idTokens',
-    Base.metadata,
-    Column('cp_id', String(20)),
-    Column('evse_id', Integer),
-    Column('id_token', String(36), ForeignKey('IdTokenInfo._id_token')),
-    ForeignKeyConstraint(("cp_id", "evse_id"),
-                        ("EVSE.cp_id", "EVSE.evse_id"))
-)
 
 evse_chargeProfiles = Table(
     'evse_chargeProfiles',
@@ -57,7 +52,7 @@ class Modem(CustomBase):
 class Charge_Point(CustomBase):
     __tablename__ = "Charge_Point"
     cp_id = Column(String(20), primary_key=True)
-    password_hash = Column(String(256)) #https://stackoverflow.com/questions/56738384/sqlalchemy-call-function-and-save-returned-value-in-table-always
+    _password_hash = Column(String(256)) #https://stackoverflow.com/questions/56738384/sqlalchemy-call-function-and-save-returned-value-in-table-always
     model = Column(String(20))
     vendor_name = Column(String(50))
     serial_number = Column(String(25))
@@ -68,8 +63,8 @@ class Charge_Point(CustomBase):
     def __init__(self, password=None, **kwargs):
         
         if password:
-            password_hash = self.generate_hash(password) #Encript password (Hash)
-            kwargs["password_hash"] = password_hash
+            password_hash = generate_hash(password) #Encript password (Hash)
+            kwargs["_password_hash"] = password_hash
         
         super().__init__(**kwargs)
     
@@ -79,15 +74,10 @@ class Charge_Point(CustomBase):
     
     @password.setter
     def password(self, password):
-        self.password_hash = self.generate_hash(password)
-    
-    @staticmethod
-    def generate_hash(password):
-        """Generate a secure password hash from a new password"""
-        return PASSLIB_CONTEXT.hash(password.encode("utf8"))
+        self._password_hash = generate_hash(password)
     
     def verify_password(self, password):
-        return PASSLIB_CONTEXT.verify(password, self.password_hash)
+        return PASSLIB_CONTEXT.verify(password, self._password_hash)
 
 
 class BootNotification(CustomBase):
@@ -201,12 +191,59 @@ class SampledValue(CustomBase):
         super().__init__(**kwargs)
 
 
+
+
+####################################################################################
+
+evse_idTokens = Table(
+    'evse_idTokens',
+    Base.metadata,
+    Column('cp_id', String(20)),
+    Column('evse_id', Integer),
+    Column('id_token', String(36), ForeignKey('IdTokenInfo._id_token')),
+    ForeignKeyConstraint(("cp_id", "evse_id"),
+                        ("EVSE.cp_id", "EVSE.evse_id"))
+)
+
+class User(CustomBase):
+    __tablename__ = "User"
+    id = Column(Integer, primary_key = True)
+    cust_id = Column(Integer)
+    full_name = Column(String(256))
+    email = Column(String(256), nullable = False, unique=True, index=True)
+    status = Column(String(256))
+    _password_hash = Column(String(256))
+
+    id_token = relationship("IdToken", backref=backref("user", uselist=False), uselist=False)
+
+    def __init__(self, password=None, **kwargs):
+        
+        if password:
+            password_hash = generate_hash(password) #Encript password (Hash)
+            kwargs["_password_hash"] = password_hash
+        
+        super().__init__(**kwargs)
     
+    @property
+    def password(self):
+        raise AttributeError("User.password is write-only")
+    
+    @password.setter
+    def password(self, password):
+        self._password_hash = generate_hash(password)
+    
+    
+    def verify_password(self, password):
+        return PASSLIB_CONTEXT.verify(password, self._password_hash)
+
+
 
 class IdToken(CustomBase):
     __tablename__ = "IdToken"
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
+
+    _user_id = Column(Integer, ForeignKey("User.id"))
 
     def __init__(self, additional_info=None, **kwargs):
         super().__init__(**kwargs)
@@ -246,6 +283,8 @@ class IdTokenInfo(CustomBase):
         
 
 
+
+############################################################################3
 
 class Transaction(CustomBase):
     __tablename__ = "Transaction"
@@ -298,6 +337,9 @@ class Transaction_Event(CustomBase):
     #Meter value
     meter_value = relationship("MeterValue", backref="transaction_event", uselist=False)
 
+
+
+##############################################################################3
 
 
 class ChargingProfile(CustomBase):
