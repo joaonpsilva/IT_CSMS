@@ -93,9 +93,16 @@ class DataBase:
             self.session.commit()
             
             return {"status":"OK", "content":toReturn}
+        
+        except ValueError as e:
+            self.session.rollback()
+            return {"status" : "VAL_ERROR" , "content": e.args[0]}
+        
+        except AssertionError as e:
+            self.session.rollback()
+            return {"status" : "OTHER_ERROR" , "content": e.args[0]}
 
         except Exception as e:
-
             self.session.rollback()
             LOGGER.error(traceback.format_exc())
             return {"status":"ERROR"}
@@ -126,20 +133,29 @@ class DataBase:
         self.session.execute(statement)
 
 
-    
+    def register(self, cp_id=None, **content):
+        
+        user = self.session.query(User).filter_by(email=content["email"]).first()
+        
+        if user:
+            raise ValueError("User already exists")
+
+        user = User(**content)
+        self.session.add(user)
+
+
     def login(self, email, password, **kwargs):
         user = self.session.query(User).filter_by(email=email).first()
 
-        try:
-            assert(user.verify_password(password))
+        if not user or not user.verify_password(password):
+            raise AssertionError("Invalid User or Password")
 
-            response = {"u_id" : user.id}
-            if user.id_token:
-                response["card_id_token"] = user.id_token.id_token
+        response = {"u_id" : user.id}
+        if user.id_token:
+            response["card_id_token"] = user.id_token.id_token
 
-            return response
-        except:
-            return {}
+        return response
+
 
 
     def verify_password(self, CP_ID, password, **kwargs):
@@ -159,10 +175,8 @@ class DataBase:
         
         self.session.merge(bootNotification)
 
-    def StatusNotification(self, cp_id, content, **kwargs):
+    def StatusNotification(self, cp_id, connector_id,evse_id, **content):
 
-        connector_id = content.pop("connector_id")
-        evse_id = content.pop("evse_id")
         content["connector"] = {"cp_id": cp_id, "evse_id":evse_id, "connector_id":connector_id}
 
         statusNotification = StatusNotification(**content)

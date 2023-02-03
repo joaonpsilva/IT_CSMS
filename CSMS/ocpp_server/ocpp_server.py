@@ -92,6 +92,8 @@ class OCPP_Server:
             LOGGER.info("Client hasn't requested any Subprotocol. "
                     "Closing Connection")
             return await websocket.close()
+        
+        #print(requested_protocols)
 
         if websocket.subprotocol:
             LOGGER.info("Protocols Matched: %s", websocket.subprotocol)
@@ -144,7 +146,7 @@ class OCPP_Server:
             if request.method == "get_connected_cps":
                 return {"status" : "OK", "content": list(self.connected_CPs.keys())}
             
-            if request.method == "getTransactionStatus":
+            if "transaction_id" in request.content:
                 try:
                     cp_id = await self.get_cpID_by_TransactionId(request.content["transaction_id"])
                 except:

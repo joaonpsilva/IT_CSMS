@@ -53,10 +53,19 @@ class Charge_Point(CustomBase):
     __tablename__ = "Charge_Point"
     cp_id = Column(String(20), primary_key=True)
     _password_hash = Column(String(256)) #https://stackoverflow.com/questions/56738384/sqlalchemy-call-function-and-save-returned-value-in-table-always
+    
     model = Column(String(20))
     vendor_name = Column(String(50))
     serial_number = Column(String(25))
     firmware_version = Column(String(50))
+
+    city = Column(String(50))
+    latitude = Column(String(50))
+    longitude = Column(String(50))
+    country = Column(String(50))
+    ocpp_version = Column(String(50))
+    is_online = Column(Boolean)
+
 
     modem = relationship("Modem", backref="Charge_Point", uselist=False)
 
@@ -78,6 +87,12 @@ class Charge_Point(CustomBase):
     
     def verify_password(self, password):
         return PASSLIB_CONTEXT.verify(password, self._password_hash)
+
+    def get_dict_obj(self):
+        d = super().get_dict_obj()
+        d["connector_count"] = sum(len(evse.connector) for evse in self.evse)
+
+        return d
 
 
 class BootNotification(CustomBase):

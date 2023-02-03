@@ -57,7 +57,7 @@ class ChargePoint(cp):
         """Funtion will use the mapping to call the correct function"""
         try:
             #print(getattr(self, "getVariables"))
-            return "OK", await getattr(self, method)(payload=content)
+            return "OK", await getattr(self, method)(**content)
         except ValueError as ve:
             return "VAL_ERROR", ve.args[0]
         except Exception as e:
@@ -249,7 +249,7 @@ class ChargePoint(cp):
 #######################Functions starting from CSMS Initiative
 
 
-    async def getVariables(self, payload):
+    async def getVariables(self, **payload):
         """Funtion initiated by the csms to get variables"""
 
         max_get_messages = await self.get_max_get_messages()
@@ -260,7 +260,7 @@ class ChargePoint(cp):
         return result
 
     
-    async def setVariables(self, payload):
+    async def setVariables(self, **payload):
 
         max_set_messages = (await self.getVariablesByName(["ItemsPerMessageSetVariables"]))["ItemsPerMessageSetVariables"]
 
@@ -270,7 +270,7 @@ class ChargePoint(cp):
         return result
     
 
-    async def requestStartTransaction(self, payload):
+    async def requestStartTransaction(self, **payload):
 
         payload = call.RequestStartTransactionPayload(**payload)
         
@@ -314,13 +314,13 @@ class ChargePoint(cp):
         return response                
 
     
-    async def requestStopTransaction(self, payload):
+    async def requestStopTransaction(self, **payload):
 
         request = call.RequestStopTransactionPayload(**payload)
         return await self.call(request)
     
 
-    async def triggerMessage(self, payload):
+    async def triggerMessage(self, **payload):
         request = call.TriggerMessagePayload(**payload)
 
         if request.requested_message == enums.MessageTriggerType.status_notification and request.evse["connector_id"] == None:
@@ -329,7 +329,7 @@ class ChargePoint(cp):
         return await self.call(request)
 
 
-    async def getTransactionStatus(self, payload={}, transaction_id=None):
+    async def getTransactionStatus(self, transaction_id=None, **payload):
 
         if transaction_id is not None:
             payload["transaction_id"] = transaction_id
@@ -350,7 +350,7 @@ class ChargePoint(cp):
         
         return False
     
-    async def charging_profile_assert_no_conflicts(self, payload):
+    async def charging_profile_assert_no_conflicts(self, **payload):
         #check for conflicts in other charging profiles
         #K01.FR.06, K01.FR.39
         #relevant = {"evse_id": payload["evse_id"]}
@@ -389,8 +389,7 @@ class ChargePoint(cp):
                             raise ValueError("Already exists conflicting Profile with different ID")
 
     
-    def verify_charging_profile_structure(self, payload):
-        
+    def verify_charging_profile_structure(self, **payload):
 
         if payload.charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
             #K01.FR.03
@@ -406,7 +405,7 @@ class ChargePoint(cp):
                 raise ValueError("Only tx_profile can have tansaction id")
         
     
-    async def setChargingProfile(self, payload):
+    async def setChargingProfile(self, **payload):
         #TODO revisit document
         #K01.FR.34, K01.FR.35, K01.FR.38, K01.FR.18, K01.FR.19, K01.FR.20
 
@@ -426,7 +425,7 @@ class ChargePoint(cp):
         return response
 
     
-    async def getCompositeSchedule(self, payload):
+    async def getCompositeSchedule(self, **payload):
 
         request = call.GetCompositeSchedulePayload(**payload)
         return await self.call(request)
@@ -451,7 +450,7 @@ class ChargePoint(cp):
         return response
 
 
-    async def getBaseReport(self, payload):
+    async def getBaseReport(self, **payload):
         if request.request_id is None: 
             request.request_id = ChargePoint.new_requestId()
 
@@ -459,7 +458,7 @@ class ChargePoint(cp):
         return await self.async_request(request)
 
     
-    async def getChargingProfiles(self, payload):
+    async def getChargingProfiles(self, **payload):
 
         request = call.GetChargingProfilesPayload(**payload)
 
@@ -470,7 +469,7 @@ class ChargePoint(cp):
         return await self.async_request(request)
 
     
-    async def clearChargingProfile(self, payload):
+    async def clearChargingProfile(self, **payload):
 
         #K10.FR.02
         request = call.ClearChargingProfilePayload(**payload)
@@ -484,12 +483,12 @@ class ChargePoint(cp):
         return await self.call(request)
 
     
-    async def changeAvailability(self, payload):
+    async def changeAvailability(self, **payload):
         request = call.ChangeAvailabilityPayload(**payload)
         return await self.call(request)
     
 
-    async def setVariableMonitoring(self, payload):
+    async def setVariableMonitoring(self, **payload):
 
         vars = await self.getVariablesByName(["ItemsPerMessageSetVariableMonitoring", "BytesPerMessageSetVariableMonitoring"])
 
@@ -499,7 +498,7 @@ class ChargePoint(cp):
         return result
 
     
-    async def clearVariableMonitoring(self, payload):
+    async def clearVariableMonitoring(self, **payload):
 
         vars = await self.getVariablesByName(["ItemsPerMessageClearVariableMonitoring", "BytesPerMessageClearVariableMonitoring"])
 
@@ -509,16 +508,16 @@ class ChargePoint(cp):
         return result
     
 
-    async def reset(self,payload):
+    async def reset(self, **payload):
         request = call.ResetPayload(**payload)
         return await self.call(request)
 
-    async def getLocalListVersion(self, payload=None):
+    async def getLocalListVersion(self, **payload):
         request = call.GetLocalListVersionPayload()
         return await self.call(request)
         
     
-    async def send_auhorization_list(self, payload=None):
+    async def send_auhorization_list(self, **payload):
         """
         Send a new authorization list to the cp
 
@@ -579,30 +578,34 @@ class ChargePoint(cp):
             vars["BytesPerMessageSendLocalList"])
     
 
-    async def setDisplayMessage(self, payload):
+    async def setDisplayMessage(self, **payload):
         request = call.SetDisplayMessagePayload(**payload)
         return await self.call(request)
 
-    async def getDisplayMessages(self, payload):
+    async def getDisplayMessages(self, **payload):
         request = call.GetDisplayMessagesPayload(**payload)
         return await self.async_request(request)
     
-    async def clearDisplayMessage(self, payload):
+    async def clearDisplayMessage(self, **payload):
         request = call.ClearDisplayMessagePayload(**payload)
         return await self.call(request)
     
-    async def unlockConnector(self, payload):
+    async def unlockConnector(self, **payload):
         request = call.UnlockConnectorPayload(**payload)
         return await self.call(request)
     
 
-    async def reserveNow(self, payload):
+    async def reserveNow(self, **payload):
         request = call.ReserveNowPayload(**payload)
         if request.id is None: 
             request.id = ChargePoint.new_requestId()
 
         return await self.call(request)
 
+
+    async def setmaxpower(self, transaction_id, max_power):
+        #make charging profile
+        pass
 
 #######################Funtions staring from the CP Initiative
 
