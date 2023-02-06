@@ -116,9 +116,9 @@ class DataBase:
         await self.broker.connect(rabbit, receive_responses=False)
     
 
-    def select(self, table, filters = {}, **kwargs):
+    def select(self, table, filters = {}, mode={}, **kwargs):
         statement = select(self.table_mapping[table]).filter_by(**filters)
-        return [obj.get_dict_obj() for obj in self.session.scalars(statement).all()]
+        return [obj.get_dict_obj(mode) for obj in self.session.scalars(statement).all()]
     
     def create(self, table, values={}, **kwargs):
         obj = self.table_mapping[table](**values)
@@ -177,7 +177,7 @@ class DataBase:
 
     def StatusNotification(self, cp_id, connector_id,evse_id, **content):
 
-        content["connector"] = {"cp_id": cp_id, "evse_id":evse_id, "connector_id":connector_id}
+        content["connector"] = {"cp_id": cp_id, "evse_id":evse_id, "connector_id":connector_id, "connector_status":content["connector_status"]}
 
         statusNotification = StatusNotification(**content)
         self.session.merge(statusNotification)

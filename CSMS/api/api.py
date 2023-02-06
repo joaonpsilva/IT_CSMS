@@ -68,9 +68,23 @@ async def getUsers():
     return response["content"]
 
 
+@app.get("/transactions", status_code=200)
+async def getTransactions(transaction_id:str):
+    response = await send_request("select", payload={"table": "Transaction", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
+    return response["content"]
+
+
+
 @app.get("/stations", status_code=200)
 async def stations():
     response = await send_request("select", payload={"table": "Charge_Point"}, destination="SQL_DB")
+    return response["content"]
+
+
+@app.get("/stations/{CP_Id}", status_code=200)
+async def getStationById(CP_Id : str):
+    mode = {"relationships":{"evse":{"describe":False, "relationships":{"connector":{}}}}}
+    response = await send_request("select", payload={"table": "Charge_Point", "filters":{"cp_id":CP_Id}, "mode":mode}, destination="SQL_DB")
     return response["content"]
 
 

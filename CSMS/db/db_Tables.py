@@ -2,6 +2,7 @@ from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, Fore
 from sqlalchemy.orm import declarative_base, relationship, backref
 from ocpp.v201 import enums
 from passlib.context import CryptContext
+from sqlalchemy.inspection import inspect
 
 import sys
 from os import path
@@ -88,12 +89,6 @@ class Charge_Point(CustomBase):
     def verify_password(self, password):
         return PASSLIB_CONTEXT.verify(password, self._password_hash)
 
-    def get_dict_obj(self):
-        d = super().get_dict_obj()
-        d["connector_count"] = sum(len(evse.connector) for evse in self.evse)
-
-        return d
-
 
 class BootNotification(CustomBase):
     __tablename__ = "BootNotification"
@@ -125,6 +120,7 @@ class Connector(CustomBase):
 
     connector_id = Column(Integer, primary_key=True) #This id is only unique inside each EVSE
     connector_type = Column(Enum(enums.ConnectorType))
+    connector_status = Column(Enum(enums.ConnectorStatusType))
 
     cp_id = Column(String(20), primary_key=True)
     evse_id = Column(Integer, primary_key=True)
