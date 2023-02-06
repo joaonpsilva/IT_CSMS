@@ -29,6 +29,12 @@ Tem que retornar jwt também
 requeststarttransaction recebe o evse e nao o connector
 
 
+chargeprofiles
+/setmaxpower
+
+nao posso mandar com ids iguais tenho q guardar? cp pode ter charge profiles q nao foram postos pelo csms
+
+
 
 Client ocpp-----------------
 

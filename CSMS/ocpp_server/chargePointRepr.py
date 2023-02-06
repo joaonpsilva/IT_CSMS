@@ -604,8 +604,31 @@ class ChargePoint(cp):
 
 
     async def setmaxpower(self, transaction_id, max_power):
+
+        #find out evse
+
         #make charging profile
-        pass
+        payload = {
+            "evse_id":None,
+            "charging_profile":{
+                "id" : "?",
+                "stack_level" : "?", #ChargingProfileMaxStackLevel
+                "charging_profile_purpose" : enums.ChargingProfilePurposeType.tx_profile,
+                "charging_profile_kind" : enums.ChargingProfileKindType.relative,
+                "transaction_id" : transaction_id,
+                "charging_schedule" : [{
+                    "id" : "?",
+                    "charging_rate_unit" : enums.ChargingRateUnitType.watts,
+                    "charging_schedule_period" : [{
+                        "start_period" : 0,
+                        "limit" : max_power,
+                    }]
+                }]
+
+            }
+        }
+
+        
 
 #######################Funtions staring from the CP Initiative
 
