@@ -10,11 +10,14 @@ Notify event? tem tbc e seq no mas pode ter events diferentes
 api-------------------------------
 
 - usam "name", "username" e "full_name". Username é necessario (email ja serve)? 
-- o que é user status?
+
 - station_id deveria ser uma str
 
+/stations/chargerid
+deve retornar reservations. reservation pode ser efetuada sem especificar o evse. posso nao saber oq esta reservado
+
 /session/open/cardToken
-É possivel uma transacao estar associada a multiplos idtokens?
+É possivel uma transacao estar associada a multiplos idtokens? e a multiplos connecotrs?
 
 /sessions 
 retorna todas as transactions? ou so as ativas
