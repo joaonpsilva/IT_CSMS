@@ -208,10 +208,8 @@ class DataBase:
 
         #get idtokeninfo from idtoken
         idTokenInfo = idToken.id_token_info
-        #load groupid from info
-        idTokenInfo.group_id_token
         #transform to dict
-        idTokenInfo_dict = idTokenInfo.get_dict_obj()
+        idTokenInfo_dict = idTokenInfo.get_dict_obj(mode={"relationships":{"group_id_token":{}}})
         #append allowed evseids
         idTokenInfo_dict["evse_id"] = idTokenInfo.get_allowed_evse_for_cp(cp_id) 
         
