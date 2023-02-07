@@ -21,6 +21,7 @@ deve retornar reservations. reservation pode ser efetuada sem especificar o evse
 
 /sessions 
 retorna todas as transactions? ou so as ativas
+tem parametros q nao sei como dis/charged energy
 
 /login
 Tem que retornar jwt também
