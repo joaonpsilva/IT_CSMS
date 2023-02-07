@@ -214,11 +214,11 @@ class ChargingProfileType:
     SetChargingProfileRequest, ReportChargingProfilesRequest
     """
 
-    id: int
     stack_level: int
     charging_profile_purpose: enums.ChargingProfilePurposeType
     charging_profile_kind: enums.ChargingProfileKindType
     charging_schedule: List[ChargingScheduleType]
+    id: Optional[int] = None
     valid_from: Optional[datetime.datetime] = None
     valid_to: Optional[datetime.datetime] = None
     transaction_id: Optional[str] = None

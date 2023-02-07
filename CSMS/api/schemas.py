@@ -21,7 +21,6 @@ class DB_Tables(str, Enum):
     Transaction="Transaction"
     Transaction_Event="Transaction_Event"
     ChargingProfile="ChargingProfile"
-    ChargingSchedule="ChargingSchedule"
     EventData="EventData"
 
 

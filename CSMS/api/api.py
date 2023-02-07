@@ -25,7 +25,7 @@ parser.add_argument("-p", type=int, default = 8000, help="OCPP server port")
 parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
 args = parser.parse_args()
 
-LOGGER = logging.getLogger("api")
+LOGGER = logging.getLogger("API")
 LOGGER.setLevel(logging.DEBUG)
 
 # create console handler with a higher log level
@@ -182,6 +182,9 @@ async def GetCompositeSchedule(CP_Id: str, payload: payloads.GetCompositeSchedul
 @app.post("/SetChargingProfile/{CP_Id}", status_code=200)
 async def SetChargingProfile(CP_Id: str, payload: payloads.SetChargingProfilePayload):
     response = await send_request("setChargingProfile", CP_Id, payload)
+
+    if response["status"] != "OK":
+        raise HTTPException(500,response["content"] )
     return response["content"]
 
 @app.post("/GetChargingProfiles/{CP_Id}", status_code=200)
