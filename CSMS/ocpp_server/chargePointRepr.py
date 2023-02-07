@@ -60,6 +60,10 @@ class ChargePoint(cp):
             return "OK", await getattr(self, method)(**content)
         except ValueError as ve:
             return "VAL_ERROR", ve.args[0]
+    
+        except AssertionError as e:
+            return "OTHER_ERROR" , e.args[0]
+
         except Exception as e:
             self.logger.error(traceback.format_exc())
             return "ERROR", None
@@ -350,46 +354,41 @@ class ChargePoint(cp):
         
         return False
     
-    async def charging_profile_assert_no_conflicts(self, **payload):
+    async def charging_profile_assert_no_conflicts(self, payload):
         #check for conflicts in other charging profiles
-        #K01.FR.06, K01.FR.39
-        #relevant = {"evse_id": payload["evse_id"]}
-        #relevant["charging_profile"] = {key: value for key, value in payload["charging_profile"].items() if key in ["id", "stack_level", "charging_profile_purpose", "valid_from", "valid_to"]}
-        #message = ChargePoint.broker.build_message("verify_charging_profile_conflicts", self.id, relevant)
-        #response = await ChargePoint.broker.send_request_wait_response(message)
-        #if len(response["content"]["conflict_ids"]) != 0:
-        #    return "profile conflicts with existing profile"
+
 
         charging_profile = datatypes.ChargingProfileType(**payload.charging_profile)
 
         request = {
-            "request_id" : ChargePoint.new_requestId(),
             "evse_id" : payload.evse_id,
-            "charging_profile" : {
-                "charging_profile_purpose":charging_profile.charging_profile_purpose,
-                "stack_level":charging_profile.stack_level
-            }
+            "charging_profile_purpose":charging_profile.charging_profile_purpose,
+            "stack_level":charging_profile.stack_level
         }
-        result = await self.getChargingProfiles(request)
 
-        if result["status"] == enums.GetChargingProfileStatusType.accepted:
-            for report in result["data"]:
-                for report_charging_profile in report["charging_profile"]:
-                    report_charging_profile = datatypes.ChargingProfileType(**report_charging_profile)
+        message = Topic_Message(method="get_charging_profiles", cp_id=self.id, content=request, destination="SQL_DB")
+        result = await ChargePoint.broker.send_request_wait_response(message)
 
-                    if report_charging_profile.id == charging_profile.id:
-                        continue
 
-                    if charging_profile.charging_profile_purpose==enums.ChargingProfilePurposeType.tx_profile:
-                        if charging_profile.transaction_id == report_charging_profile.transaction_id:
-                            raise ValueError("Already exists conflicting Profile with different ID")
+        if result["status"] == "OK":
+            for report_charging_profile in result["content"]:
+                report_charging_profile = datatypes.ChargingProfileType(**report_charging_profile)
 
-                    else:
-                        if self.dates_overlap(charging_profile.valid_from, charging_profile.valid_to, report_charging_profile.valid_from, report_charging_profile.valid_to):
-                            raise ValueError("Already exists conflicting Profile with different ID")
+                if report_charging_profile.id == charging_profile.id:
+                    continue
+
+                if charging_profile.charging_profile_purpose==enums.ChargingProfilePurposeType.tx_profile:
+                    if charging_profile.transaction_id == report_charging_profile.transaction_id:
+                        raise ValueError("Already exists conflicting Profile with different ID")
+
+                else:
+                    if self.dates_overlap(charging_profile.valid_from, charging_profile.valid_to, report_charging_profile.valid_from, report_charging_profile.valid_to):
+                        raise ValueError("Already exists conflicting Profile with different ID")
+        else:
+            raise AssertionError("Cannot reach DB")
 
     
-    def verify_charging_profile_structure(self, **payload):
+    def verify_charging_profile_structure(self, payload):
 
         if payload.charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
             #K01.FR.03
@@ -414,13 +413,24 @@ class ChargePoint(cp):
         self.verify_charging_profile_structure(request)
         await self.charging_profile_assert_no_conflicts(request)
 
-        #send message to the cp
-        response = await self.call(request)
+        if request.charging_profile["id"] is None:
+            #need to create the profile on the db now
+            #need to choose an id for the profile
+            #waiting for approval may result in duplicate ids
+            
+            message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
+            response = await ChargePoint.broker.send_request_wait_response(message)
+            assert response["status"] == "OK", "DB comunication failed"
+            request.charging_profile["id"] = response["content"]
 
-        #send profile to the db
-        if response.status == enums.ChargingProfileStatus.accepted:
-            message = Topic_Message(method="setChargingProfile", cp_id=self.id, content=payload)
-            await ChargePoint.broker.ocpp_log(message)
+        try:
+            #send message to the cp
+            response = await self.call(request)
+            assert(response.status == enums.ChargingProfileStatus.accepted)
+        except:
+            #if profile is not accepted remove it from the db
+            message = Topic_Message(method="remove", cp_id=self.id, content={"table":"ChargingProfile", "filters":{"id":request.charging_profile["id"]}}, destination="SQL_DB")
+            await ChargePoint.broker.send_request_wait_response(message)
         
         return response
 
@@ -461,6 +471,9 @@ class ChargePoint(cp):
     async def getChargingProfiles(self, **payload):
 
         request = call.GetChargingProfilesPayload(**payload)
+
+        if request.request_id is None:
+            request.request_id = ChargePoint.new_requestId()
 
         #K09.FR.03
         if request.evse_id is None and (request.charging_profile is None or all(v is None for v in request.charging_profile.values())):

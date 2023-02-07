@@ -23,19 +23,6 @@ def generate_hash(password):
     return PASSLIB_CONTEXT.hash(password.encode("utf8"))
 
 
-
-
-evse_chargeProfiles = Table(
-    'evse_chargeProfiles',
-    Base.metadata,
-    Column('cp_id', String(20)),
-    Column('evse_id', Integer),
-    Column('id', Integer, ForeignKey('ChargingProfile.id', ondelete="CASCADE")),
-    ForeignKeyConstraint(("cp_id", "evse_id"),
-                        ("EVSE.cp_id", "EVSE.evse_id"))
-)
-
-
 class Modem(CustomBase):
     __tablename__ = "Modem"
     iccid = Column(String(20), primary_key=True)
@@ -352,11 +339,21 @@ class Transaction_Event(CustomBase):
 
 ##############################################################################3
 
+evse_chargeProfiles = Table(
+    'evse_chargeProfiles',
+    Base.metadata,
+    Column('cp_id', String(20)),
+    Column('evse_id', Integer),
+    Column('id', Integer, ForeignKey('ChargingProfile.id', ondelete="CASCADE")),
+    ForeignKeyConstraint(("cp_id", "evse_id"),
+                        ("EVSE.cp_id", "EVSE.evse_id"))
+)
+
 
 class ChargingProfile(CustomBase):
     __tablename__ = "ChargingProfile"
 
-    id = Column(Integer, primary_key = True, autoincrement=False)
+    id = Column(Integer, primary_key = True)
     stack_level = Column(Integer)
     charging_profile_purpose = Column(Enum(enums.ChargingProfilePurposeType))
     charging_profile_kind = Column(Enum(enums.ChargingProfileKindType))
@@ -365,53 +362,12 @@ class ChargingProfile(CustomBase):
     valid_to = Column(DateTime)
 
     transaction_id = Column(String(36), ForeignKey('Transaction.transaction_id'))
-    transaction_info = relationship("Transaction", backref="charging_profile",uselist=False)
+    transaction = relationship("Transaction", backref="charging_profile",uselist=False)
 
-    charging_schedule = relationship("ChargingSchedule", cascade="all,delete", backref="charging_profile")
+    charging_schedule = Column(JSON)
 
     evse = relationship('EVSE', secondary=evse_chargeProfiles, backref='charging_profile')
 
-
-
-"""do i need this?"""
-class ChargingSchedule(CustomBase):
-    __tablename__ = "ChargingSchedule"
-
-    id = Column(Integer, primary_key = True, autoincrement=False)
-    start_schedule = Column(DateTime)
-    duration = Column(Integer)
-    charging_rate_unit = Column(Enum(enums.ChargingRateUnitType))
-    min_charging_rate = Column(Float)
-
-    _charging_profile = Column(Integer, ForeignKey("ChargingProfile.id"))
-
-    charging_schedule_period = relationship("ChargingSchedulePeriod", cascade="all,delete", backref="charging_schedule")
-    sales_tariff = relationship("SalesTariff", cascade="all,delete", uselist=False, backref="charging_schedule")
-
-
-class ChargingSchedulePeriod(CustomBase):
-    __tablename__ = "ChargingSchedulePeriod"
-
-    id = Column(Integer, primary_key = True)
-    start_period = Column(Integer)
-    limit = Column(Float)
-    number_phases = Column(Integer)
-    phase_to_use = Column(Integer)
-
-    _charging_schedule = Column(Integer, ForeignKey("ChargingSchedule.id"))
-
-
-class SalesTariff(CustomBase):
-    __tablename__ = "SalesTariff"
-    id = Column(Integer, primary_key = True)
-    content = Column(String(1000))
-
-    _charging_schedule = Column(Integer, ForeignKey("ChargingSchedule.id"))
-
-    def __init__(self, id , **kwargs):
-        content = str(kwargs)
-        kwargs = {"id":id, "content":content}
-        super().__init__(**kwargs)
 
 
 class EventData(CustomBase):

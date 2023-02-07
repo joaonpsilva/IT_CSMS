@@ -67,7 +67,6 @@ class DataBase:
             "Transaction":Transaction,
             "Transaction_Event":Transaction_Event,
             "ChargingProfile":ChargingProfile,
-            "ChargingSchedule":ChargingSchedule,
             "EventData":EventData,
             }
     
@@ -274,39 +273,49 @@ class DataBase:
         self.session.merge(transaction_event)
     
 
-    def setChargingProfile(self, cp_id, **content):
+    def get_charging_profiles(self, cp_id, evse_id, charging_profile_purpose, stack_level):
+
+        if evse_id == 0:
+            evse_ids = [evse.evse_id for evse in self.session.query(EVSE).filter(EVSE.cp_id==cp_id).all()]
+        else:
+            evse_ids = [evse_id]
+
+        result = []
+        for evse_id in evse_ids:
+
+            profiles = self.session.query(ChargingProfile).join(ChargingProfile.evse).filter(
+                EVSE.cp_id == cp_id,
+                EVSE.evse_id == evse_id,
+                ChargingProfile.charging_profile_purpose == charging_profile_purpose,
+                ChargingProfile.stack_level == stack_level
+            ).all()
+
+            result += [obj.get_dict_obj() for obj in profiles]
+
+        return result
+
+
+
+    def create_Charging_profile(self, cp_id,  evse_id, charging_profile, **kwargs):
         
-        self.session.query(ChargingProfile).filter(ChargingProfile.id==content["charging_profile"]["id"]).delete()
-        # for schedule in content["charging_profile"]["charging_schedule"]:
-        #     self.session.query(ChargingSchedule).filter(ChargingSchedule.id==schedule["id"]).delete()
+        if "id" in charging_profile and charging_profile["id"] is not None:
+            self.session.query(ChargingProfile).filter(ChargingProfile.id==charging_profile["id"]).delete()
+        
+        charging_profile = ChargingProfile(**charging_profile)
 
-        content["charging_profile"].pop("charging_schedule")
-        charging_profile = ChargingProfile(**content["charging_profile"])
-
-        if content["evse_id"] is not None:
-            if content["evse_id"] == 0:
-                evses = self.session.query(EVSE).filter(EVSE.cp_id==cp_id).all()
-            else:
-                evses = [self.session.query(EVSE).get((content["evse_id"], cp_id))]
-            
-            charging_profile.evse = evses
+        if evse_id == 0:
+            evses = self.session.query(EVSE).filter(EVSE.cp_id==cp_id).all()
+        else:
+            evses = [self.session.query(EVSE).get((evse_id, cp_id))]
+        charging_profile.evse = evses
 
         self.session.add(charging_profile)
-
-    
-    def dates_overlap(self, valid_from1, valid_to1, valid_from2, valid_to2):
-
-        valid_from1 = valid_from1 if valid_from1 is not None else datetime.now()
-        valid_from2 = dateutil.parser.parse(valid_from2) if valid_from2 is not None else datetime.now()
-
-        valid_to1 = valid_to1 if valid_to1 is not None else datetime.max
-        valid_to2 = dateutil.parser.parse(valid_to2) if valid_to2 is not None else datetime.max
-
-        if valid_from1 <= valid_to2 and valid_to1 >= valid_from2:
-            return True
+        self.session.commit()
+        self.session.refresh(charging_profile)
         
-        return False
-    
+        return charging_profile.id
+
+
 
     def verify_charging_profile_conflicts(self, cp_id, **content):
 
