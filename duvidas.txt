@@ -16,6 +16,8 @@ api-------------------------------
 /stations/chargerid
 deve retornar reservations. reservation pode ser efetuada sem especificar o evse. posso nao saber oq esta reservado
 
+metervalues charged/discharged
+
 /session/open/cardToken
 É possivel uma transacao estar associada a multiplos idtokens? e a multiplos connecotrs?
 

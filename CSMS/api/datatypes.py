@@ -196,9 +196,9 @@ class ChargingScheduleType:
     NotifyChargingLimitRequest, NotifyEVChargingScheduleRequest
     """
 
-    id: int
     charging_rate_unit: enums.ChargingRateUnitType
     charging_schedule_period: List[ChargingSchedulePeriodType]
+    id: Optional[int] = None
     start_schedule: Optional[datetime.datetime] = None
     duration: Optional[int] = None
     min_charging_rate: Optional[float] = None

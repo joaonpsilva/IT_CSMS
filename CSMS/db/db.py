@@ -301,6 +301,11 @@ class DataBase:
         if "id" in charging_profile and charging_profile["id"] is not None:
             self.session.query(ChargingProfile).filter(ChargingProfile.id==charging_profile["id"]).delete()
         
+        for schedule in charging_profile["charging_schedule"]:
+            if "id" in schedule and schedule["id"] is not None:
+                self.session.query(ChargingSchedule).filter(ChargingSchedule.id==schedule["id"]).delete()
+
+        
         charging_profile = ChargingProfile(**charging_profile)
 
         if evse_id == 0:
@@ -313,7 +318,7 @@ class DataBase:
         self.session.commit()
         self.session.refresh(charging_profile)
         
-        return charging_profile.id
+        return charging_profile.get_dict_obj(mode={"relationships":{"charging_schedule":{}}})
 
 
 

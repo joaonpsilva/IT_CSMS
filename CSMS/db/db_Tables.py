@@ -364,9 +364,22 @@ class ChargingProfile(CustomBase):
     transaction_id = Column(String(36), ForeignKey('Transaction.transaction_id'))
     transaction = relationship("Transaction", backref="charging_profile",uselist=False)
 
-    charging_schedule = Column(JSON)
-
     evse = relationship('EVSE', secondary=evse_chargeProfiles, backref='charging_profile')
+    charging_schedule = relationship("ChargingSchedule", backref="charging_profile")
+
+
+class ChargingSchedule(CustomBase):
+    __tablename__ = "ChargingSchedule"
+
+    id = Column(Integer, primary_key = True)
+    start_schedule = Column(DateTime)
+    duration = Column(Integer)
+    charging_rate_unit = Column(Enum(enums.ChargingRateUnitType))
+    min_charging_rate = Column(Float)
+
+    _charging_profile = Column(Integer, ForeignKey("ChargingProfile.id"))
+    sales_tariff = Column(JSON)
+
 
 
 

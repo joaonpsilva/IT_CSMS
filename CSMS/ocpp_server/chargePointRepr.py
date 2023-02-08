@@ -299,21 +299,21 @@ class ChargePoint(cp):
 
         response = await self.call(payload)
 
-        if response.status == enums.RequestStartStopStatusType.accepted:
+        # if response.status == enums.RequestStartStopStatusType.accepted:
 
-            if response.transaction_id is None:
-                future = self.loop.create_future()
-                self.wait_start_transaction[payload.remote_start_id] = future
-                response.transaction_id = await asyncio.wait_for(future, timeout=5)
+        #     if response.transaction_id is None:
+        #         future = self.loop.create_future()
+        #         self.wait_start_transaction[payload.remote_start_id] = future
+        #         response.transaction_id = await asyncio.wait_for(future, timeout=5)
 
-            #Send to db
-            if payload.charging_profile is not None:
+        #     #TODO REDO THIS Send to db
+        #     if payload.charging_profile is not None:
                 
-                payload.charging_profile["transaction_id"] = response.transaction_id
+        #         payload.charging_profile["transaction_id"] = response.transaction_id
                 
-                m = {"evse_id": payload.evse_id, "charging_profile":payload.charging_profile}
-                message = Topic_Message(method="setChargingProfile", cp_id=self.id, content=m)
-                await ChargePoint.broker.ocpp_log(message)
+        #         m = {"evse_id": payload.evse_id, "charging_profile":payload.charging_profile}
+        #         message = Topic_Message(method="setChargingProfile", cp_id=self.id, content=m)
+        #         await ChargePoint.broker.ocpp_log(message)
 
         return response                
 
@@ -413,6 +413,8 @@ class ChargePoint(cp):
         self.verify_charging_profile_structure(request)
         await self.charging_profile_assert_no_conflicts(request)
 
+        #assume that if either schedule and profile both know id or neither does
+        in_db=False
         if request.charging_profile["id"] is None:
             #need to create the profile on the db now
             #need to choose an id for the profile
@@ -421,16 +423,20 @@ class ChargePoint(cp):
             message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
             response = await ChargePoint.broker.send_request_wait_response(message)
             assert response["status"] == "OK", "DB comunication failed"
-            request.charging_profile["id"] = response["content"]
+            in_db=True
+            request.charging_profile = response["content"]
 
-        try:
-            #send message to the cp
-            response = await self.call(request)
-            assert(response.status == enums.ChargingProfileStatus.accepted)
-        except:
-            #if profile is not accepted remove it from the db
-            message = Topic_Message(method="remove", cp_id=self.id, content={"table":"ChargingProfile", "filters":{"id":request.charging_profile["id"]}}, destination="SQL_DB")
-            await ChargePoint.broker.send_request_wait_response(message)
+        #send message to the cp
+        response = await self.call(request)
+        if response.status == enums.ChargingProfileStatus.accepted:
+            if not in_db:
+                message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
+                response = await ChargePoint.broker.send_request_wait_response(message)
+        else:
+            if in_db:
+                #if profile is not accepted remove it from the db
+                message = Topic_Message(method="remove", cp_id=self.id, content={"table":"ChargingProfile", "filters":{"id":request.charging_profile["id"]}}, destination="SQL_DB")
+                await ChargePoint.broker.send_request_wait_response(message)
         
         return response
 
@@ -614,33 +620,45 @@ class ChargePoint(cp):
             request.id = ChargePoint.new_requestId()
 
         return await self.call(request)
+    
+
+    async def change_profile_transaction(self, transaction_id, schedule):
+
+        #TODO get evse of transaction
+        #TODO ChargingProfileMaxStackLevel
+        evse=1
+
+        message = Topic_Message(method="select", cp_id=self.id, content={"table":"ChargingProfile", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
+        response = await ChargePoint.broker.send_request_wait_response(message)
+
+        assert response["status"] == "OK", "DB comunication failed"
+
+        stack_level=-1
+        if len(response["content"]) > 0:
+            stack_level = max(response["content"], key= lambda x : x["stack_level"])
+
+        charging_profile = {
+            "stack_level" : stack_level + 1,
+            "charging_profile_purpose" : enums.ChargingProfilePurposeType.tx_profile,
+            "charging_profile_kind" : enums.ChargingProfileKindType.relative,
+            "transaction_id" : transaction_id,
+            "charging_schedule" : schedule
+        }
+
+        await self.setChargingProfile(**{"evse_id":evse, "charging_profile" : charging_profile})
 
 
     async def setmaxpower(self, transaction_id, max_power):
 
-        #find out evse
+        charging_schedule = [{
+            "charging_rate_unit" : enums.ChargingRateUnitType.watts,
+            "charging_schedule_period" : [{
+                "start_period" : 0,
+                "limit" : max_power,
+            }]
+        }]
 
-        #make charging profile
-        payload = {
-            "evse_id":None,
-            "charging_profile":{
-                "id" : "?",
-                "stack_level" : "?", #ChargingProfileMaxStackLevel
-                "charging_profile_purpose" : enums.ChargingProfilePurposeType.tx_profile,
-                "charging_profile_kind" : enums.ChargingProfileKindType.relative,
-                "transaction_id" : transaction_id,
-                "charging_schedule" : [{
-                    "id" : "?",
-                    "charging_rate_unit" : enums.ChargingRateUnitType.watts,
-                    "charging_schedule_period" : [{
-                        "start_period" : 0,
-                        "limit" : max_power,
-                    }]
-                }]
-
-            }
-        }
-
+        await self.change_profile_transaction(transaction_id, charging_schedule)
         
 
 #######################Funtions staring from the CP Initiative
