@@ -132,65 +132,6 @@ class StatusNotification(CustomBase):
 
     connector = relationship("Connector", backref="status_nofications", uselist=False)
 
-    
-
-
-
-class MeterValue(CustomBase):
-    __tablename__ = "MeterValue"
-    id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime)
-
-    cp_id = Column(String(20))
-    evse_id = Column(Integer)
-    evse = relationship("EVSE", backref="meter_value", uselist=False)
-
-    seq_no = Column(Integer)
-    transaction_id = Column(String(36))
-
-    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
-                                    ["EVSE.cp_id", "EVSE.evse_id"]),
-                    ForeignKeyConstraint(["transaction_id", "seq_no"],
-                                    ["Transaction_Event.transaction_id", "Transaction_Event.seq_no"]),{})
-
-
-class SignedMeterValue(CustomBase):
-    __tablename__ = "SignedMeterValue"
-    id = Column(Integer, primary_key=True)
-    signed_meter_data = Column(String(2500))
-    signing_method = Column(String(50))
-    encoding_method = Column(String(50))
-    public_key = Column(String(2500))
-
-
-class SampledValue(CustomBase):
-    __tablename__ = "SampledValue"
-    id = Column(Integer, primary_key=True)
-
-    value = Column(Float, nullable=False)
-    context = Column(Enum(enums.ReadingContextType))
-    measurand = Column(Enum(enums.MeasurandType))
-    phase = Column(Enum(enums.PhaseType))
-    location = Column(Enum(enums.LocationType))
-    unit = Column(String(20))
-    multiplier = Column(Integer)
-
-    _meter_value_id = Column(Integer, ForeignKey("MeterValue.id"))
-    meter_value = relationship("MeterValue", backref="sampled_value", uselist=False)
-
-    _signed_meter_value_id = Column(Integer, ForeignKey("SignedMeterValue.id"))
-    signed_meter_value = relationship("SignedMeterValue", backref=backref("sampled_value", uselist=False), uselist=False)
-
-    def __init__(self, unit_of_measure=None, **kwargs):
-        if unit_of_measure:
-            for key, value in unit_of_measure.items():
-                kwargs[key] = value
-
-        super().__init__(**kwargs)
-
-
-
-
 ####################################################################################
 
 evse_idTokens = Table(
@@ -284,6 +225,52 @@ class IdTokenInfo(CustomBase):
 
 ############################################################################3
 
+class MeterValue(CustomBase):
+    __tablename__ = "MeterValue"
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime)
+
+    cp_id = Column(String(20))
+    evse_id = Column(Integer)
+    evse = relationship("EVSE", backref="meter_value", uselist=False)
+
+    seq_no = Column(Integer)
+    transaction_id = Column(String(36))
+
+    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
+                                    ["EVSE.cp_id", "EVSE.evse_id"]),
+                    ForeignKeyConstraint(["transaction_id", "seq_no"],
+                                    ["Transaction_Event.transaction_id", "Transaction_Event.seq_no"]),{})
+
+
+class SampledValue(CustomBase):
+    __tablename__ = "SampledValue"
+    id = Column(Integer, primary_key=True)
+
+    value = Column(Float, nullable=False)
+    context = Column(Enum(enums.ReadingContextType))
+    measurand = Column(Enum(enums.MeasurandType))
+    phase = Column(Enum(enums.PhaseType))
+    location = Column(Enum(enums.LocationType))
+    unit = Column(String(20))
+    multiplier = Column(Integer)
+
+    _meter_value_id = Column(Integer, ForeignKey("MeterValue.id"))
+    meter_value = relationship("MeterValue", backref="sampled_value", uselist=False)
+
+    signed_meter_value = Column(JSON)
+
+    def __init__(self, unit_of_measure=None, measurand=enums.MeasurandType.energy_active_export_register, location=enums.LocationType.outlet, **kwargs):
+        if unit_of_measure:
+            for key, value in unit_of_measure.items():
+                kwargs[key] = value
+        
+        kwargs["measurand"] = measurand
+        kwargs["location"] = location
+
+        super().__init__(**kwargs)
+
+
 class Transaction(CustomBase):
     __tablename__ = "Transaction"
     transaction_id = Column(String(36), primary_key=True)
@@ -291,6 +278,11 @@ class Transaction(CustomBase):
     time_spent_charging = Column(Integer)
     stopped_reason = Column(Enum(enums.ReasonType))
     remote_start_id = Column(Integer, unique=True)
+
+    initial_export = Column(Integer)
+    final_export = Column(Integer)
+    initial_import = Column(Integer)
+    final_import = Column(Integer)
 
     cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
     charge_Point = relationship("Charge_Point", backref="transaction", uselist=False)
@@ -333,7 +325,7 @@ class Transaction_Event(CustomBase):
     transaction_info = relationship("Transaction", backref="transaction_event",uselist=False)
 
     #Meter value
-    meter_value = relationship("MeterValue", backref="transaction_event", uselist=False)
+    meter_value = relationship("MeterValue", backref=backref("transaction_event", uselist=False))
 
 
 

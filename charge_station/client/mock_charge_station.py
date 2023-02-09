@@ -112,15 +112,21 @@ class ChargePoint(cp):
 
 
         request = call.TransactionEventPayload(
-            event_type=enums.TransactionEventType.started,
+            event_type=enums.TransactionEventType.updated,
             timestamp=datetime.utcnow().isoformat(),
             trigger_reason=enums.TriggerReasonType.cable_plugged_in,
-            seq_no=1,
+            seq_no=2,
             transaction_info=datatypes.TransactionType(
                 transaction_id=transaction_id,
                 charging_state=enums.ChargingStateType.ev_connected
             ),
-            evse=datatypes.EVSEType(id=1, connector_id=1)
+            evse=datatypes.EVSEType(id=1, connector_id=1),
+            meter_value=[datatypes.MeterValueType(
+                timestamp=datetime.utcnow().isoformat(),
+                sampled_value=[
+                    datatypes.SampledValueType(
+                        value=30
+                    )])]
             
         )
         response = await self.call(request)
@@ -144,7 +150,13 @@ class ChargePoint(cp):
             transaction_info=datatypes.TransactionType(
                 transaction_id=transaction_id,
                 charging_state=enums.ChargingStateType.idle
-            )
+            ),
+            meter_value=[datatypes.MeterValueType(
+                timestamp=datetime.utcnow().isoformat(),
+                sampled_value=[
+                    datatypes.SampledValueType(
+                        value=50
+                    )])]
         )
         
         self.messages_in_queue=True
@@ -174,9 +186,16 @@ class ChargePoint(cp):
                 transaction_id=transaction_id,
                 charging_state=enums.ChargingStateType.ev_connected
             ),
-            evse=datatypes.EVSEType(id=1, connector_id=1)
+            evse=datatypes.EVSEType(id=1, connector_id=1),
+            meter_value=[datatypes.MeterValueType(
+                timestamp=datetime.utcnow().isoformat(),
+                sampled_value=[
+                    datatypes.SampledValueType(
+                        value=20,
+                        context=enums.ReadingContextType.transaction_begin
+                    )])]
+            )
             
-        )
         response = await self.call(request)
 
         if await self.authorizeRequest():
@@ -197,7 +216,14 @@ class ChargePoint(cp):
             transaction_info=datatypes.TransactionType(
                 transaction_id=transaction_id,
                 charging_state=enums.ChargingStateType.charging
-            )
+            ),
+            meter_value=[datatypes.MeterValueType(
+                timestamp=datetime.utcnow().isoformat(),
+                sampled_value=[
+                    datatypes.SampledValueType(
+                        value=30,
+                    )])]
+            
         )
         response = await self.call(request)
         if response.id_token_info['status'] != "Accepted":
@@ -216,7 +242,18 @@ class ChargePoint(cp):
             transaction_info=datatypes.TransactionType(
                 transaction_id=transaction_id,
                 charging_state=enums.ChargingStateType.idle
-            )
+            ),
+            meter_value=[datatypes.MeterValueType(
+                timestamp=datetime.utcnow().isoformat(),
+                sampled_value=[
+                    datatypes.SampledValueType(
+                        value=50,
+                        measurand=enums.MeasurandType.energy_active_export_register
+                    ),
+                    datatypes.SampledValueType(
+                        value=20,
+                        location=enums.LocationType.body
+                    )])]
         )
         response = await self.call(request)
     
@@ -338,10 +375,10 @@ class ChargePoint(cp):
             self.messages_in_queue = False
 
             request = call.TransactionEventPayload(
-                event_type=enums.TransactionEventType.updated,
+                event_type=enums.TransactionEventType.started,
                 timestamp=datetime.utcnow().isoformat(),
                 trigger_reason=enums.TriggerReasonType.authorized,
-                seq_no=2,
+                seq_no=1,
                 id_token=datatypes.IdTokenType(
                     id_token="123456789",
                     type=enums.IdTokenType.iso14443
@@ -349,7 +386,14 @@ class ChargePoint(cp):
                 transaction_info=datatypes.TransactionType(
                     transaction_id=transaction_id,
                     charging_state=enums.ChargingStateType.charging
-                )
+                ),
+                meter_value=[datatypes.MeterValueType(
+                timestamp=datetime.utcnow().isoformat(),
+                sampled_value=[
+                    datatypes.SampledValueType(
+                        value=20,
+                        context=enums.ReadingContextType.transaction_begin
+                    )])]
             )
             response = await self.call(request)
     

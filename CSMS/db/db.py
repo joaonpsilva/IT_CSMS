@@ -58,7 +58,6 @@ class DataBase:
             "EVSE":EVSE,
             "Connector":Connector,
             "MeterValue":MeterValue,
-            "SignedMeterValue":SignedMeterValue,
             "SampledValue":SampledValue,
             "User": User,
             "IdToken":IdToken,
@@ -101,7 +100,7 @@ class DataBase:
             self.session.rollback()
             return {"status" : "OTHER_ERROR" , "content": e.args[0]}
 
-        except Exception as e:
+        except:
             self.session.rollback()
             LOGGER.error(traceback.format_exc())
             return {"status":"ERROR"}
@@ -236,7 +235,6 @@ class DataBase:
         return response
 
 
-
     def TransactionEvent(self, cp_id, **content):
         
         #If message contains idtoken
@@ -249,27 +247,44 @@ class DataBase:
                 content.pop("id_token")
 
         #introduce cp_id in message, store evse_id and connector_id in better format
-        LOGGER.info(content)
         if "evse" in content and content["evse"]:
             content["evse"]["evse_id"] = content["evse"].pop("id")
             evse = content.pop("evse")
             content = {**content, **evse}
-        LOGGER.info(content)
         
         content["transaction_info"]["cp_id"] = cp_id
 
+        transaction_info = content.pop("transaction_info")
+        transaction_event = Transaction_Event(**content)
+
+        #check meter values
+        if len(transaction_event.meter_value) > 0:
+            for mv in transaction_event.meter_value:
+                for sv in mv.sampled_value:
+                    if sv.location == enums.LocationType.outlet:
+                        if sv.measurand == enums.MeasurandType.energy_active_export_register:
+                            if sv.context == enums.ReadingContextType.transaction_begin:
+                                transaction_info["initial_export"] = sv.value
+                            transaction_info["final_export"] = sv.value
+                            
+                        elif sv.measurand == enums.MeasurandType.energy_active_import_register:
+                            if sv.context == enums.ReadingContextType.transaction_begin:
+                                transaction_info["initial_import"] = sv.value
+                            transaction_info["final_import"] = sv.value
+
 
         #check if there is a more recent event. (Dont update transaction)
-        transaction = self.session.query(Transaction).get(content["transaction_info"]["transaction_id"])
+        transaction = self.session.query(Transaction).get(transaction_info["transaction_id"])
         if transaction is not None:
             higher_seq_no = max([event.seq_no for event in transaction.transaction_event])
-            if higher_seq_no > content["seq_no"]:
+            if higher_seq_no > transaction_event.seq_no:
                 #this event is old
                 existing_transaction = transaction.get_dict_obj()
-                content["transaction_info"] = {key: value for key, value in content["transaction_info"].items() if key not in existing_transaction or key == "transaction_id"}
- 
+                transaction_info = {key: value for key, value in transaction_info.items() if existing_transaction[key] is None or key == "transaction_id"}
+
         #introduce message in DB
-        transaction_event = Transaction_Event(**content)
+        transaction = Transaction(**transaction_info)
+        transaction_event.transaction_info = transaction
         self.session.merge(transaction_event)
     
 
@@ -293,7 +308,6 @@ class DataBase:
             result += [obj.get_dict_obj() for obj in profiles]
 
         return result
-
 
 
     def create_Charging_profile(self, cp_id,  evse_id, charging_profile, **kwargs):
