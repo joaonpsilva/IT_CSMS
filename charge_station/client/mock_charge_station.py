@@ -333,6 +333,7 @@ class ChargePoint(cp):
         transaction_id = ''.join(random.choice(string.ascii_letters) for i in range(10))
 
         request = call.TransactionEventPayload(
+            id_token=id_token,
             event_type=enums.TransactionEventType.started,
             timestamp=datetime.utcnow().isoformat(),
             trigger_reason=enums.TriggerReasonType.remote_start,

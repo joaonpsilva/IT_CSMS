@@ -15,25 +15,11 @@ Notify event? tem tbc e seq no mas pode ter events diferentes
 
 api-------------------------------
 
-- usam "name", "username" e "full_name". Username é necessario (email ja serve)? 
 
-- station_id deveria ser uma str
-
-metervalues charged/discharged
 
 /session/open/cardToken
 É possivel uma transacao estar associada a multiplos idtokens? e a multiplos connecotrs?
-evse e connector é unico
 
-/sessions 
-retorna todas as transactions? ou so as ativas
-tem parametros q nao sei como dis/charged energy
-
-/login
-Tem que retornar jwt também
-
-/charge/start
-requeststarttransaction recebe o evse e nao o connector
 
 
 chargeprofiles
@@ -45,6 +31,9 @@ nao posso mandar com ids iguais tenho q guardar? cp pode ter charge profiles q n
 deve retornar reservations. reservation pode ser efetuada sem especificar o evse. posso nao saber oq esta reservado
 
 guardar reservations, ver no statusnotification qual foi reserved
+
+----
+request start nao retorna o transactionId se a transacao ainda nao estiver em curso, eu espero pelo começo
 
 
 
