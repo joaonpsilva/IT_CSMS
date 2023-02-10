@@ -299,12 +299,12 @@ class ChargePoint(cp):
 
         response = await self.call(payload)
 
-        # if response.status == enums.RequestStartStopStatusType.accepted:
+        if response.status == enums.RequestStartStopStatusType.accepted:
 
-        #     if response.transaction_id is None:
-        #         future = self.loop.create_future()
-        #         self.wait_start_transaction[payload.remote_start_id] = future
-        #         response.transaction_id = await asyncio.wait_for(future, timeout=5)
+            if response.transaction_id is None:
+                future = self.loop.create_future()
+                self.wait_start_transaction[payload.remote_start_id] = future
+                response.transaction_id = await asyncio.wait_for(future, timeout=5)
 
         #     #TODO REDO THIS Send to db
         #     if payload.charging_profile is not None:
@@ -717,14 +717,6 @@ class ChargePoint(cp):
 
         if "id_token" in kwargs:
             transaction_response.id_token_info = await self.authorize_idToken(**kwargs)
-        
-        if kwargs["trigger_reason"] == enums.TriggerReasonType.remote_start:
-
-            #Transaction was started remotely, signal the transaction id
-            if kwargs["transaction_info"]["remote_start_id"] is not None:
-                #get the future with key = correlationid
-                future = self.wait_start_transaction.pop(kwargs["transaction_info"]["remote_start_id"])
-                future.set_result(kwargs["transaction_info"]["transaction_id"])
 
         if kwargs["event_type"] == enums.TransactionEventType.ended:
             #Payment (show total cost)
@@ -736,6 +728,15 @@ class ChargePoint(cp):
     @after('TransactionEvent')
     async def after_TransactionEvent(self, **kwargs):
         transaction_id =  kwargs["transaction_info"]["transaction_id"]
+
+        if kwargs["trigger_reason"] == enums.TriggerReasonType.remote_start:
+
+            #Transaction was started remotely, signal the transaction id
+            if kwargs["transaction_info"]["remote_start_id"] is not None:
+                #get the future with key = correlationid
+                future = self.wait_start_transaction.pop(kwargs["transaction_info"]["remote_start_id"])
+                future.set_result(kwargs["transaction_info"]["transaction_id"])
+
 
         if kwargs["event_type"] == enums.TransactionEventType.ended or transaction_id in self.out_of_order_transaction:
             #verify that all messages have been received
