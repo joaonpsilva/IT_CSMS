@@ -8,7 +8,7 @@ import sys
 from os import path
 sys.path.append( path.dirname(path.dirname( path.dirname( path.abspath(__file__) ) ) ))
 from database_Base import *
-
+from sqlalchemy.sql import true
 
 
 
@@ -269,7 +269,15 @@ class SampledValue(CustomBase):
         kwargs["location"] = location
 
         super().__init__(**kwargs)
+    
 
+
+idToken_Transactions = Table(
+    'idToken_Transactions',
+    Base.metadata,
+    Column('id_token', String(36), ForeignKey("IdToken.id_token")),
+    Column('transaction_id', String(36), ForeignKey("Transaction.transaction_id"))
+)
 
 class Transaction(CustomBase):
     __tablename__ = "Transaction"
@@ -279,6 +287,8 @@ class Transaction(CustomBase):
     stopped_reason = Column(Enum(enums.ReasonType))
     remote_start_id = Column(Integer, unique=True)
 
+    active = Column(Boolean, server_default=true())
+
     initial_export = Column(Integer)
     final_export = Column(Integer)
     initial_import = Column(Integer)
@@ -287,6 +297,7 @@ class Transaction(CustomBase):
     cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
     charge_Point = relationship("Charge_Point", backref="transaction", uselist=False)
 
+    id_token = relationship("IdToken", secondary=idToken_Transactions, backref="transaction")
     
 
 class Transaction_Event(CustomBase):

@@ -235,26 +235,18 @@ class DataBase:
         return response
 
 
-    def TransactionEvent(self, cp_id, **content):
+    def TransactionEvent(self, cp_id, id_token=None, evse=None, **content):
         
-        #If message contains idtoken
-        if "id_token" in content:
-            #if for some reason, this idtoken is not good, dont use it to store in db
-
-            q = self.session.query(IdToken).filter(IdToken.id_token==content["id_token"]["id_token"])
-            exists = self.session.query(q.exists()).scalar()
-            if not exists:
-                content.pop("id_token")
 
         #introduce cp_id in message, store evse_id and connector_id in better format
-        if "evse" in content and content["evse"]:
-            content["evse"]["evse_id"] = content["evse"].pop("id")
-            evse = content.pop("evse")
-            content = {**content, **evse}
-        
+        if evse:
+            evse["evse_id"] = evse.pop("id")
+            content = {**content, **evse}        
         content["transaction_info"]["cp_id"] = cp_id
-
+        
         transaction_info = content.pop("transaction_info")
+        transaction_info = {k: v for k, v in transaction_info.items() if v is not None}
+
         transaction_event = Transaction_Event(**content)
 
         #check meter values
@@ -263,15 +255,18 @@ class DataBase:
                 for sv in mv.sampled_value:
                     if sv.location == enums.LocationType.outlet:
                         if sv.measurand == enums.MeasurandType.energy_active_export_register:
-                            if sv.context == enums.ReadingContextType.transaction_begin:
+                            if sv.context == enums.ReadingContextType.transaction_begin or transaction_event.seq_no==0:
                                 transaction_info["initial_export"] = sv.value
                             transaction_info["final_export"] = sv.value
                             
                         elif sv.measurand == enums.MeasurandType.energy_active_import_register:
-                            if sv.context == enums.ReadingContextType.transaction_begin:
+                            if sv.context == enums.ReadingContextType.transaction_begin or transaction_event.seq_no==0:
                                 transaction_info["initial_import"] = sv.value
                             transaction_info["final_import"] = sv.value
 
+        #active var in transaction
+        if transaction_event.event_type == enums.TransactionEventType.ended:
+            transaction_info["active"] = False
 
         #check if there is a more recent event. (Dont update transaction)
         transaction = self.session.query(Transaction).get(transaction_info["transaction_id"])
@@ -280,13 +275,31 @@ class DataBase:
             if higher_seq_no > transaction_event.seq_no:
                 #this event is old
                 existing_transaction = transaction.get_dict_obj()
-                transaction_info = {key: value for key, value in transaction_info.items() if existing_transaction[key] is None or key == "transaction_id"}
+                transaction_info = {key: value for key, value in transaction_info.items() if existing_transaction[key] is None}
+                
+            for key, value in transaction_info.items():
+                setattr(transaction, key, value)
+        else:
+            transaction = Transaction(**transaction_info)
+        
+        
+        #connect idtoken with transaction and event
+        if id_token:
+            #q = self.session.query(IdToken).filter(IdToken.id_token==id_token["id_token"])
+            #exists = self.session.query(q.exists()).scalar()
+            #if exists:
+            id_token = self.session.query(IdToken).get(id_token["id_token"])
+            if id_token is not None:
+                if id_token.id_token not in [token.id_token for token in transaction.id_token]:
+                    transaction.id_token.append(id_token)
+                transaction_event.id_token = id_token
 
-        #introduce message in DB
-        transaction = Transaction(**transaction_info)
+        
+        #connect transaction with event
         transaction_event.transaction_info = transaction
+        
         self.session.merge(transaction_event)
-    
+
 
     def get_charging_profiles(self, cp_id, evse_id, charging_profile_purpose, stack_level):
 
