@@ -67,6 +67,11 @@ async def getUsers():
     response = await send_request("select", payload={"table": "User"}, destination="SQL_DB")
     return response["content"]
 
+@app.get("/transactions/open/{id_token}", status_code=200)
+async def getOpenTransactionsByIdToken(id_token:str):
+    response = await send_request("get_IdToken_Transactions", payload={"id_token": id_token}, destination="SQL_DB")
+    return response["content"]
+
 
 @app.get("/transactions", status_code=200)
 async def getTransactions(transaction_id:str):

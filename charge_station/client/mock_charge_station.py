@@ -231,7 +231,7 @@ class ChargePoint(cp):
             return 
 
         request = call.TransactionEventPayload(
-            event_type=enums.TransactionEventType.ended,
+            event_type=enums.TransactionEventType.updated,
             timestamp=datetime.utcnow().isoformat(),
             trigger_reason=enums.TriggerReasonType.ev_departed,
             seq_no=3,

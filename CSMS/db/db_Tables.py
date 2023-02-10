@@ -289,10 +289,13 @@ class Transaction(CustomBase):
 
     active = Column(Boolean, server_default=true())
 
-    initial_export = Column(Integer)
-    final_export = Column(Integer)
-    initial_import = Column(Integer)
-    final_import = Column(Integer)
+    initial_export = Column(Float)
+    final_export = Column(Float)
+    initial_import = Column(Float)
+    final_import = Column(Float)
+    soc = Column(Float)
+    power_export = Column(Float)
+    power_import = Column(Float)
 
     cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
     charge_Point = relationship("Charge_Point", backref="transaction", uselist=False)

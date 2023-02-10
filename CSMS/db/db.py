@@ -235,26 +235,22 @@ class DataBase:
         return response
 
 
-    def TransactionEvent(self, cp_id, id_token=None, evse=None, **content):
-        
-
-        #introduce cp_id in message, store evse_id and connector_id in better format
-        if evse:
-            evse["evse_id"] = evse.pop("id")
-            content = {**content, **evse}        
-        content["transaction_info"]["cp_id"] = cp_id
-        
-        transaction_info = content.pop("transaction_info")
-        transaction_info = {k: v for k, v in transaction_info.items() if v is not None}
-
-        transaction_event = Transaction_Event(**content)
-
+    def collect_important_metervalues(self, transaction_event, transaction_info):
         #check meter values
         if len(transaction_event.meter_value) > 0:
             for mv in transaction_event.meter_value:
                 for sv in mv.sampled_value:
                     if sv.location == enums.LocationType.outlet:
-                        if sv.measurand == enums.MeasurandType.energy_active_export_register:
+                        if sv.measurand == enums.MeasurandType.power_active_export:
+                            transaction_info["power_export"] = sv.value
+
+                        elif sv.measurand == enums.MeasurandType.power_active_import:
+                            transaction_info["power_import"] = sv.value
+
+                        elif sv.measurand == enums.MeasurandType.soc:
+                            transaction_info["soc"] = sv.value
+
+                        elif sv.measurand == enums.MeasurandType.energy_active_export_register:
                             if sv.context == enums.ReadingContextType.transaction_begin or transaction_event.seq_no==0:
                                 transaction_info["initial_export"] = sv.value
                             transaction_info["final_export"] = sv.value
@@ -263,6 +259,25 @@ class DataBase:
                             if sv.context == enums.ReadingContextType.transaction_begin or transaction_event.seq_no==0:
                                 transaction_info["initial_import"] = sv.value
                             transaction_info["final_import"] = sv.value
+        
+        return transaction_info
+
+
+    def TransactionEvent(self, cp_id, id_token=None, evse=None, **content):
+        #introduce cp_id in message, store evse_id and connector_id in better format
+        if evse:
+            evse["evse_id"] = evse.pop("id")
+            content = {**content, **evse}        
+        content["transaction_info"]["cp_id"] = cp_id
+        
+        #separate transation object and remove Nones
+        transaction_info = content.pop("transaction_info")
+        transaction_info = {k: v for k, v in transaction_info.items() if v is not None}
+
+        #Instantiate event obj
+        transaction_event = Transaction_Event(**content)
+
+        transaction_info = self.collect_important_metervalues(transaction_event, transaction_info)
 
         #active var in transaction
         if transaction_event.event_type == enums.TransactionEventType.ended:
@@ -282,23 +297,28 @@ class DataBase:
         else:
             transaction = Transaction(**transaction_info)
         
-        
         #connect idtoken with transaction and event
         if id_token:
-            #q = self.session.query(IdToken).filter(IdToken.id_token==id_token["id_token"])
-            #exists = self.session.query(q.exists()).scalar()
-            #if exists:
             id_token = self.session.query(IdToken).get(id_token["id_token"])
             if id_token is not None:
                 if id_token.id_token not in [token.id_token for token in transaction.id_token]:
                     transaction.id_token.append(id_token)
                 transaction_event.id_token = id_token
 
-        
         #connect transaction with event
         transaction_event.transaction_info = transaction
         
         self.session.merge(transaction_event)
+    
+
+    def get_IdToken_Transactions(self, id_token, **kwargs):
+        """method for a specific api endpoint"""
+        transactions = self.session.query(Transaction).join(Transaction.id_token).filter(
+            IdToken.id_token == id_token,
+            Transaction.active == True
+        ).all()
+
+        return [t.get_dict_obj() for t in transactions]
 
 
     def get_charging_profiles(self, cp_id, evse_id, charging_profile_purpose, stack_level):
