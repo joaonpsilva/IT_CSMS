@@ -319,6 +319,15 @@ class DataBase:
         ).all()
 
         return [t.get_dict_obj() for t in transactions]
+    
+    def get_Transactions_byDate(self, id_token, date, **kwargs):
+        """method for a specific api endpoint"""
+        transactions = self.session.query(Transaction).join(Transaction.id_token).join(Transaction.transaction_event).filter(
+            IdToken.id_token == id_token,
+            Transaction_Event.timestamp >= dateutil.parser.parse(date)
+        ).all()
+
+        return [t.get_dict_obj() for t in transactions]
 
 
     def get_charging_profiles(self, cp_id, evse_id, charging_profile_purpose, stack_level):
@@ -367,45 +376,7 @@ class DataBase:
         
         return charging_profile.get_dict_obj(mode={"relationships":{"charging_schedule":{}}})
 
-
-
-    def verify_charging_profile_conflicts(self, cp_id, **content):
-
-        charging_profile = ChargingProfile(**content["charging_profile"])
-
-        conflict_ids = []
-        
-        if charging_profile.charging_profile_purpose == enums.ChargingProfilePurposeType.tx_profile:
-            transaction_profiles = self.session.query(ChargingProfile).filter(ChargingProfile.transaction_id==charging_profile.transaction_id)
-
-            for transaction_profile in transaction_profiles:
-                if transaction_profile.id != charging_profile.id and \
-                    transaction_profile.stack_level == charging_profile.stack_level:
-                    conflict_ids.append(transaction_profile.id)
-
-        else:
-            #Other than txprofile
-            if content["evse_id"] == 0:
-                evses = self.session.query(EVSE).filter(EVSE.cp_id==cp_id).all()
-            else:
-                evses = [self.session.query(EVSE).get((content["evse_id"], cp_id))]
-
-            for evse in evses:
-                for evse_profile in evse.charging_profile:
-                    if evse_profile.id != charging_profile.id and \
-                        evse_profile.stack_level == charging_profile.stack_level and \
-                        evse_profile.charging_profile_purpose == charging_profile.charging_profile_purpose and \
-                        (
-                            self.dates_overlap(evse_profile.valid_from, evse_profile.valid_to, charging_profile.valid_from, charging_profile.valid_to) 
-                        ):
-
-                        conflict_ids.append(evse_profile.id)
-        
-        return {"conflict_ids" : conflict_ids}
     
-
-
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()

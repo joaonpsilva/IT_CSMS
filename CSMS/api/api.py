@@ -19,6 +19,7 @@ from fastapi.responses import StreamingResponse
 from sse_starlette.sse import EventSourceResponse
 import json
 import argparse
+import datetime
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", type=int, default = 8000, help="OCPP server port")
@@ -62,9 +63,37 @@ async def send_request(method, CP_Id=None, payload=None, destination="Ocpp_Serve
 
 ##################################################################
 
+@app.post("/register", status_code=201)
+async def register(email: str, password:str, full_name:str, status:str, cust_id:int):
+    values = {"email": email, "password":password, "full_name":full_name, "status":status, "cust_id":cust_id}
+    response = await send_request("register", payload=values, destination="SQL_DB")
+    return response["content"]
+
+
+@app.get("/login", status_code=200)
+async def login(email: str, password:str):
+    response = await send_request("login", payload={"email": email, "password":password}, destination="SQL_DB")
+
+    if response["status"] == "OTHER_ERROR":
+        raise HTTPException(401, detail=response["content"])
+
+    return response["content"]
+
+
 @app.get("/users", status_code=200)
 async def getUsers():
     response = await send_request("select", payload={"table": "User"}, destination="SQL_DB")
+    return response["content"]
+
+@app.get("/users/{email}", status_code=200)
+async def get_user_byEmail(email:str):
+    response = await send_request("select", payload={"table": "User", "filters":{"email":email}}, destination="SQL_DB")
+    return response["content"]
+
+
+@app.get("/transactions", status_code=200)
+async def getTransactions(transaction_id:str):
+    response = await send_request("select", payload={"table": "Transaction", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
     return response["content"]
 
 @app.get("/transactions/open/{id_token}", status_code=200)
@@ -73,9 +102,33 @@ async def getOpenTransactionsByIdToken(id_token:str):
     return response["content"]
 
 
-@app.get("/transactions", status_code=200)
-async def getTransactions(transaction_id:str):
-    response = await send_request("select", payload={"table": "Transaction", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
+@app.get("/transactions/{id_token}/{date}", status_code=200)
+async def getOpenTransactionsByIdToken(id_token:str, date: datetime.datetime):
+    response = await send_request("get_Transactions_byDate", payload={"id_token": id_token, "date":date}, destination="SQL_DB")
+    return response["content"]
+
+
+@app.get("/charge/start", status_code=200)
+async def charge_start(id_tag: str, evse_id: int, cp_id:str):
+    payload = payloads.RequestStartTransactionPayload(
+        id_token=datatypes.IdTokenType(id_token=id_tag, type=enums.IdTokenType.iso14443),
+        evse_id=evse_id
+    )
+    response = await send_request("requestStartTransaction", CP_Id=cp_id, payload=payload)
+    return response["content"]
+
+
+@app.get("/charge/stop", status_code=200)
+async def charge_stop(transaction_id: str):
+    payload = payloads.RequestStopTransactionPayload(transaction_id)
+    response = await send_request("requestStopTransaction", payload=payload)
+    return response["content"]
+
+
+@app.get("/setmaxpower", status_code=200)
+async def setmaxpower(transaction_id: str, max_power: int):
+    payload = {"transaction_id": transaction_id, "max_power":max_power}
+    response = await send_request("setmaxpower", payload=payload)
     return response["content"]
 
 
@@ -93,45 +146,6 @@ async def getStationById(CP_Id : str):
     return response["content"]
 
 
-@app.get("/login", status_code=200)
-async def login(email: str, password:str):
-    response = await send_request("login", payload={"email": email, "password":password}, destination="SQL_DB")
-
-    if response["status"] == "OTHER_ERROR":
-        raise HTTPException(401, detail=response["content"])
-
-    return response["content"]
-
-
-@app.get("/charge/start", status_code=200)
-async def charge_start(id_tag: str, evse_id: str, cp_id):
-    payload = payloads.RequestStartTransactionPayload(
-        id_token=datatypes.IdTokenType(id_token=id_tag),
-        evse_id=evse_id
-    )
-    response = await send_request("RequestStartTransaction", CP_Id=cp_id, payload=payload)
-    return response["content"]
-
-
-@app.get("/charge/stop", status_code=200)
-async def charge_stop(transaction_id: str):
-    payload = payloads.RequestStopTransactionPayload(transaction_id)
-    response = await send_request("RequestStopTransaction", payload=payload)
-    return response["content"]
-
-
-@app.get("/setmaxpower", status_code=200)
-async def setmaxpower(transaction_id: str, max_power: int):
-    payload = {"transaction_id": transaction_id, "max_power":max_power}
-    response = await send_request("setmaxpower", payload=payload)
-    return response["content"]
-
-
-@app.post("/register", status_code=200)
-async def register(email: str, password:str, full_name:str, status:str, cust_id:int):
-    values = {"email": email, "password":password, "full_name":full_name, "status":status, "cust_id":cust_id}
-    response = await send_request("register", payload=values, destination="SQL_DB")
-    return response["content"]
 
 
 
