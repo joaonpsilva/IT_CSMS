@@ -13,17 +13,9 @@ import argparse
 import signal
 import sys
 
+logging.basicConfig(level=logging.INFO)
+
 LOGGER = logging.getLogger("Ocpp_Server")
-LOGGER.setLevel(logging.DEBUG)
-
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-
-LOGGER.addHandler(ch)
 
 def Basic_auth_with_broker(broker):
     class BasicAuth(websockets.BasicAuthWebSocketServerProtocol):
@@ -162,11 +154,12 @@ class OCPP_Server:
     
 
     async def get_cpID_by_TransactionId(self, transaction_id):
-        message = Topic_Message(method="select", content={"table":"Transaction", "filters": {"transaction_id" : transaction_id}})
+        message = Topic_Message(destination="SQL_DB", method="select", content={"table":"Transaction", "filters": {"transaction_id" : transaction_id}})
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if len(response["content"]) > 0:
             return response["content"][0]["cp_id"]
+        raise Exception
 
 
 if __name__ == '__main__':
