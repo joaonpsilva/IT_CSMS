@@ -55,7 +55,7 @@ class Charge_Point(CustomBase):
     is_online = Column(Boolean)
 
 
-    modem = relationship("Modem", backref="Charge_Point", uselist=False)
+    modem = relationship("Modem", backref="charge_point", uselist=False)
 
     def __init__(self, password=None, **kwargs):
         
@@ -94,7 +94,7 @@ class EVSE(CustomBase):
     evse_id = Column(Integer, primary_key=True)   #This id is only unique inside each CP
 
     cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"), primary_key=True)
-    Charge_Point = relationship("Charge_Point", backref="evse")
+    charge_point = relationship("Charge_Point", backref="evse")
 
     def __init__(self, id = None, **kwargs):
         if id:
@@ -298,7 +298,12 @@ class Transaction(CustomBase):
     power_import = Column(Float)
 
     cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
-    charge_Point = relationship("Charge_Point", backref="transaction", uselist=False)
+    evse_id = Column(Integer)
+    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
+                                [ "EVSE.cp_id", "EVSE.evse_id"]),{})
+    charge_point = relationship("Charge_Point", backref="transaction", uselist=False)
+    evse = relationship("EVSE", backref=backref("transaction", overlaps="charge_point,transaction"), uselist=False, overlaps="charge_point,transaction")
+    #evse = relationship("EVSE", backref="transaction", uselist=False)
 
     id_token = relationship("IdToken", secondary=idToken_Transactions, backref="transaction")
     
@@ -322,7 +327,7 @@ class Transaction_Event(CustomBase):
     #EVSE, Connector
     #No foreign key? correct?
     connector_id = Column(Integer)
-    evse_id = Column(Integer)
+    #evse_id = Column(Integer)
 
     """
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],

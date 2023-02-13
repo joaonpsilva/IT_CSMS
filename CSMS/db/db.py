@@ -266,9 +266,12 @@ class DataBase:
     def TransactionEvent(self, cp_id, id_token=None, evse=None, **content):
         #introduce cp_id in message, store evse_id and connector_id in better format
         if evse:
-            evse["evse_id"] = evse.pop("id")
-            content = {**content, **evse}        
+            #evse["evse_id"] = evse.pop("id")
+            #content = {**content, **evse}  
+            content["connector_id"] = evse["connector_id"]  
+            content["transaction_info"]["evse_id"] = evse["id"]
         content["transaction_info"]["cp_id"] = cp_id
+
         
         #separate transation object and remove Nones
         transaction_info = content.pop("transaction_info")

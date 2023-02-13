@@ -36,6 +36,7 @@ class CRUD_Payload:
     table: DB_Tables
     filters: dict
     values: dict
+    mode : dict
 
 
 
