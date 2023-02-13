@@ -230,8 +230,10 @@ class ChargePoint(cp):
             logging.info("User authorization unsuccessful on 2nd check")
             return 
 
+        await ainput("")
+        
         request = call.TransactionEventPayload(
-            event_type=enums.TransactionEventType.updated,
+            event_type=enums.TransactionEventType.ended,
             timestamp=datetime.utcnow().isoformat(),
             trigger_reason=enums.TriggerReasonType.ev_departed,
             seq_no=3,

@@ -388,11 +388,12 @@ class ChargingSchedule(CustomBase):
     charging_rate_unit = Column(Enum(enums.ChargingRateUnitType))
     min_charging_rate = Column(Float)
 
-    _charging_profile = Column(Integer, ForeignKey("ChargingProfile.id"))
+    _charging_profile = Column(Integer, ForeignKey("ChargingProfile.id", ondelete="CASCADE"))
     sales_tariff = Column(JSON)
+    charging_schedule_period = Column(JSON)
 
 
-
+##########################################
 
 class EventData(CustomBase):
     __tablename__ = "EventData"

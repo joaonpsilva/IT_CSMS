@@ -354,16 +354,13 @@ class ChargePoint(cp):
         
         return False
     
-    async def charging_profile_assert_no_conflicts(self, payload):
+    async def charging_profile_assert_no_conflicts(self, evse_id, charging_profile):
         #check for conflicts in other charging profiles
 
-
-        charging_profile = datatypes.ChargingProfileType(**payload.charging_profile)
-
         request = {
-            "evse_id" : payload.evse_id,
-            "charging_profile_purpose":charging_profile.charging_profile_purpose,
-            "stack_level":charging_profile.stack_level
+            "evse_id" : evse_id,
+            "charging_profile_purpose":charging_profile["charging_profile_purpose"],
+            "stack_level":charging_profile["stack_level"]
         }
 
         message = Topic_Message(method="get_charging_profiles", cp_id=self.id, content=request, destination="SQL_DB")
@@ -374,15 +371,15 @@ class ChargePoint(cp):
             for report_charging_profile in result["content"]:
                 report_charging_profile = datatypes.ChargingProfileType(**report_charging_profile)
 
-                if report_charging_profile.id == charging_profile.id:
+                if "id" in charging_profile and report_charging_profile.id == charging_profile["id"]:
                     continue
 
-                if charging_profile.charging_profile_purpose==enums.ChargingProfilePurposeType.tx_profile:
-                    if charging_profile.transaction_id == report_charging_profile.transaction_id:
+                if charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
+                    if charging_profile["transaction_id"] == report_charging_profile.transaction_id:
                         raise ValueError("Already exists conflicting Profile with different ID")
 
                 else:
-                    if self.dates_overlap(charging_profile.valid_from, charging_profile.valid_to, report_charging_profile.valid_from, report_charging_profile.valid_to):
+                    if self.dates_overlap(charging_profile["valid_from"], charging_profile["valid_to"], report_charging_profile.valid_from, report_charging_profile.valid_to):
                         raise ValueError("Already exists conflicting Profile with different ID")
         else:
             raise AssertionError("Cannot reach DB")
@@ -411,7 +408,7 @@ class ChargePoint(cp):
         request = call.SetChargingProfilePayload(**payload)
 
         self.verify_charging_profile_structure(request)
-        await self.charging_profile_assert_no_conflicts(request)
+        await self.charging_profile_assert_no_conflicts(request.evse_id, request.charging_profile)
 
         #assume that if either schedule and profile both know id or neither does
         in_db=False
@@ -623,22 +620,27 @@ class ChargePoint(cp):
     
 
     async def change_profile_transaction(self, transaction_id, schedule):
-
-        #TODO get evse of transaction
-        #TODO ChargingProfileMaxStackLevel
-        evse=1
+        
+        message = Topic_Message(method="select", cp_id=self.id, content={"table":"Transaction", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
+        response = await ChargePoint.broker.send_request_wait_response(message)
+        assert response["status"] == "OK", "DB comunication failed"
+        evse=response["content"][0]["evse_id"]
 
         message = Topic_Message(method="select", cp_id=self.id, content={"table":"ChargingProfile", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
         response = await ChargePoint.broker.send_request_wait_response(message)
-
         assert response["status"] == "OK", "DB comunication failed"
 
-        stack_level=-1
         if len(response["content"]) > 0:
-            stack_level = max(response["content"], key= lambda x : x["stack_level"])
+            most_important_profile = max(response["content"], key= lambda x : x["stack_level"])
+            id = most_important_profile["id"]
+            stack_level = most_important_profile["stack_level"]
+        else:
+            id = None
+            stack_level = 0
 
         charging_profile = {
-            "stack_level" : stack_level + 1,
+            "id" : id,
+            "stack_level" : stack_level,
             "charging_profile_purpose" : enums.ChargingProfilePurposeType.tx_profile,
             "charging_profile_kind" : enums.ChargingProfileKindType.relative,
             "transaction_id" : transaction_id,
@@ -726,19 +728,25 @@ class ChargePoint(cp):
         return transaction_response
     
     @after('TransactionEvent')
-    async def after_TransactionEvent(self, **kwargs):
-        transaction_id =  kwargs["transaction_info"]["transaction_id"]
+    async def after_TransactionEvent(self, transaction_info, event_type,trigger_reason, **kwargs):
+        transaction_id =  transaction_info["transaction_id"]
 
-        if kwargs["trigger_reason"] == enums.TriggerReasonType.remote_start:
+        if trigger_reason == enums.TriggerReasonType.remote_start:
 
             #Transaction was started remotely, signal the transaction id
-            if kwargs["transaction_info"]["remote_start_id"] is not None:
+            if transaction_info["remote_start_id"] is not None:
                 #get the future with key = correlationid
-                future = self.wait_start_transaction.pop(kwargs["transaction_info"]["remote_start_id"])
-                future.set_result(kwargs["transaction_info"]["transaction_id"])
+                future = self.wait_start_transaction.pop(transaction_info["remote_start_id"])
+                future.set_result(transaction_info["transaction_id"])
+        
+
+        if event_type == enums.TransactionEventType.ended:
+            #delete charging profile
+            message = Topic_Message(method="remove", cp_id=self.id, content={"table": "ChargingProfile", "filters":{"transaction_id":transaction_info["transaction_id"]}},destination="SQL_DB")
+            response = await ChargePoint.broker.send_request_wait_response(message)
 
 
-        if kwargs["event_type"] == enums.TransactionEventType.ended or transaction_id in self.out_of_order_transaction:
+        if event_type == enums.TransactionEventType.ended or transaction_id in self.out_of_order_transaction:
             #verify that all messages have been received
             transaction_status = await self.getTransactionStatus(transaction_id=transaction_id)
             
