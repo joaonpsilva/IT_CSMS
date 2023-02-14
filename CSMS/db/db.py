@@ -67,6 +67,7 @@ class DataBase:
             "Transaction_Event":Transaction_Event,
             "ChargingProfile":ChargingProfile,
             "EventData":EventData,
+            "Reservation":Reservation
             }
     
     def shut_down(self, sig, frame):

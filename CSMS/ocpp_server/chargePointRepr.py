@@ -26,7 +26,7 @@ class ChargePoint(cp):
         #TODO read variables (request_Id) from file
         pass
 
-    def new_requestId():
+    def new_Id():
         ChargePoint.request_Id += 1
         return ChargePoint.request_Id
 
@@ -39,6 +39,7 @@ class ChargePoint(cp):
         self.out_of_order_transaction = set([])
         self.multiple_response_requests = {}
         self.wait_start_transaction = {}
+        self.wait_reservation_evse_id = None
 
         self.logger = logging.getLogger(self.id)
         self.logger.setLevel(logging.DEBUG)
@@ -295,7 +296,7 @@ class ChargePoint(cp):
 
         #creating an id for the request
         if payload.remote_start_id is None:
-            payload.remote_start_id = ChargePoint.new_requestId()
+            payload.remote_start_id = ChargePoint.new_Id()
 
         response = await self.call(payload)
 
@@ -446,7 +447,7 @@ class ChargePoint(cp):
 
     async def async_request(self, request):
         if request.request_id is None: 
-            request.request_id = ChargePoint.new_requestId()
+            request.request_id = ChargePoint.new_Id()
 
         response = await self.call(request)
         response = asdict(response)
@@ -465,7 +466,7 @@ class ChargePoint(cp):
 
     async def getBaseReport(self, **payload):
         if request.request_id is None: 
-            request.request_id = ChargePoint.new_requestId()
+            request.request_id = ChargePoint.new_Id()
 
         request = call.GetBaseReportPayload(**payload)
         return await self.async_request(request)
@@ -476,7 +477,7 @@ class ChargePoint(cp):
         request = call.GetChargingProfilesPayload(**payload)
 
         if request.request_id is None:
-            request.request_id = ChargePoint.new_requestId()
+            request.request_id = ChargePoint.new_Id()
 
         #K09.FR.03
         if request.evse_id is None and (request.charging_profile is None or all(v is None for v in request.charging_profile.values())):
@@ -613,10 +614,25 @@ class ChargePoint(cp):
 
     async def reserveNow(self, **payload):
         request = call.ReserveNowPayload(**payload)
-        if request.id is None: 
-            request.id = ChargePoint.new_requestId()
+        request.id = ChargePoint.new_Id()
+            
+        response = await self.call(request)
 
-        return await self.call(request)
+        if response.status == enums.ReserveNowStatusType.accepted:
+            
+            if request.evse_id is None:
+                try:
+                    self.wait_reservation_evse_id = self.loop.create_future()
+                    request.evse_id = await asyncio.wait_for(self.wait_reservation_evse_id, timeout=5) 
+                except:
+                    pass
+            
+            req_dict = request.__dict__
+            req_dict["cp_id"] = self.id
+            message = Topic_Message(method="create", cp_id=self.id, content={"table":"Reservation", "values":req_dict}, destination="SQL_DB")
+            response = await ChargePoint.broker.send_request_wait_response(message)
+
+        return response
     
 
     async def change_profile_transaction(self, transaction_id, schedule):
@@ -689,8 +705,16 @@ class ChargePoint(cp):
         await ChargePoint.broker.ocpp_log(message)
         
         return call_result.StatusNotificationPayload()
-
     
+    @after('StatusNotification')
+    async def after_StatusNotification(self, connector_status, evse_id, **kwargs):
+        if connector_status == enums.ConnectorStatusType.reserved and self.wait_reservation_evse_id is not None:
+            try:
+                self.wait_reservation_evse_id.set_result(evse_id)
+            except:
+                pass
+
+
     @on('MeterValues')
     async def on_MeterValues(self, **kwargs):
 
@@ -728,7 +752,7 @@ class ChargePoint(cp):
         return transaction_response
     
     @after('TransactionEvent')
-    async def after_TransactionEvent(self, transaction_info, event_type,trigger_reason, **kwargs):
+    async def after_TransactionEvent(self, transaction_info, event_type,trigger_reason,reservation_id=None, **kwargs):
         transaction_id =  transaction_info["transaction_id"]
 
         if trigger_reason == enums.TriggerReasonType.remote_start:
@@ -738,6 +762,12 @@ class ChargePoint(cp):
                 #get the future with key = correlationid
                 future = self.wait_start_transaction.pop(transaction_info["remote_start_id"])
                 future.set_result(transaction_info["transaction_id"])
+        
+
+        if event_type == enums.TransactionEventType.started and reservation_id is not None:
+            #delete reservation
+            message = Topic_Message(method="remove", cp_id=self.id, content={"table": "Reservation", "filters":{"id":reservation_id}},destination="SQL_DB")
+            response = await ChargePoint.broker.send_request_wait_response(message)
         
 
         if event_type == enums.TransactionEventType.ended:

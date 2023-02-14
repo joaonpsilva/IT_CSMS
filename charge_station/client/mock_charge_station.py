@@ -452,6 +452,20 @@ class ChargePoint(cp):
             charging_profile = [charge_profile]
         )
         response = await self.call(request)
+
+    @on("ReserveNow")
+    async def on_ReserveNow(self, id, **kwargs):
+        return call_result.ReserveNowPayload(status=enums.ReserveNowStatusType.accepted)
+    
+    @after("ReserveNow")
+    async def after_ReserveNow(self, id, **kwargs):
+        request = call.StatusNotificationPayload(
+            timestamp=datetime.utcnow().isoformat(),
+            connector_status=enums.ConnectorStatusType.reserved,
+            evse_id=1,
+            connector_id=1
+        )
+
     
     @on("ClearChargingProfile")
     async def on_ClearChargingProfileRequest(self, **kwargs):

@@ -325,19 +325,7 @@ class Transaction_Event(CustomBase):
     id_token = relationship("IdToken", backref="transaction_event", uselist=False)
 
     #EVSE, Connector
-    #No foreign key? correct?
     connector_id = Column(Integer)
-    #evse_id = Column(Integer)
-
-    """
-    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
-                                [ "EVSE.cp_id", "EVSE.evse_id"]),
-                ForeignKeyConstraint(["cp_id", "evse_id", "connector_id"],
-                                [ "Connector.cp_id", "Connector.evse_id", "Connector.connector_id"]),{})
-
-    evse = relationship("EVSE", backref=backref("transaction", overlaps="Charge_Point,transaction"), uselist=False, overlaps="Charge_Point,transaction")
-    connector = relationship("Connector", backref=backref("transaction", overlaps="Charge_Point,evse,transaction"), uselist=False, overlaps="Charge_Point,evse,transaction")
-    """
 
     #Transaction
     transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"), primary_key = True)
@@ -345,6 +333,29 @@ class Transaction_Event(CustomBase):
 
     #Meter value
     meter_value = relationship("MeterValue", backref=backref("transaction_event", uselist=False))
+
+
+############################
+
+class Reservation(CustomBase):
+    __tablename__ = "Reservation"
+
+    id = Column(Integer, primary_key = True)
+    expiry_date_time = Column(DateTime)
+    connector_type = Column(Enum(enums.ConnectorType))
+    
+    cp_id = Column(String(20))
+    evse_id = Column(Integer)
+    __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
+                                [ "EVSE.cp_id", "EVSE.evse_id"]),{})
+    evse = relationship("EVSE", backref="reservation", uselist=False)
+
+    _id_token = Column(String(36), ForeignKey("IdToken.id_token"))
+    id_token = relationship("IdToken", backref="reservation", uselist=False)
+
+    _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
+    group_id_token = relationship("GroupIdToken", backref="reservation", uselist=False)
+
 
 
 

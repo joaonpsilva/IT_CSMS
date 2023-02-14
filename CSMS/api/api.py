@@ -141,7 +141,7 @@ async def stations():
 
 @app.get("/stations/{CP_Id}", status_code=200)
 async def getStationById(CP_Id : str):
-    mode = {"relationships":{"evse":{"describe":False, "relationships":{"connector":{}}}}}
+    mode = {"relationships":{"evse":{"describe":False, "relationships":{"connector":{}, "reservation":{}}}}}
     response = await send_request("select", payload={"table": "Charge_Point", "filters":{"cp_id":CP_Id}, "mode":mode}, destination="SQL_DB")
     return response["content"]
 
