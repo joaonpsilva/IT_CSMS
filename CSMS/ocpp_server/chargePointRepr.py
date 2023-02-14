@@ -290,9 +290,6 @@ class ChargePoint(cp):
             if "transaction_id" in payload.charging_profile and payload.charging_profile["transaction_id"] is not None:
                 raise ValueError("Transaction id shall not be set")
 
-            charge_profile_payload = call.SetChargingProfilePayload(evse_id=payload.evse_id, charging_profile=payload.charging_profile)
-            charge_profile_payload.charging_profile["transaction_id"] = "will_be_replaced"
-            self.verify_charging_profile_structure(charge_profile_payload)             
 
         #creating an id for the request
         if payload.remote_start_id is None:
@@ -307,14 +304,7 @@ class ChargePoint(cp):
                 self.wait_start_transaction[payload.remote_start_id] = future
                 response.transaction_id = await asyncio.wait_for(future, timeout=5)
 
-        #     #TODO REDO THIS Send to db
-        #     if payload.charging_profile is not None:
-                
-        #         payload.charging_profile["transaction_id"] = response.transaction_id
-                
-        #         m = {"evse_id": payload.evse_id, "charging_profile":payload.charging_profile}
-        #         message = Topic_Message(method="setChargingProfile", cp_id=self.id, content=m)
-        #         await ChargePoint.broker.ocpp_log(message)
+            #TODO REDO THIS Send to db
 
         return response                
 
