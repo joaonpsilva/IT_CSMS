@@ -600,7 +600,17 @@ class ChargePoint(cp):
     async def unlockConnector(self, **payload):
         request = call.UnlockConnectorPayload(**payload)
         return await self.call(request)
+
     
+    async def wait_for_evse(self, id):
+        try:
+            self.wait_reservation_evse_id = self.loop.create_future()
+            evse_id = await asyncio.wait_for(self.wait_reservation_evse_id, timeout=20)
+            message = Topic_Message(method="update", cp_id=self.id, content={"table":"Reservation", "filters":{"id":id}, "values":{"evse_id":evse_id}}, destination="SQL_DB")
+            response = await ChargePoint.broker.send_request_wait_response(message)
+        except:
+            pass
+
 
     async def reserveNow(self, **payload):
         request = call.ReserveNowPayload(**payload)
@@ -609,19 +619,12 @@ class ChargePoint(cp):
         response = await self.call(request)
 
         if response.status == enums.ReserveNowStatusType.accepted:
-            
             if request.evse_id is None:
-                try:
-                    self.wait_reservation_evse_id = self.loop.create_future()
-                    request.evse_id = await asyncio.wait_for(self.wait_reservation_evse_id, timeout=5) 
-                except:
-                    pass
-            
-            req_dict = request.__dict__
-            req_dict["cp_id"] = self.id
-            message = Topic_Message(method="create", cp_id=self.id, content={"table":"Reservation", "values":req_dict}, destination="SQL_DB")
-            response = await ChargePoint.broker.send_request_wait_response(message)
+                self.loop.create_task(self.wait_for_evse(request.id))
 
+            message = Topic_Message(method="new_Reservation", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
+            response = await ChargePoint.broker.send_request_wait_response(message)
+                    
         return response
     
 

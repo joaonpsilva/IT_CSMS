@@ -465,6 +465,7 @@ class ChargePoint(cp):
             evse_id=1,
             connector_id=1
         )
+        response = await self.call(request)
 
     
     @on("ClearChargingProfile")

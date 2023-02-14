@@ -315,6 +315,21 @@ class DataBase:
         self.session.merge(transaction_event)
     
 
+    def new_Reservation(self, cp_id, id_token, group_id_token, **reservation):
+        
+        reservation = Reservation(**reservation, cp_id=cp_id)
+
+        id_token = self.session.query(IdToken).get(id_token["id_token"])
+        if id_token is not None:
+            reservation.id_token = id_token
+        
+        group_id_token = self.session.query(GroupIdToken).get(group_id_token["id_token"])
+        if group_id_token is not None:
+            reservation.group_id_token = group_id_token
+        
+        self.session.add(reservation)
+    
+
     def get_IdToken_Transactions(self, id_token, **kwargs):
         """method for a specific api endpoint"""
         transactions = self.session.query(Transaction).join(Transaction.id_token).filter(
