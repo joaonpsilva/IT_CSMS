@@ -212,10 +212,13 @@ class Rabbit_Handler:
         
 
     async def ocpp_log(self, message):
-        if isinstance(message, Topic_Message):
-            message.origin = self.name
-        message.type = "ocpp_log"
-        await self.send_Message(message)
+        try:
+            if isinstance(message, Topic_Message):
+                message.origin = self.name
+            message.type = "ocpp_log"
+            await self.send_Message(message)
+        except:
+            return
 
     
     async def send_Message(self, message, requestID=None, reply_to=None, routing_key=None):
