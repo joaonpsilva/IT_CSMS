@@ -60,16 +60,21 @@ sudo docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-
 
 ### Start CSMS 
 
-- python3 CSMS/api/api.py  
-- python3 CSMS/ocpp_server/ocpp_server.py  
-- python3 CSMS/db/db.py
+- cd src
+- python3 -m CSMS.api.api
+- python3 -m CSMS.ocpp_server.ocpp_server
+- python3 -m CSMS.db.db
 
-Or 
+OR
+- cd src
+- python3 -m CSMS
+
+OR 
 - ./run_CSMS.sh
 
 
 ## Client (needs rabbitMq running)
 
-- python3 charge_station/simple_client/ocpp_client.py
+- python3 -m charge_station.client.simple_ocpp_client
 
 
