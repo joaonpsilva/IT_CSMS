@@ -8,6 +8,7 @@ from ocpp.v201 import call, call_result, enums
 from CSMS.api import datatypes
 from CSMS.api import payloads
 from CSMS.api import schemas
+from .auth import AuthHandler
 import asyncio
 import logging
 from sse_starlette.sse import EventSourceResponse
@@ -34,6 +35,7 @@ LOGGER.addHandler(ch)
 
 
 app = FastAPI()
+auth_handler = AuthHandler()
 broker = None
 
 def check_status(response):
@@ -70,6 +72,9 @@ async def login(email: str, password:str):
 
     if response["status"] == "OTHER_ERROR":
         raise HTTPException(401, detail=response["content"])
+    elif response["status"] == "OK":
+        token = auth_handler.encode_token(response["content"])
+        return {"token" : token}
 
     return response["content"]
 
@@ -103,7 +108,7 @@ async def getOpenTransactionsByIdToken(id_token:str, date: datetime.datetime):
 
 
 @app.get("/charge/start", status_code=200)
-async def charge_start(id_tag: str, evse_id: int, cp_id:str):
+async def charge_start(id_tag: str, evse_id: int, cp_id:str, user=Depends(auth_handler.auth_wrapper)):
     payload = payloads.RequestStartTransactionPayload(
         id_token=datatypes.IdTokenType(id_token=id_tag, type=enums.IdTokenType.iso14443),
         evse_id=evse_id

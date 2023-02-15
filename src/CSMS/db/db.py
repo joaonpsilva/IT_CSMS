@@ -144,7 +144,7 @@ class DataBase:
         if not user or not user.verify_password(password):
             raise AssertionError("Invalid User or Password")
 
-        response = {"u_id" : user.id}
+        response = {"id" : user.id, "permission_level" : user.permission_level}
         if user.id_token:
             response["card_id_token"] = user.id_token.id_token
 

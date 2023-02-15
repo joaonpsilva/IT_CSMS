@@ -147,6 +147,7 @@ class User(CustomBase):
     full_name = Column(String(256))
     email = Column(String(256), nullable = False, unique=True, index=True)
     status = Column(String(256))
+    permission_level = Column(Integer, server_default='1')
     _password_hash = Column(String(256))
 
     id_token = relationship("IdToken", backref=backref("user", uselist=False), uselist=False)
