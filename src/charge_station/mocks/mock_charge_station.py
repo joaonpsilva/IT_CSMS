@@ -95,7 +95,12 @@ class ChargePoint(cp):
         response = await self.call(request)
         return response.id_token_info['status'] == "Accepted"
     
-
+    async def NotifyChargingLimitRequest(self):
+        request = call.NotifyChargingLimitPayload(
+            charging_limit=datatypes.ChargingLimitType(
+                charging_limit_source=enums.ChargingLimitSourceType.other
+            ))
+        response = await self.call(request)
 
     
     async def unsorted_transaction(self):
@@ -416,9 +421,9 @@ class ChargePoint(cp):
     async def after_GetChargingProfiles(self, request_id, charging_profile, **kwargs):
 
         charge_profile = {
-                        "id": 0,
+                        "id": 5,
                         "stack_level": 0,
-                        "charging_profile_purpose": "TxDefaultProfile",
+                        "charging_profile_purpose": "ChargingStationExternalConstraints",
                         "charging_profile_kind": "Absolute",
                         "charging_schedule": [
                         {
@@ -434,19 +439,19 @@ class ChargePoint(cp):
 
         request = call.ReportChargingProfilesPayload(
             request_id = request_id,
-            charging_limit_source = enums.ChargingLimitSourceType.cso,
+            charging_limit_source = enums.ChargingLimitSourceType.other,
             tbc = True,
             evse_id = 1,
             charging_profile = [charge_profile]
         )
-
-
-            
         response = await self.call(request)
+
+        charge_profile["id"] = 8
+        charge_profile["charging_schedule"][0]["id"] = 8
 
         request = call.ReportChargingProfilesPayload(
             request_id = request_id,
-            charging_limit_source = enums.ChargingLimitSourceType.cso,
+            charging_limit_source = enums.ChargingLimitSourceType.other,
             tbc = False,
             evse_id = 0,
             charging_profile = [charge_profile]
@@ -646,7 +651,8 @@ async def get_input(cp):
         "meter_values":cp.meterValuesRequest,
         "authorize" : cp.authorizeRequest,
         "start_cable" : cp.startTransaction_CablePluginFirst,
-        "start_unsorted" : cp.unsorted_transaction
+        "start_unsorted" : cp.unsorted_transaction,
+        "notify_limit" : cp.NotifyChargingLimitRequest
     }
 
     while True:
@@ -669,11 +675,6 @@ async def main(cp_id):
         cp = ChargePoint(cp_id, ws)
 
         await asyncio.gather(cp.start(), cp.cold_Boot(), get_input(cp))
-
-
-
-
-        
 
 
 if __name__ == '__main__':

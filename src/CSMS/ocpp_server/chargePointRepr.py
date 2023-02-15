@@ -432,8 +432,6 @@ class ChargePoint(cp):
     
 
     async def async_request(self, request):
-        if request.request_id is None: 
-            request.request_id = ChargePoint.new_Id()
 
         response = await self.call(request)
         response = asdict(response)
@@ -442,7 +440,7 @@ class ChargePoint(cp):
             future = self.loop.create_future()
             self.multiple_response_requests[request.request_id] = {"ready" : future, "data": []}
 
-            await asyncio.wait_for(future, timeout=5)
+            await asyncio.wait_for(future, timeout=10)
             
             response["data"] = self.multiple_response_requests[request.request_id]["data"]
             self.multiple_response_requests.pop(request.request_id)
@@ -451,8 +449,8 @@ class ChargePoint(cp):
 
 
     async def getBaseReport(self, **payload):
-        if request.request_id is None: 
-            request.request_id = ChargePoint.new_Id()
+        if "request_id" not in payload or payload["request_id"] is None:
+            payload["request_id"] = ChargePoint.new_Id()
 
         request = call.GetBaseReportPayload(**payload)
         return await self.async_request(request)
@@ -460,10 +458,10 @@ class ChargePoint(cp):
     
     async def getChargingProfiles(self, **payload):
 
+        if "request_id" not in payload or payload["request_id"] is None:
+            payload["request_id"] = ChargePoint.new_Id()
+        
         request = call.GetChargingProfilesPayload(**payload)
-
-        if request.request_id is None:
-            request.request_id = ChargePoint.new_Id()
 
         #K09.FR.03
         if request.evse_id is None and (request.charging_profile is None or all(v is None for v in request.charging_profile.values())):
@@ -471,7 +469,24 @@ class ChargePoint(cp):
 
         return await self.async_request(request)
 
-    
+
+    async def new_external_profiles(self):
+        request = {"charging_profile" : {"charging_profile_purpose":enums.ChargingProfilePurposeType.charging_station_external_constraints}}    
+        reports = await self.getChargingProfiles(**request)
+
+        #delete current external profiles
+        message = Topic_Message(method="remove", cp_id=self.id, content={"table":"ChargingProfile", 
+                        "filters":{"charging_profile_purpose":enums.ChargingProfilePurposeType.charging_station_external_constraints}},
+                        destination="SQL_DB")
+        response = await ChargePoint.broker.send_request_wait_response(message)
+
+        #add new profiles
+        for r in reports["data"]:
+            for profile in r["charging_profile"]:
+                message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content={"evse_id":r["evse_id"], "charging_profile": profile}, destination="SQL_DB")
+                response = await ChargePoint.broker.send_request_wait_response(message)
+
+
     async def clearChargingProfile(self, **payload):
 
         #K10.FR.02
@@ -586,6 +601,9 @@ class ChargePoint(cp):
         return await self.call(request)
 
     async def getDisplayMessages(self, **payload):
+        if "request_id" not in payload or payload["request_id"] is None:
+            payload["request_id"] = ChargePoint.new_Id()
+
         request = call.GetDisplayMessagesPayload(**payload)
         return await self.async_request(request)
     
@@ -685,6 +703,12 @@ class ChargePoint(cp):
             interval=30,
             status=enums.RegistrationStatusType.accepted
         )
+
+
+    @after("BootNotification")
+    async def after_BootNotification(self, **kwargs):
+        await self.new_external_profiles()
+
 
     @on('StatusNotification')
     async def on_StatusNotification(self, **kwargs):
@@ -824,6 +848,14 @@ class ChargePoint(cp):
         message = Topic_Message(method="NotifyEvent", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
         return call_result.NotifyEventPayload()
+
+
+    @on("NotifyChargingLimit")
+    async def on_NotifyChargingLimit(self, **kwargs):
+        return call_result.NotifyChargingLimitPayload()
+    @after("NotifyChargingLimit")
+    async def after_NotifyChargingLimit(self, **kwargs):
+        await self.new_external_profiles()
 
 
     @on('Heartbeat')

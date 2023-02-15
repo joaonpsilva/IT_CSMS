@@ -119,8 +119,9 @@ class DataBase:
         self.session.add(obj)
     
     def remove(self, table, filters ={}, **kwargs):
-        statement = delete(self.table_mapping[table]).filter_by(**filters)
-        self.session.execute(statement)
+        self.session.query(self.table_mapping[table]).filter_by(**filters).delete()
+        #statement = delete(self.table_mapping[table]).filter_by(**filters)
+        #self.session.execute(statement)
 
     def update(self, table, filters={},values={}, **kwargs):
         statement = update(self.table_mapping[table]).filter_by(**filters).values(**values)
@@ -389,7 +390,7 @@ class DataBase:
         self.session.refresh(charging_profile)
         
         return charging_profile.get_dict_obj(mode={"relationships":{"charging_schedule":{}}})
-
+    
     
 if __name__ == '__main__':
 
