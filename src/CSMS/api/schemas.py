@@ -36,16 +36,3 @@ class CRUD_Payload:
     values: dict
     mode : dict
 
-
-
-
-####################################
-
-
-class Transaction_Schema(BaseModel):
-    transaction_id : Optional[str]
-    charging_state : Optional[enums.ChargingStateType]
-    time_spent_charging : Optional[int]
-    stopped_reason : Optional[enums.ReasonType]
-    remote_start_id : Optional[int]
-
