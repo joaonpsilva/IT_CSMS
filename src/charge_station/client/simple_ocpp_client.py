@@ -110,6 +110,8 @@ class ChargePoint(cp):
                     response = payload_type(status="Unknown")
                 elif payload_type == call_result.SendLocalListPayload:
                     response = payload_type(status="Failed")
+                elif payload_type == call_result.GetChargingProfilesPayload:
+                    response = payload_type(status="NoProfiles")
                 else:
                     response = payload_type(status="Rejected")
                 

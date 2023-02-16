@@ -155,11 +155,9 @@ class DataBase:
             raise AssertionError("Invalid User or Password")
 
         response = {"id" : user.id, "permission_level" : user.permission_level}
-        if user.id_token:
-            response["card_id_token"] = user.id_token.id_token
+        response["card_id_token"] = user.id_token.id_token if user.id_token else None
 
         return response
-
 
 
     def verify_password(self, CP_ID, password, **kwargs):
@@ -274,7 +272,7 @@ class DataBase:
         if evse:
             #evse["evse_id"] = evse.pop("id")
             #content = {**content, **evse}  
-            content["connector_id"] = evse["connector_id"]  
+            content["connector_id"] = evse["connector_id"]  if "connector_id" in evse else None
             content["transaction_info"]["evse_id"] = evse["id"]
         content["transaction_info"]["cp_id"] = cp_id
 
