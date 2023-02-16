@@ -15,6 +15,7 @@ from sse_starlette.sse import EventSourceResponse
 import json
 import argparse
 import datetime
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", type=int, default = 8000, help="OCPP server port")
@@ -369,9 +370,12 @@ async def on_event(message):
 async def main():
 
     global broker
-    broker = Rabbit_Handler("API", on_event)
-    await broker.connect(args.rb, receive_requests=False)
-
+    
+    try:
+        broker = Rabbit_Handler("API", on_event)
+        await broker.connect(args.rb, receive_requests=False)
+    except:
+        LOGGER.info("Could not connect to RabbitMq")
     
 if __name__ == '__main__':
     uvicorn.run(app, host="0.0.0.0", port=args.p,loop= 'asyncio')

@@ -47,8 +47,11 @@ class OCPP_Server:
 
     async def run(self, port, rb):
         #broker handles the rabbit mq queues and communication between services
-        self.broker = Rabbit_Handler("Ocpp_Server", self.handle_api_request)
-        await self.broker.connect(rb, receive_logs=False)
+        try:
+            self.broker = Rabbit_Handler("Ocpp_Server", self.handle_api_request)
+            await self.broker.connect(rb, receive_logs=False)
+        except:
+            LOGGER.error("Could not connect to RabbitMq")
 
         #set same broker for all charge point connections
         ChargePoint.broker = self.broker

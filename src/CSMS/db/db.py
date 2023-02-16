@@ -32,21 +32,6 @@ class DataBase:
 
     def __init__(self):
 
-        #MySql engine
-        self.engine = create_engine("mysql+pymysql://root:password123@localhost:3306/csms_db")
-        LOGGER.info("Connected to the database")
-
-        #Create new sqlachemy session
-        Session = sessionmaker(bind=self.engine)
-        self.session = Session()
-
-        #Create SQL tables
-        create_Tables(self.engine)
-
-        #Insert some CPs (testing)
-        insert_Hard_Coded(self)
-
-
         self.table_mapping={
             "Modem":Modem,
             "Charge_Point":Charge_Point,
@@ -65,10 +50,9 @@ class DataBase:
             "Reservation":Reservation
             }
     
-    def shut_down(self, sig, frame):
+    def shut_down(self, sig=None, frame=None):
         LOGGER.info("DB Shuting down")
-        sys.exit(0)
-
+        exit(0)
 
     async def on_db_request(self, request):
         """
@@ -104,11 +88,36 @@ class DataBase:
 
     async def run(self, rabbit):
 
-        #Initialize broker that will handle Rabbit coms
-        self.broker = Rabbit_Handler("SQL_DB", self.on_db_request)
-        #Start listening to messages
-        await self.broker.connect(rabbit, receive_responses=False)
-    
+        try:
+            #MySql engine
+            self.engine = create_engine("mysql+pymysql://root:password123@localhost:3306/csms_db")
+
+            #Create new sqlachemy session
+            Session = sessionmaker(bind=self.engine)
+            self.session = Session()
+
+            #Create SQL tables
+            create_Tables(self.engine)
+
+            #Insert some CPs (testing)
+            insert_Hard_Coded(self)
+            LOGGER.info("Connected to the database")
+
+        except Exception:
+            LOGGER.info("Could not connect to the Database")
+            self.shut_down()
+
+        try:
+            #Initialize broker that will handle Rabbit coms
+            self.broker = Rabbit_Handler("SQL_DB", self.on_db_request)
+            #Start listening to messages
+            await self.broker.connect(rabbit, receive_responses=False)
+        except:
+            LOGGER.info("Could not connect to RabbitMq")
+            self.shut_down()
+        
+        await asyncio.get_event_loop().create_future()
+        
 
     def select(self, table, filters = {}, mode={}, **kwargs):
         statement = select(self.table_mapping[table]).filter_by(**filters)
@@ -407,5 +416,4 @@ if __name__ == '__main__':
     #shut down handler
     signal.signal(signal.SIGINT, db.shut_down)
 
-    loop.create_task(db.run(args.rb))
-    loop.run_forever()
+    asyncio.run(db.run(args.rb))
