@@ -59,8 +59,12 @@ class ChargePoint(cp):
                 connector_status=enums.ConnectorStatusType.available
             )
             response = await self.call(request)
-
-
+        
+        request = call.HeartbeatPayload()
+        response = await self.call(request)
+        await asyncio.sleep(30)
+        request = call.HeartbeatPayload()
+        response = await self.call(request)
 
     
     async def meterValuesRequest(self):

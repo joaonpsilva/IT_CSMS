@@ -123,6 +123,7 @@ class OCPP_Server:
             LOGGER.warning("CP closed the connection")
 
         #when cp ends remove from connections
+        await cp.set_on_off(False)
         self.connected_CPs.pop(charge_point_id)
     
 

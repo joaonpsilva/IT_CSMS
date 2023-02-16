@@ -36,17 +36,18 @@ class ChargePoint(cp):
         self.multiple_response_requests = {}
         self.wait_start_transaction = {}
         self.wait_reservation_evse_id = None
+        
+        self.is_online = False
+        self.change_is_online = None
 
         self.logger = logging.getLogger(self.id)
         self.logger.setLevel(logging.DEBUG)
-
         # create console handler with a higher log level
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
         # create formatter and add it to the handlers
         formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
-
         self.logger.addHandler(ch)
     
     
@@ -863,4 +864,20 @@ class ChargePoint(cp):
         return call_result.HeartbeatPayload(
             current_time=datetime.utcnow().isoformat()
         )
+    @after('Heartbeat')
+    async def after_Heartbeat(self):
+        if self.is_online:
+            self.change_is_online.cancel()
+        else:
+            await self.set_on_off(True)
+        
+        self.change_is_online = self.loop.call_later(40, self.loop.create_task, self.set_on_off(False))
+    
+
+    async def set_on_off(self, on):
+        self.is_online = on
+        message = Topic_Message(method="update", cp_id=self.id, content={"table":"Charge_Point", "filters" : {"cp_id" : self.id}, "values":{"is_online":self.is_online}})            
+        await ChargePoint.broker.ocpp_log(message)
+
+
     

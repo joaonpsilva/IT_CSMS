@@ -48,7 +48,7 @@ class Charge_Point(CustomBase):
     longitude = Column(String(50))
     country = Column(String(50))
     ocpp_version = Column(String(50))
-    is_online = Column(Boolean)
+    is_online = Column(Boolean, server_default="0")
 
 
     modem = relationship("Modem", backref="charge_point", uselist=False)
