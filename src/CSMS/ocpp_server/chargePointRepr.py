@@ -871,13 +871,20 @@ class ChargePoint(cp):
         else:
             await self.set_on_off(True)
         
-        self.change_is_online = self.loop.call_later(40, self.loop.create_task, self.set_on_off(False))
-    
+        try:
+            self.change_is_online = asyncio.create_task(self.set_on_off(False, wait=40)) 
+        except asyncio.CancelledError:
+            pass
 
-    async def set_on_off(self, on):
-        self.is_online = on
-        message = Topic_Message(method="update", cp_id=self.id, content={"table":"Charge_Point", "filters" : {"cp_id" : self.id}, "values":{"is_online":self.is_online}})            
-        await ChargePoint.broker.ocpp_log(message)
+
+    async def set_on_off(self, on, wait=0):
+        #couroutine might be cancelled
+        await asyncio.sleep(wait)
+
+        if not self.is_online == on: 
+            self.is_online = on
+            message = Topic_Message(method="update", cp_id=self.id, content={"table":"Charge_Point", "filters" : {"cp_id" : self.id}, "values":{"is_online":self.is_online}})            
+            await ChargePoint.broker.ocpp_log(message)
 
 
     
