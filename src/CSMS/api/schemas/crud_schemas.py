@@ -1,7 +1,3 @@
-from pydantic import BaseModel
-from ocpp.v201 import enums
-
-from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional
-from CSMS.api import datatypes
+from . import datatypes
 from ocpp.v201 import enums
 import datetime
 
