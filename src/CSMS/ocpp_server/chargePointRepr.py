@@ -17,6 +17,8 @@ class ChargePoint(cp):
 
     broker = None
     request_Id = 0
+    charging_profile_id = 0
+    charging_schedule_id = 0
 
     def read_variables():
         #TODO read variables (request_Id) from file
@@ -357,17 +359,16 @@ class ChargePoint(cp):
 
         if result["status"] == "OK":
             for report_charging_profile in result["content"]:
-                report_charging_profile = datatypes.ChargingProfileType(**report_charging_profile)
 
-                if "id" in charging_profile and report_charging_profile.id == charging_profile["id"]:
+                if report_charging_profile["id"] == charging_profile["id"]:
                     continue
 
                 if charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
-                    if charging_profile["transaction_id"] == report_charging_profile.transaction_id:
+                    if charging_profile["transaction_id"] == report_charging_profile["transaction_id"]:
                         raise ValueError("Already exists conflicting Profile with different ID")
 
                 else:
-                    if self.dates_overlap(charging_profile["valid_from"], charging_profile["valid_to"], report_charging_profile.valid_from, report_charging_profile.valid_to):
+                    if self.dates_overlap(charging_profile["valid_from"], charging_profile["valid_to"], report_charging_profile["valid_from"], report_charging_profile["valid_to"]):
                         raise ValueError("Already exists conflicting Profile with different ID")
         else:
             raise AssertionError("Cannot reach DB")
@@ -395,33 +396,24 @@ class ChargePoint(cp):
 
         request = call.SetChargingProfilePayload(**payload)
 
+        if "id" not in request.charging_profile or request.charging_profile["id"] is None:
+            request.charging_profile["id"] = ChargePoint.charging_profile_id
+            ChargePoint.charging_profile_id+=1
+        
+        for schedule in request.charging_profile["charging_schedule"]:
+            if "id" not in schedule or schedule["id"] is None:
+                schedule["id"] = ChargePoint.charging_schedule_id
+                ChargePoint.charging_schedule_id +=1
+            
         self.verify_charging_profile_structure(request)
         await self.charging_profile_assert_no_conflicts(request.evse_id, request.charging_profile)
 
-        #assume that if either schedule and profile both know id or neither does
-        in_db=False
-        if request.charging_profile["id"] is None:
-            #need to create the profile on the db now
-            #need to choose an id for the profile
-            #waiting for approval may result in duplicate ids
-            
-            message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
-            response = await ChargePoint.broker.send_request_wait_response(message)
-            assert response["status"] == "OK", "DB comunication failed"
-            in_db=True
-            request.charging_profile = response["content"]
-
         #send message to the cp
         response = await self.call(request)
+
         if response.status == enums.ChargingProfileStatus.accepted:
-            if not in_db:
-                message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
-                response = await ChargePoint.broker.send_request_wait_response(message)
-        else:
-            if in_db:
-                #if profile is not accepted remove it from the db
-                message = Topic_Message(method="remove", cp_id=self.id, content={"table":"ChargingProfile", "filters":{"id":request.charging_profile["id"]}}, destination="SQL_DB")
-                await ChargePoint.broker.send_request_wait_response(message)
+            message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
+            await ChargePoint.broker.ocpp_log(message)
         
         return response
 
@@ -476,16 +468,21 @@ class ChargePoint(cp):
         reports = await self.getChargingProfiles(**request)
 
         #delete current external profiles
-        message = Topic_Message(method="remove", cp_id=self.id, content={"table":"ChargingProfile", 
-                        "filters":{"charging_profile_purpose":enums.ChargingProfilePurposeType.charging_station_external_constraints}},
-                        destination="SQL_DB")
-        response = await ChargePoint.broker.send_request_wait_response(message)
+        #external profiles can have duplicate ids considering multiple charging stations
+        #message = Topic_Message(method="remove", cp_id=self.id, content={"table":"ChargingProfile", 
+        #                "filters":{"charging_profile_purpose":enums.ChargingProfilePurposeType.charging_station_external_constraints}},
+        #                destination="SQL_DB")
+        #response = await ChargePoint.broker.send_request_wait_response(message)
 
         #add new profiles
         for r in reports["data"]:
             for profile in r["charging_profile"]:
-                message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content={"evse_id":r["evse_id"], "charging_profile": profile}, destination="SQL_DB")
-                response = await ChargePoint.broker.send_request_wait_response(message)
+                if profile["id"] > ChargePoint.charging_profile_id:
+                    ChargePoint.charging_profile_id = profile["id"]+1
+                
+                for schedule in profile["charging_schedule"]:
+                    if schedule["id"] > ChargePoint.charging_schedule_id:
+                        ChargePoint.charging_schedule_id = schedule["id"]+1
 
 
     async def clearChargingProfile(self, **payload):
@@ -641,50 +638,6 @@ class ChargePoint(cp):
             response = await ChargePoint.broker.send_request_wait_response(message)
                     
         return response
-    
-
-    async def change_profile_transaction(self, transaction_id, schedule):
-        
-        message = Topic_Message(method="select", cp_id=self.id, content={"table":"Transaction", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
-        response = await ChargePoint.broker.send_request_wait_response(message)
-        assert response["status"] == "OK", "DB comunication failed"
-        evse=response["content"][0]["evse_id"]
-
-        message = Topic_Message(method="select", cp_id=self.id, content={"table":"ChargingProfile", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
-        response = await ChargePoint.broker.send_request_wait_response(message)
-        assert response["status"] == "OK", "DB comunication failed"
-
-        if len(response["content"]) > 0:
-            most_important_profile = max(response["content"], key= lambda x : x["stack_level"])
-            id = most_important_profile["id"]
-            stack_level = most_important_profile["stack_level"]
-        else:
-            id = None
-            stack_level = 0
-
-        charging_profile = {
-            "id" : id,
-            "stack_level" : stack_level,
-            "charging_profile_purpose" : enums.ChargingProfilePurposeType.tx_profile,
-            "charging_profile_kind" : enums.ChargingProfileKindType.relative,
-            "transaction_id" : transaction_id,
-            "charging_schedule" : schedule
-        }
-
-        await self.setChargingProfile(**{"evse_id":evse, "charging_profile" : charging_profile})
-
-
-    async def setmaxpower(self, transaction_id, max_power):
-
-        charging_schedule = [{
-            "charging_rate_unit" : enums.ChargingRateUnitType.watts,
-            "charging_schedule_period" : [{
-                "start_period" : 0,
-                "limit" : max_power,
-            }]
-        }]
-
-        await self.change_profile_transaction(transaction_id, charging_schedule)
         
 
 #######################Funtions staring from the CP Initiative
@@ -819,6 +772,7 @@ class ChargePoint(cp):
             if "tbc" not in message or message["tbc"] is None or message["tbc"]==False:
                 self.multiple_response_requests[message["request_id"]]["ready"].set_result(True)
     
+
     @on("ReportChargingProfiles")
     async def on_reportChargingProfiles(self, **kwargs):
         message = Topic_Message(method="ReportChargingProfiles", cp_id=self.id, content=kwargs)

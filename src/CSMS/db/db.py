@@ -396,7 +396,7 @@ class DataBase:
         self.session.commit()
         self.session.refresh(charging_profile)
         
-        return charging_profile.get_dict_obj(mode={"relationships":{"charging_schedule":{}}})
+        #return charging_profile.get_dict_obj(mode={"relationships":{"charging_schedule":{}}})
     
     
 if __name__ == '__main__':
