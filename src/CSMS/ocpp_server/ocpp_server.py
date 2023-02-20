@@ -3,7 +3,7 @@ import logging
 from CSMS.ocpp_server.chargePointRepr import ChargePoint
 
 from rabbit_mq.rabbit_handler import Rabbit_Handler, Topic_Message
-
+from Exceptions.exceptions import ValidationError
 import asyncio
 import argparse
 import signal
@@ -27,7 +27,7 @@ def Basic_auth_with_broker(broker):
                 content = {"CP_ID" : username,"password": password}
                 message = Topic_Message(destination="SQL_DB", method = "verify_password", cp_id=username, content=content)
                 response =  await self.broker.send_request_wait_response(message)
-                return response["content"]['approved']
+                return response['approved']
             except:
                 return False
 
@@ -136,30 +136,14 @@ class OCPP_Server:
         if cp_id is None:
             #api wants to know current connected cps
             if request.method == "get_connected_cps":
-                return {"status" : "OK", "content": list(self.connected_CPs.keys())}
+                return list(self.connected_CPs.keys())
             
-            if "transaction_id" in request.content:
-                try:
-                    cp_id = await self.get_cpID_by_TransactionId(request.content["transaction_id"])
-                except:
-                    return {"status":"VAL_ERROR", "content": "Unknown Transaction"}
-
-
         if cp_id in self.connected_CPs:
             #if is connected
-            status, content = await self.connected_CPs[str(cp_id)].send_CP_Message(**request.__dict__)
-            return {"status" : status, "content": content}
+            content = await self.connected_CPs[str(cp_id)].send_CP_Message(**request.__dict__)
+            return content
         else:
-            return {"status":"VAL_ERROR", "content": "This CP is not connected"}
-    
-
-    async def get_cpID_by_TransactionId(self, transaction_id):
-        message = Topic_Message(destination="SQL_DB", method="select", content={"table":"Transaction", "filters": {"transaction_id" : transaction_id}})
-        response = await ChargePoint.broker.send_request_wait_response(message)
-
-        if len(response["content"]) > 0:
-            return response["content"][0]["cp_id"]
-        raise Exception
+            raise ValidationError("This CP is not connected")
 
 
 if __name__ == '__main__':

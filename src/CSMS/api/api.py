@@ -1,8 +1,6 @@
 import uvicorn
 from fastapi import FastAPI, Depends, Query, Response, status, Request, HTTPException
 
-from rabbit_mq.rabbit_handler import Rabbit_Handler, Topic_Message
-
 from typing import List
 from ocpp.v201 import call, call_result, enums
 from .schemas import datatypes
@@ -10,6 +8,7 @@ from .schemas import payloads
 from .schemas import crud_schemas
 from .auth import AuthHandler
 from .service import API_Service
+from Exceptions.exceptions import OtherError
 import asyncio
 import logging
 from sse_starlette.sse import EventSourceResponse
@@ -44,48 +43,45 @@ service = API_Service()
 async def register(email: str, password:str, full_name:str, status:str, cust_id:int):
     values = {"email": email, "password":password, "full_name":full_name, "status":status, "cust_id":cust_id}
     response = await service.send_request("register", payload=values, destination="SQL_DB")
-    return response["content"]
+    return response
 
 
 @app.get("/login", status_code=200)
 async def login(email: str, password:str):
-    response = await service.send_request("login", payload={"email": email, "password":password}, destination="SQL_DB")
-
-    if response["status"] == "OTHER_ERROR":
-        raise HTTPException(401, detail=response["content"])
-    elif response["status"] == "OK":
-        token = auth_handler.encode_token(response["content"])
+    try:
+        response = await service.send_request("login", payload={"email": email, "password":password}, destination="SQL_DB")
+        token = auth_handler.encode_token(response)
         return {"token" : token}
-
-    return response["content"]
-
+    except OtherError as e:
+        raise HTTPException(401, detail=e.args[0])
+        
 
 @app.get("/users", status_code=200)
 async def getUsers():
     response = await service.send_request("select", payload={"table": "User"}, destination="SQL_DB")
-    return response["content"]
+    return response
 
 @app.get("/users/{email}", status_code=200)
 async def get_user_byEmail(email:str):
     response = await service.send_request("select", payload={"table": "User", "filters":{"email":email}}, destination="SQL_DB")
-    return response["content"]
+    return response
 
 
 @app.get("/transactions", status_code=200)
 async def getTransactions(transaction_id:str):
     response = await service.send_request("select", payload={"table": "Transaction", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
-    return response["content"]
+    return response
 
 @app.get("/transactions/open/{id_token}", status_code=200)
 async def getOpenTransactionsByIdToken(id_token:str):
     response = await service.send_request("get_IdToken_Transactions", payload={"id_token": id_token}, destination="SQL_DB")
-    return response["content"]
+    return response
 
 
 @app.get("/transactions/{id_token}/{date}", status_code=200)
 async def getOpenTransactionsByIdToken(id_token:str, date: datetime.datetime):
     response = await service.send_request("get_Transactions_byDate", payload={"id_token": id_token, "date":date}, destination="SQL_DB")
-    return response["content"]
+    return response
 
 
 @app.get("/charge/start", status_code=200)
@@ -95,14 +91,14 @@ async def charge_start(id_tag: str, evse_id: int, cp_id:str, user=Depends(auth_h
         evse_id=evse_id
     )
     response = await service.send_request("requestStartTransaction", CP_Id=cp_id, payload=payload)
-    return response["content"]
+    return response
 
 
 @app.get("/charge/stop", status_code=200)
 async def charge_stop(transaction_id: str):
     payload = payloads.RequestStopTransactionPayload(transaction_id)
     response = await service.send_request("requestStopTransaction", payload=payload)
-    return response["content"]
+    return response
 
 
 @app.get("/setmaxpower", status_code=200)
@@ -110,21 +106,21 @@ async def setmaxpower(transaction_id: str, max_power: int):
     return await service.setmaxpower(transaction_id, max_power)
     #payload = {"transaction_id": transaction_id, "max_power":max_power}
     #response = await service.send_request("setmaxpower", payload=payload)
-    #return response["content"]
+    #return response
 
 
 
 @app.get("/stations", status_code=200)
 async def stations():
     response = await service.send_request("select", payload={"table": "Charge_Point"}, destination="SQL_DB")
-    return response["content"]
+    return response
 
 
 @app.get("/stations/{CP_Id}", status_code=200)
 async def getStationById(CP_Id : str):
     mode = {"evse":{"describe":False, "connector":{}, "reservation":{}}}
     response = await service.send_request("select", payload={"table": "Charge_Point", "filters":{"cp_id":CP_Id}, "mode":mode}, destination="SQL_DB")
-    return response["content"]
+    return response
 
 
 
@@ -132,30 +128,30 @@ async def getStationById(CP_Id : str):
 @app.post("/ChangeAvailability/{CP_Id}", status_code=200)
 async def ChangeAvailability(CP_Id: str, payload: payloads.ChangeAvailabilityPayload):
     response = await service.send_request("changeAvailability", CP_Id, payload)
-    return response["content"]
+    return response
 
 @app.post("/UnlockConnector/{CP_Id}", status_code=200)
 async def UnlockConnector(CP_Id: str, payload: payloads.UnlockConnectorPayload):
     response = await service.send_request("unlockConnector", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/GetVariables/{CP_Id}", status_code=200)
 async def GetVariables(CP_Id: str, payload: payloads.GetVariablesPayload):
     response = await service.send_request("getVariables", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/SetVariables/{CP_Id}", status_code=200)
 async def SetVariables(CP_Id: str, payload: payloads.SetVariablesPayload):
     response = await service.send_request("setVariables", CP_Id, payload)
-    return response["content"]  
+    return response  
 
 
 @app.post("/RequestStartTransaction/{CP_Id}", status_code=200)
 async def RequestStartTransaction(CP_Id: str, payload: payloads.RequestStartTransactionPayload):
     response = await service.send_request("requestStartTransaction", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/RequestStopTransaction/{CP_Id}", status_code=200)
@@ -163,19 +159,19 @@ async def RequestStopTransaction(CP_Id: str, payload: call.RequestStopTransactio
     #TODO request stop transaction without cp id input?
     # request stop transaction with remote start id
     response = await service.send_request("requestStopTransaction", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/TriggerMessage/{CP_Id}", status_code=200)
 async def TriggerMessage(CP_Id: str, payload: payloads.TriggerMessagePayload):
     response = await service.send_request("triggerMessage", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/GetCompositeSchedule/{CP_Id}", status_code=200)
 async def GetCompositeSchedule(CP_Id: str, payload: payloads.GetCompositeSchedulePayload):
     response = await service.send_request("getCompositeSchedule", CP_Id, payload)
-    return response["content"]
+    return response
     #TODO make a get 
 
 @app.post("/SetChargingProfile/{CP_Id}", status_code=200)
@@ -183,121 +179,121 @@ async def SetChargingProfile(CP_Id: str, payload: payloads.SetChargingProfilePay
     response = await service.send_request("setChargingProfile", CP_Id, payload)
 
     if response["status"] != "OK":
-        raise HTTPException(500,response["content"] )
-    return response["content"]
+        raise HTTPException(500,response )
+    return response
 
 @app.post("/GetChargingProfiles/{CP_Id}", status_code=200)
 async def GetChargingProfiles(CP_Id: str, payload: payloads.GetChargingProfilesPayload):
     response = await service.send_request("getChargingProfiles", CP_Id, payload)
-    return response["content"]
+    return response
     #TODO make a get 
 
 
 @app.post("/ClearChargingProfile/{CP_Id}", status_code=200)
 async def ClearChargingProfile(CP_Id: str, payload: payloads.ClearChargingProfilePayload):
     response = await service.send_request("clearChargingProfile", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/GetBaseReport/{CP_Id}", status_code=200)
 async def GetBaseReport(CP_Id: str, payload: payloads.GetBaseReportPayload):
     response = await service.send_request("getBaseReport", CP_Id, payload)
-    return response["content"]
+    return response
     #TODO make a get
 
 
 @app.post("/ClearVariableMonitoring/{CP_Id}", status_code=200)
 async def ClearVariableMonitoring(CP_Id: str, payload: payloads.ClearVariableMonitoringPayload):
     response = await service.send_request("clearVariableMonitoring", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/SetVariableMonitoring/{CP_Id}", status_code=200)
 async def SetVariableMonitoring(CP_Id: str, payload: payloads.SetVariableMonitoringPayload):
     response = await service.send_request("setVariableMonitoring", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/Reset/{CP_Id}", status_code=200)
 async def Reset(CP_Id: str, payload: payloads.ResetPayload):
     response = await service.send_request("reset", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/GetTransactionStatus/{CP_Id}", status_code=200)
 async def GetTransactionStatus(CP_Id: str, payload: payloads.GetTransactionStatusPayload):
     response = await service.send_request("getTransactionStatus", CP_Id, payload)
-    return response["content"]
+    return response
 
 @app.get("/GetTransactionStatus", status_code=200)
 async def GetTransactionStatus(transaction_id: str):
     response = await service.send_request("getTransactionStatus", payload={"transaction_id":transaction_id})
-    return response["content"]
+    return response
 
 
 @app.post("/ReserveNow/{CP_Id}", status_code=200)
 async def GetTransactionStatus(CP_Id: str, payload: payloads.ReserveNowPayload):
     response = await service.send_request("reserveNow", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 
 @app.post("/SetDisplayMessage/{CP_Id}", status_code=200)
 async def SetDisplayMessage(CP_Id: str, payload: payloads.SetDisplayMessagePayload):
     response = await service.send_request("setDisplayMessage", CP_Id, payload)
-    return response["content"]
+    return response
 
 @app.post("/GetDisplayMessages/{CP_Id}", status_code=200)
 async def GetDisplayMessages(CP_Id: str, payload: payloads.GetDisplayMessagesPayload):
     response = await service.send_request("getDisplayMessages", CP_Id, payload)
-    return response["content"]
+    return response
 
 @app.post("/ClearDisplayMessage/{CP_Id}", status_code=200)
 async def ClearDisplayMessage(CP_Id: str, payload: payloads.ClearDisplayMessagePayload):
     response = await service.send_request("clearDisplayMessage", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/send_full_authorization_list/{CP_Id}", status_code=200)
 async def send_full_authorization_list(CP_Id: str):
     payload = {"update_type" : enums.UpdateType.full}
     response = await service.send_request("send_auhorization_list", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/differential_Auth_List_Add/{CP_Id}", status_code=200)
 async def differential_Auth_List_Add(CP_Id: str, payload: List[datatypes.IdTokenType]):
     payload = {"update_type" : enums.UpdateType.differential, "id_tokens" : payload, "operation" : "Add"}
     response = await service.send_request("send_auhorization_list", CP_Id, payload)
-    return response["content"]
+    return response
 
 @app.post("/differential_Auth_List_Delete/{CP_Id}", status_code=200)
 async def differential_Auth_List_Delete(CP_Id: str, payload: List[datatypes.IdTokenType]):
     payload = {"update_type" : enums.UpdateType.differential, "id_tokens" : payload, "operation" : "Delete"}
     response = await service.send_request("send_auhorization_list", CP_Id, payload)
-    return response["content"]
+    return response
 
 
 @app.post("/CRUD/", status_code=200)
 async def CRUD(payload: crud_schemas.CRUD_Payload):
     response = await service.send_request(payload.operation, payload=payload, destination="SQL_DB")
-    return response["content"]
+    return response
 
 @app.get("/getTransactions")
 async def getTransactions():
     response = await service.send_request("select", payload={"table" : crud_schemas.DB_Tables.Transaction}, destination="SQL_DB")
-    return response["content"]
+    return response
 
 @app.get("/getTransactions_ById/{transactionId}")
 async def getTransactions(transactionId: str):
     response = await service.send_request("select", payload={"table":crud_schemas.DB_Tables.Transaction, "filters":{"transaction_id":transactionId}}, destination="SQL_DB")
-    return response["content"]
+    return response
 
 
 @app.get("/getConnected_ChargePoints/")
 async def getConnected_ChargePoints():
     response = await service.send_request("get_connected_cps")
-    return response["content"]
+    return response
 
 
 @app.get('/stream')

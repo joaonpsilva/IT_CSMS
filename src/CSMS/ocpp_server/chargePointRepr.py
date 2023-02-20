@@ -9,6 +9,7 @@ import logging
 import dateutil.parser
 from sys import getsizeof
 import traceback
+from Exceptions.exceptions import ValidationError, OtherError
 
 from rabbit_mq.rabbit_handler import Topic_Message
 
@@ -55,19 +56,8 @@ class ChargePoint(cp):
     
     async def send_CP_Message(self, method, content={}, **kwargs):
         """Funtion will use the mapping to call the correct function"""
-        try:
-            #print(getattr(self, "getVariables"))
-            return "OK", await getattr(self, method)(**content)
-        except ValueError as ve:
-            return "VAL_ERROR", ve.args[0]
-    
-        except AssertionError as e:
-            return "OTHER_ERROR" , e.args[0]
+        return await getattr(self, method)(**content)
 
-        except Exception as e:
-            self.logger.error(traceback.format_exc())
-            return "ERROR", None
-    
 
     async def get_id_token_info(self, req_id_token):
         #get info from db
@@ -80,7 +70,7 @@ class ChargePoint(cp):
         
         response = await ChargePoint.broker.send_request_wait_response(message)
 
-        id_token = response["content"][0]
+        id_token = response[0]
         id_token_info = id_token["id_token_info"]
 
         if id_token is None:
@@ -115,7 +105,7 @@ class ChargePoint(cp):
             #evse_id needs to be empty if allowed for all charging station
             message = Topic_Message(method="select", cp_id=self.id, content={"table": "EVSE", "filters":{"cp_id" : self.id}}, destination="SQL_DB")
             response = await ChargePoint.broker.send_request_wait_response(message)
-            total_evses = len(response["content"])
+            total_evses = len(response)
             if total_evses == len(id_token_info["evse_id"]):
                 id_token_info["evse_id"] = []
             
@@ -126,7 +116,6 @@ class ChargePoint(cp):
             return id_token_info
             
         except:
-            self.logger.error(traceback.format_exc())
             return {"status" : enums.AuthorizationStatusType.invalid}
 
 
@@ -136,13 +125,10 @@ class ChargePoint(cp):
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if response["status"] == "OK":
-
-            if response["content"]["status"] == "OK":
-                return True
-            self.logger.info("DB could not identify transaction")
-            return False
+            return True
+        self.logger.info("DB could not identify transaction")
+        return False
         
-        raise ValueError("DB ERROR")
         
 
     async def get_max_get_messages(self):
@@ -206,7 +192,7 @@ class ChargePoint(cp):
 
                 #message was as small as it could be
                 if len(request_dict[var_with_list]) == 1:
-                    raise ValueError("Charge Station doesnt allow a single item")
+                    raise ValidationError("Charge Station doesnt allow a single item")
 
                 #insert splitted entries
                 half_of_list = len(current_list) // 2
@@ -288,17 +274,17 @@ class ChargePoint(cp):
         request = call.RequestStartTransactionPayload(**payload)
         
         if request.evse_id is not None and request.evse_id <= 0:
-            raise ValueError("evse id must be > 0")
+            raise ValidationError("evse id must be > 0")
 
         if request.charging_profile is not None:
             request = self.choose_profile_id(request)
 
             #F01.FR.08
             if request.charging_profile["charging_profile_purpose"] != enums.ChargingProfilePurposeType.tx_profile:
-                raise ValueError("charging profile needs to be TxProfile")
+                raise ValidationError("charging profile needs to be TxProfile")
             #F01.FR.11
             if "transaction_id" in request.charging_profile and request.charging_profile["transaction_id"] is not None:
-                raise ValueError("Transaction id shall not be set")
+                raise ValidationError("Transaction id shall not be set")
 
         #creating an id for the request
         if request.remote_start_id is None:
@@ -328,7 +314,7 @@ class ChargePoint(cp):
         request = call.TriggerMessagePayload(**payload)
 
         if request.requested_message == enums.MessageTriggerType.status_notification and request.evse["connector_id"] == None:
-            raise ValueError("Connector ID is required for status_notification")
+            raise ValidationError("Connector ID is required for status_notification")
 
         return await self.call(request)
 
@@ -365,20 +351,17 @@ class ChargePoint(cp):
         message = Topic_Message(method="get_charging_profiles", cp_id=self.id, content=request, destination="SQL_DB")
         result = await ChargePoint.broker.send_request_wait_response(message)
 
-        if result["status"] == "OK":
-            for report_charging_profile in result["content"]:
+        for report_charging_profile in result:
 
-                if report_charging_profile["id"] == charging_profile["id"]:
-                    continue
+            if report_charging_profile["id"] == charging_profile["id"]:
+                continue
 
-                if charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
-                    if charging_profile["transaction_id"] == report_charging_profile["transaction_id"]:
-                        raise ValueError("Already exists conflicting Profile with different ID")
-                else:
-                    if self.dates_overlap(charging_profile["valid_from"], charging_profile["valid_to"], report_charging_profile["valid_from"], report_charging_profile["valid_to"]):
-                        raise ValueError("Already exists conflicting Profile with different ID")
-        else:
-            raise AssertionError("Cannot reach DB")
+            if charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
+                if charging_profile["transaction_id"] == report_charging_profile["transaction_id"]:
+                    raise ValidationError("Already exists conflicting Profile with different ID")
+            else:
+                if self.dates_overlap(charging_profile["valid_from"], charging_profile["valid_to"], report_charging_profile["valid_from"], report_charging_profile["valid_to"]):
+                    raise ValidationError("Already exists conflicting Profile with different ID")
 
     
     def verify_charging_profile_structure(self, payload):
@@ -386,15 +369,15 @@ class ChargePoint(cp):
         if payload.charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
             #K01.FR.03
             if "transaction_id" not in payload.charging_profile or payload.charging_profile["transaction_id"] is None:
-                raise ValueError("Tx_profile needs tansaction id")
+                raise ValidationError("Tx_profile needs tansaction id")
 
             #K01.FR.16
             if payload.evse_id == 0:
-                raise ValueError("TxProfile SHALL only be be used with evseId >0")
+                raise ValidationError("TxProfile SHALL only be be used with evseId >0")
             
         else:
             if "transaction_id" in payload.charging_profile and payload.charging_profile["transaction_id"] is not None:
-                raise ValueError("Only tx_profile can have tansaction id")
+                raise ValidationError("Only tx_profile can have tansaction id")
     
     
     def choose_profile_id(self, request):
@@ -468,7 +451,7 @@ class ChargePoint(cp):
 
         #K09.FR.03
         if request.evse_id is None and (request.charging_profile is None or all(v is None for v in request.charging_profile.values())):
-            raise ValueError("Specify at least 1 field")
+            raise ValidationError("Specify at least 1 field")
 
         return await self.async_request(request)
 
@@ -476,6 +459,9 @@ class ChargePoint(cp):
     async def new_external_profiles(self):
         request = {"charging_profile" : {"charging_profile_purpose":enums.ChargingProfilePurposeType.charging_station_external_constraints}}    
         reports = await self.getChargingProfiles(**request)
+        
+        if reports["status"] != enums.GetChargingProfileStatusType.accepted:
+            return
 
         #add new profiles
         for r in reports["data"]:
@@ -493,7 +479,7 @@ class ChargePoint(cp):
         request = call.ClearChargingProfilePayload(**payload)
 
         if request.charging_profile_id is None and (request.charging_profile_criteria is None or all(v is None for v in request.charging_profile_criteria.values())):
-            raise ValueError("Specify at least 1 field")
+            raise ValidationError("Specify at least 1 field")
             
         message = Topic_Message(method="clearChargingProfile", cp_id=self.id, content=payload)
         await ChargePoint.broker.ocpp_log(message)
@@ -545,10 +531,8 @@ class ChargePoint(cp):
             #Get id tokens from DB
             message = Topic_Message(method="select", cp_id=self.id, content={"table":"IdToken"}, destination="SQL_DB")
             response = await ChargePoint.broker.send_request_wait_response(message)
-            if response["status"] != "OK":
-                raise ValueError("DB ERROR")
 
-            id_tokens = response['content']
+            id_tokens = response
         else:
             id_tokens = payload["id_tokens"]
 
@@ -619,7 +603,7 @@ class ChargePoint(cp):
             self.wait_reservation_evse_id = self.loop.create_future()
             evse_id = await asyncio.wait_for(self.wait_reservation_evse_id, timeout=20)
             message = Topic_Message(method="update", cp_id=self.id, content={"table":"Reservation", "filters":{"id":id}, "values":{"evse_id":evse_id}}, destination="SQL_DB")
-            response = await ChargePoint.broker.send_request_wait_response(message)
+            await ChargePoint.broker.ocpp_log(message)
         except:
             pass
 
@@ -635,7 +619,7 @@ class ChargePoint(cp):
                 self.loop.create_task(self.wait_for_evse(request.id))
 
             message = Topic_Message(method="new_Reservation", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
-            response = await ChargePoint.broker.send_request_wait_response(message)
+            await ChargePoint.broker.ocpp_log(message)
                     
         return response
         
@@ -729,19 +713,16 @@ class ChargePoint(cp):
                 #get the future with key = correlationid
                 future = self.wait_start_transaction.pop(transaction_info["remote_start_id"])
                 future.set_result(transaction_info["transaction_id"])
-        
 
         if event_type == enums.TransactionEventType.started and reservation_id is not None:
             #delete reservation
             message = Topic_Message(method="remove", cp_id=self.id, content={"table": "Reservation", "filters":{"id":reservation_id}},destination="SQL_DB")
-            response = await ChargePoint.broker.send_request_wait_response(message)
-        
+            await ChargePoint.broker.ocpp_log(message)
 
         if event_type == enums.TransactionEventType.ended:
             #delete charging profile
             message = Topic_Message(method="remove", cp_id=self.id, content={"table": "ChargingProfile", "filters":{"transaction_id":transaction_info["transaction_id"]}},destination="SQL_DB")
-            response = await ChargePoint.broker.send_request_wait_response(message)
-
+            await ChargePoint.broker.ocpp_log(message)
 
         if event_type == enums.TransactionEventType.ended or transaction_id in self.out_of_order_transaction:
             #verify that all messages have been received

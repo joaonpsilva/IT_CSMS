@@ -1,6 +1,7 @@
 import logging
 import asyncio
 from datetime import datetime
+from aioconsole import ainput
 
 from rabbit_mq.fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
 
@@ -34,7 +35,7 @@ async def main():
     await broker.send_request_wait_response(message)
 
     ########
-    input()
+    await ainput("")
 
     message = Fanout_Message(
         intent="request_authorize",
@@ -46,7 +47,7 @@ async def main():
     await broker.send_request_wait_response(message)
 
     ########
-    input()
+    await ainput("")
     message = Fanout_Message(
         intent="request_status_notification",
         type="REQUEST",

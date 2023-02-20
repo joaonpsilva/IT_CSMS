@@ -11,6 +11,7 @@ import traceback
 import argparse
 import signal
 import sys
+from Exceptions.exceptions import ValidationError, OtherError
 
 import dateutil.parser
 
@@ -70,20 +71,11 @@ class DataBase:
             #commit possible changes
             self.session.commit()
             
-            return {"status":"OK", "content":toReturn}
+            return toReturn
         
-        except ValueError as e:
+        except Exception as e:
             self.session.rollback()
-            return {"status" : "VAL_ERROR" , "content": e.args[0]}
-        
-        except AssertionError as e:
-            self.session.rollback()
-            return {"status" : "OTHER_ERROR" , "content": e.args[0]}
-
-        except:
-            self.session.rollback()
-            LOGGER.error(traceback.format_exc())
-            return {"status":"ERROR"}
+            raise e        
 
 
     async def run(self, rabbit):
@@ -142,17 +134,19 @@ class DataBase:
         user = self.session.query(User).filter_by(email=content["email"]).first()
         
         if user:
-            raise ValueError("User already exists")
+            raise ValidationError("User already exists")
 
         user = User(**content)
         self.session.add(user)
+        
+        return user.get_dict_obj()
 
 
     def login(self, email, password, **kwargs):
         user = self.session.query(User).filter_by(email=email).first()
 
         if not user or not user.verify_password(password):
-            raise AssertionError("Invalid User or Password")
+            raise OtherError("Invalid User or Password")
 
         response = {"id" : user.id, "permission_level" : user.permission_level}
         response["card_id_token"] = user.id_token.id_token if user.id_token else None

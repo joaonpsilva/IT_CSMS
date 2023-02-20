@@ -7,6 +7,8 @@ from typing import MutableMapping
 from aio_pika.abc import AbstractIncomingMessage
 import logging
 import datetime
+from Exceptions.exceptions import ValidationError, OtherError
+import traceback
 
 #SEE TODO
 #https://stackoverflow.com/questions/53374144/rabbitmq-ack-timeout
@@ -29,13 +31,14 @@ class Rabbit_Message:
 
 
 class Topic_Message(Rabbit_Message):
-    def __init__(self, destination = None, origin = None, method = None,type = None,content = None,cp_id = None):
+    def __init__(self, destination = None, origin = None, method = None,type = None,content = None,cp_id = None,status=None):
         self.destination = destination
         self.origin = origin
         self.method = method
         self.type = type
         self.content = content
         self.cp_id = cp_id
+        self.status=status
 
     def routing_key(self):
         s=self.type
@@ -45,12 +48,13 @@ class Topic_Message(Rabbit_Message):
             s += "." + self.cp_id
         return s
 
-    def prepare_Response(self):
+    def prepare_Response(self, status, **kwargs):
         temp_destination = self.destination
         self.destination = self.origin
         self.origin = temp_destination
         self.type = "response"
         self.content = None
+        self.status = status
         return self
 
 
@@ -60,10 +64,14 @@ class Fanout_Message(Rabbit_Message):
         self.type = type
         self.content = content
     
+    @property
+    def destination(self):
+        return "Decision_point"
+    
     def routing_key(self):
         return ''
     
-    def prepare_Response(self):
+    def prepare_Response(self, **kwargs):
         self.type = "response"
         self.content = None
         return self
@@ -83,7 +91,6 @@ class Rabbit_Handler:
         self.handle_request = handle_request
         self.name = name
         self.logger = logging.getLogger(name)
-
 
     async def connect(self, url, receive_requests=True, receive_logs=True, receive_responses=True):
         """
@@ -112,7 +119,6 @@ class Rabbit_Handler:
 
             #Start consuming requests from the queue
             await self.request_queue.consume(self.on_request, no_ack=False)
-        
 
         if receive_responses:
             #declare a callback queue to where the reponses will be consumed
@@ -121,10 +127,7 @@ class Rabbit_Handler:
             #consume messages from the queue
             await self.response_queue.consume(self.on_response)
 
-
-
         self.logger.info("Connected to the RMQ Broker")
-
 
 
     async def unpack(self, message: AbstractIncomingMessage):
@@ -154,8 +157,7 @@ class Rabbit_Handler:
 
             future: asyncio.Future = self.futures.pop(message.correlation_id)
             #set a result to that future
-            future.set_result(response.content)
-
+            future.set_result(response)
 
 
     async def on_request(self, message: AbstractIncomingMessage) -> None:
@@ -169,14 +171,26 @@ class Rabbit_Handler:
 
         self.logger.info("RECEIVED: %s", request.__dict__)
 
-        #pass content to be handled
-        response_content = await self.handle_request(request)
+        try:
+            #pass content to be handled
+            response_content = await self.handle_request(request)
+            status = "OK"
+        except (ValidationError, OtherError) as e:
+            status = e.status
+            response_content = e.args[0]
+        except TimeoutError as e:
+            status = "ERROR"
+            response_content = e.args[0]
+        except Exception:
+            status = "ERROR"
+            response_content = self.name + " error"
+            self.logger.error(traceback.format_exc())
         
         #send response to the entity that made the request
         if request.type == "request" and response_content is not None:
-            response = request.prepare_Response()
+            response = request.prepare_Response(status=status)
             response.content = response_content
-
+            
             await self.send_Message(response, message.correlation_id)
             
 
@@ -202,13 +216,24 @@ class Rabbit_Handler:
         #send request
         await self.send_Message(message, requestID, self.response_queue.name)
 
-        #wait for the future to have a value and then return it
         try:
-            return await asyncio.wait_for(future, timeout=timeout)
+            #wait for the future to have a value and then return it
+            result = await asyncio.wait_for(future, timeout=timeout)
+
+            if isinstance(result, Topic_Message):
+                if result.status == "VAL_ERROR":
+                    raise ValidationError(result.content)
+                elif result.status == "OTHER_ERROR":
+                    raise OtherError(result.content)
+                elif result.status == "ERROR":
+                    raise Exception(result.content)
+            
+            return result.content
+
         except asyncio.TimeoutError:
             self.futures.pop(requestID)
             self.logger.info("No response received")
-            raise TimeoutError
+            raise TimeoutError("TimedOut reaching " + message.destination)
         
 
     async def ocpp_log(self, message):
