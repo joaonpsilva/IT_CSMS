@@ -211,23 +211,21 @@ class IdTokenInfo(CustomBase):
     _group_id_token = Column(String(36), ForeignKey("GroupIdToken.id_token"))
     group_id_token = relationship("GroupIdToken", backref="id_token_info", uselist=False)
 
+
     def get_dict_obj(self, mode={}, cp_id=None, **kwargs):
         #override to only include evse permissions for given cp_id
-        evse_id = None
-        if "relationships" in mode and "evse" in mode["relationships"] and cp_id is not None:
-            evse_id = [evse.evse_id for evse in self.evse if evse.cp_id == cp_id] 
-            mode["relationships"].pop("evse")
+        evse = None
+        if "evse" in mode and cp_id is not None:
+            evse = [evse.evse_id for evse in self.evse if evse.cp_id == cp_id] 
+            mode.pop("evse")
         
         result = super().get_dict_obj(mode, **kwargs)
 
-        if evse_id:
-            result["evse_id"] = evse_id
+        if evse:
+            result["evse"] = evse
 
         return result 
         
-
-
-
 ############################################################################3
 
 class MeterValue(CustomBase):

@@ -74,7 +74,7 @@ class ChargePoint(cp):
         message = Topic_Message(method="select", cp_id=self.id, 
                 content={"table": "IdToken",
                         "filters" : {"id_token" : req_id_token["id_token"]},
-                        "mode" : {"relationships" : {"id_token_info" : {"relationships":{"group_id_token":{}, "evse":{}}}}}
+                        "mode" : {"id_token_info" : {"group_id_token":{}, "evse":{}}}
                         },
                 destination="SQL_DB")
         
@@ -90,6 +90,7 @@ class ChargePoint(cp):
         assert(id_token["id_token"] == req_id_token["id_token"])
         assert(id_token["type"] == req_id_token["type"])
 
+        id_token_info["evse_id"] = id_token_info.pop("evse")
         return id_token_info
     
 

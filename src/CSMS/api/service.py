@@ -60,8 +60,11 @@ class API_Service:
         response = await self.send_request("select", payload={
             "table":"Transaction",
             "filters":{"transaction_id":transaction_id},
-            "mode":{"relationships":{"charging_profile":{}}}},
+            "mode":{"charging_profile":{}}},
             destination="SQL_DB")
+
+        if len(response["content"]) == 0:
+            raise HTTPException(400, detail="Unknown Transaction")
 
         cp_id = response["content"][0]["cp_id"] 
         evse=response["content"][0]["evse_id"]
@@ -74,7 +77,6 @@ class API_Service:
         else:
             id = None
             stack_level = 0
-
 
         charging_profile = {
             "id" : id,
