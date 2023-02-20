@@ -119,9 +119,9 @@ class DataBase:
         await asyncio.get_event_loop().create_future()
         
 
-    def select(self, table, filters = {}, mode={}, **kwargs):
+    def select(self, table, filters = {}, mode={}, cp_id=None, **kwargs):
         statement = select(self.table_mapping[table]).filter_by(**filters)
-        return [obj.get_dict_obj(mode) for obj in self.session.scalars(statement).all()]
+        return [obj.get_dict_obj(mode, cp_id=cp_id) for obj in self.session.scalars(statement).all()]
     
     def create(self, table, values={}, **kwargs):
         obj = self.table_mapping[table](**values)
@@ -196,27 +196,6 @@ class DataBase:
 
             meter_value = MeterValue(**meter_value_dict)
             self.session.add(meter_value)
-
-    
-    def get_IdToken_Info(self, cp_id, id_token, **kwargs):
-
-        #get Idtoken fromdb
-        idToken = self.session.query(IdToken).get(id_token["id_token"])
-        if idToken is None:
-            return {"id_token" : None, "id_token_info" : None}
-        
-        #transform do dict
-        idToken_dict = idToken.get_dict_obj()
-
-        #get idtokeninfo from idtoken
-        idTokenInfo = idToken.id_token_info
-        #transform to dict
-        idTokenInfo_dict = idTokenInfo.get_dict_obj(mode={"relationships":{"group_id_token":{}}})
-        #append allowed evseids
-        idTokenInfo_dict["evse_id"] = idTokenInfo.get_allowed_evse_for_cp(cp_id) 
-        
-        return {"id_token" : idToken_dict, "id_token_info" : idTokenInfo_dict}
-    
 
 
     def verify_received_all_transaction(self, cp_id, transaction_id, **kwargs):

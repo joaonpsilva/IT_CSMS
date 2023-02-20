@@ -44,7 +44,7 @@ class CustomBase(Base):
         }
     """
     
-    def get_dict_obj(self, mode={}):
+    def get_dict_obj(self, mode={}, **kwargs):
         
         if "describe" not in mode or mode["describe"]:
             base_dict= { attr:value 
@@ -62,9 +62,9 @@ class CustomBase(Base):
                     obj = getattr(self, rel_name)
 
                     if rel.uselist:
-                        base_dict[rel_name] = [o.get_dict_obj(rel_mode) for o in obj]
+                        base_dict[rel_name] = [o.get_dict_obj(rel_mode, **kwargs) for o in obj]
                     else:
-                        base_dict[rel_name] = obj.get_dict_obj(rel_mode)
+                        base_dict[rel_name] = obj.get_dict_obj(rel_mode, **kwargs)
         
 
 

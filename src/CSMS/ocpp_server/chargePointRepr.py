@@ -67,27 +67,40 @@ class ChargePoint(cp):
         except Exception as e:
             self.logger.error(traceback.format_exc())
             return "ERROR", None
-        
     
+
+    async def get_id_token_info(self, req_id_token):
+        #get info from db
+        message = Topic_Message(method="select", cp_id=self.id, 
+                content={"table": "IdToken",
+                        "filters" : {"id_token" : req_id_token["id_token"]},
+                        "mode" : {"relationships" : {"id_token_info" : {"relationships":{"group_id_token":{}, "evse":{}}}}}
+                        },
+                destination="SQL_DB")
+        
+        response = await ChargePoint.broker.send_request_wait_response(message)
+
+        id_token = response["content"][0]
+        id_token_info = id_token["id_token_info"]
+
+        if id_token is None:
+            return {"status" : enums.AuthorizationStatusType.unknown}
+
+        #assert its the same idtoken
+        assert(id_token["id_token"] == req_id_token["id_token"])
+        assert(id_token["type"] == req_id_token["type"])
+
+        return id_token_info
+    
+
     async def authorize_idToken(self, id_token, evse_id=None, **kwargs):
         #no auth required
         if id_token["type"] == enums.IdTokenType.no_authorization:
             return {"status" : enums.AuthorizationStatusType.accepted}
         
         try:
-            #get info from db
-            message = Topic_Message(method="get_IdToken_Info", cp_id=self.id, content={"id_token": id_token},destination="SQL_DB")
-            response = await ChargePoint.broker.send_request_wait_response(message)
-            id_token =response["content"]["id_token"]
-            id_token_info =response["content"]["id_token_info"]
-
-            if id_token is None:
-                return {"status" : enums.AuthorizationStatusType.unknown}
-
-            #assert its the same idtoken
-            assert(id_token["id_token"] == id_token["id_token"])
-            assert(id_token["type"] == id_token["type"])
-
+            id_token_info = await self.get_id_token_info(id_token)
+            
             #If id token is valid and known, check status
             if not id_token_info.pop("valid"): 
                 return {"status" : enums.AuthorizationStatusType.blocked}
@@ -109,13 +122,11 @@ class ChargePoint(cp):
             if id_token_info["cache_expiry_date_time"] != None and id_token_info["cache_expiry_date_time"] < datetime.utcnow().isoformat():
                 id_token_info["status"] = enums.AuthorizationStatusType.expired
             
-            
             return id_token_info
             
         except:
             self.logger.error(traceback.format_exc())
             return {"status" : enums.AuthorizationStatusType.invalid}
-
 
 
     async def guarantee_transaction_integrity(self, transaction_id):
@@ -132,7 +143,6 @@ class ChargePoint(cp):
         
         raise ValueError("DB ERROR")
         
-    
 
     async def get_max_get_messages(self):
         if self.max_get_messages is None:
@@ -249,9 +259,7 @@ class ChargePoint(cp):
             for request, result in zip(variables, results["get_variable_result"]) 
             }
         
-
 #######################Functions starting from CSMS Initiative
-
 
     async def getVariables(self, **payload):
         """Funtion initiated by the csms to get variables"""
@@ -276,40 +284,41 @@ class ChargePoint(cp):
 
     async def requestStartTransaction(self, **payload):
 
-        payload = call.RequestStartTransactionPayload(**payload)
+        request = call.RequestStartTransactionPayload(**payload)
         
-        if payload.evse_id is not None and payload.evse_id <= 0:
+        if request.evse_id is not None and request.evse_id <= 0:
             raise ValueError("evse id must be > 0")
 
-        if payload.charging_profile is not None:
+        if request.charging_profile is not None:
+            request = self.choose_profile_id(request)
+
             #F01.FR.08
-            if payload.charging_profile["charging_profile_purpose"] != enums.ChargingProfilePurposeType.tx_profile:
+            if request.charging_profile["charging_profile_purpose"] != enums.ChargingProfilePurposeType.tx_profile:
                 raise ValueError("charging profile needs to be TxProfile")
             #F01.FR.11
-            if "transaction_id" in payload.charging_profile and payload.charging_profile["transaction_id"] is not None:
+            if "transaction_id" in request.charging_profile and request.charging_profile["transaction_id"] is not None:
                 raise ValueError("Transaction id shall not be set")
 
-
         #creating an id for the request
-        if payload.remote_start_id is None:
-            payload.remote_start_id = ChargePoint.new_Id()
+        if request.remote_start_id is None:
+            request.remote_start_id = ChargePoint.new_Id()
 
-        response = await self.call(payload)
+        response = await self.call(request)
 
         if response.status == enums.RequestStartStopStatusType.accepted:
 
             if response.transaction_id is None:
                 future = self.loop.create_future()
-                self.wait_start_transaction[payload.remote_start_id] = future
+                self.wait_start_transaction[request.remote_start_id] = future
                 response.transaction_id = await asyncio.wait_for(future, timeout=5)
 
-            #TODO REDO THIS Send to db
+            message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
+            await ChargePoint.broker.ocpp_log(message)
 
         return response                
 
     
     async def requestStopTransaction(self, **payload):
-
         request = call.RequestStopTransactionPayload(**payload)
         return await self.call(request)
     
@@ -324,7 +333,6 @@ class ChargePoint(cp):
 
 
     async def getTransactionStatus(self, transaction_id=None, **payload):
-
         if transaction_id is not None:
             payload["transaction_id"] = transaction_id
         
@@ -333,7 +341,6 @@ class ChargePoint(cp):
 
     
     def dates_overlap(self, valid_from1, valid_to1, valid_from2, valid_to2):
-
         valid_from1 = dateutil.parser.parse(valid_from1) if valid_from1 is not None else datetime.now()
         valid_from2 = dateutil.parser.parse(valid_from2) if valid_from2 is not None else datetime.now()
         valid_to1 = dateutil.parser.parse(valid_to1) if valid_to1 is not None else datetime.max
@@ -344,6 +351,7 @@ class ChargePoint(cp):
         
         return False
     
+
     async def charging_profile_assert_no_conflicts(self, evse_id, charging_profile):
         #check for conflicts in other charging profiles
 
@@ -356,7 +364,6 @@ class ChargePoint(cp):
         message = Topic_Message(method="get_charging_profiles", cp_id=self.id, content=request, destination="SQL_DB")
         result = await ChargePoint.broker.send_request_wait_response(message)
 
-
         if result["status"] == "OK":
             for report_charging_profile in result["content"]:
 
@@ -366,7 +373,6 @@ class ChargePoint(cp):
                 if charging_profile["charging_profile_purpose"] == enums.ChargingProfilePurposeType.tx_profile:
                     if charging_profile["transaction_id"] == report_charging_profile["transaction_id"]:
                         raise ValueError("Already exists conflicting Profile with different ID")
-
                 else:
                     if self.dates_overlap(charging_profile["valid_from"], charging_profile["valid_to"], report_charging_profile["valid_from"], report_charging_profile["valid_to"]):
                         raise ValueError("Already exists conflicting Profile with different ID")
@@ -388,14 +394,9 @@ class ChargePoint(cp):
         else:
             if "transaction_id" in payload.charging_profile and payload.charging_profile["transaction_id"] is not None:
                 raise ValueError("Only tx_profile can have tansaction id")
-        
     
-    async def setChargingProfile(self, **payload):
-        #TODO revisit document
-        #K01.FR.34, K01.FR.35, K01.FR.38, K01.FR.18, K01.FR.19, K01.FR.20
-
-        request = call.SetChargingProfilePayload(**payload)
-
+    
+    def choose_profile_id(self, request):
         if "id" not in request.charging_profile or request.charging_profile["id"] is None:
             request.charging_profile["id"] = ChargePoint.charging_profile_id
             ChargePoint.charging_profile_id+=1
@@ -404,6 +405,17 @@ class ChargePoint(cp):
             if "id" not in schedule or schedule["id"] is None:
                 schedule["id"] = ChargePoint.charging_schedule_id
                 ChargePoint.charging_schedule_id +=1
+        
+        return request
+
+
+    async def setChargingProfile(self, **payload):
+        #TODO revisit document
+        #K01.FR.34, K01.FR.35, K01.FR.38, K01.FR.18, K01.FR.19, K01.FR.20
+
+        request = call.SetChargingProfilePayload(**payload)
+
+        request = self.choose_profile_id(request)
             
         self.verify_charging_profile_structure(request)
         await self.charging_profile_assert_no_conflicts(request.evse_id, request.charging_profile)
@@ -419,13 +431,11 @@ class ChargePoint(cp):
 
     
     async def getCompositeSchedule(self, **payload):
-
         request = call.GetCompositeSchedulePayload(**payload)
         return await self.call(request)
     
 
     async def async_request(self, request):
-
         response = await self.call(request)
         response = asdict(response)
 
@@ -450,7 +460,6 @@ class ChargePoint(cp):
 
     
     async def getChargingProfiles(self, **payload):
-
         if "request_id" not in payload or payload["request_id"] is None:
             payload["request_id"] = ChargePoint.new_Id()
         
@@ -467,13 +476,6 @@ class ChargePoint(cp):
         request = {"charging_profile" : {"charging_profile_purpose":enums.ChargingProfilePurposeType.charging_station_external_constraints}}    
         reports = await self.getChargingProfiles(**request)
 
-        #delete current external profiles
-        #external profiles can have duplicate ids considering multiple charging stations
-        #message = Topic_Message(method="remove", cp_id=self.id, content={"table":"ChargingProfile", 
-        #                "filters":{"charging_profile_purpose":enums.ChargingProfilePurposeType.charging_station_external_constraints}},
-        #                destination="SQL_DB")
-        #response = await ChargePoint.broker.send_request_wait_response(message)
-
         #add new profiles
         for r in reports["data"]:
             for profile in r["charging_profile"]:
@@ -486,7 +488,6 @@ class ChargePoint(cp):
 
 
     async def clearChargingProfile(self, **payload):
-
         #K10.FR.02
         request = call.ClearChargingProfilePayload(**payload)
 
@@ -505,7 +506,6 @@ class ChargePoint(cp):
     
 
     async def setVariableMonitoring(self, **payload):
-
         vars = await self.getVariablesByName(["ItemsPerMessageSetVariableMonitoring", "BytesPerMessageSetVariableMonitoring"])
 
         results = await self.sendListByChunks(call.SetVariableMonitoringPayload, payload, "set_monitoring_data", vars["ItemsPerMessageSetVariableMonitoring"], vars["BytesPerMessageSetVariableMonitoring"])
@@ -515,7 +515,6 @@ class ChargePoint(cp):
 
     
     async def clearVariableMonitoring(self, **payload):
-
         vars = await self.getVariablesByName(["ItemsPerMessageClearVariableMonitoring", "BytesPerMessageClearVariableMonitoring"])
 
         results = await self.sendListByChunks(call.ClearVariableMonitoringPayload, payload, "id", vars["ItemsPerMessageClearVariableMonitoring"], vars["BytesPerMessageClearVariableMonitoring"])
@@ -808,6 +807,7 @@ class ChargePoint(cp):
     @on("NotifyChargingLimit")
     async def on_NotifyChargingLimit(self, **kwargs):
         return call_result.NotifyChargingLimitPayload()
+    
     @after("NotifyChargingLimit")
     async def after_NotifyChargingLimit(self, **kwargs):
         await self.new_external_profiles()
@@ -839,6 +839,3 @@ class ChargePoint(cp):
             self.is_online = on
             message = Topic_Message(method="update", cp_id=self.id, content={"table":"Charge_Point", "filters" : {"cp_id" : self.id}, "values":{"is_online":self.is_online}})            
             await ChargePoint.broker.ocpp_log(message)
-
-
-    
