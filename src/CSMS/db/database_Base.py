@@ -73,8 +73,6 @@ class CustomBase(Base):
                 if rel.uselist:
                     base_dict[rel_name] = [o.get_dict_obj(rel_mode, **kwargs) for o in obj]
                 else:
-                    base_dict[rel_name] = obj.get_dict_obj(rel_mode, **kwargs)
+                    base_dict[rel_name] = obj.get_dict_obj(rel_mode, **kwargs) if obj is not None else None
         
-
-
         return base_dict
