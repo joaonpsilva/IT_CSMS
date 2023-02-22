@@ -104,10 +104,23 @@ async def charge_stop(transaction_id: str):
 @app.get("/setmaxpower", status_code=200)
 async def setmaxpower(transaction_id: str, max_power: int):
     return await service.setmaxpower(transaction_id, max_power)
-    #payload = {"transaction_id": transaction_id, "max_power":max_power}
-    #response = await service.send_request("setmaxpower", payload=payload)
-    #return response
 
+
+@app.get("/getTransactions")
+async def getTransactions():
+    response = await service.send_request("select", payload={"table" : crud_schemas.DB_Tables.Transaction}, destination="SQL_DB")
+    return response
+
+@app.get("/getTransactions_ById/{transactionId}")
+async def getTransactions(transactionId: str):
+    response = await service.send_request("select", payload={"table":crud_schemas.DB_Tables.Transaction, "filters":{"transaction_id":transactionId}}, destination="SQL_DB")
+    return response
+
+
+@app.get("/getConnected_ChargePoints/")
+async def getConnected_ChargePoints():
+    response = await service.send_request("get_connected_cps")
+    return response
 
 
 @app.get("/stations", status_code=200)
@@ -122,6 +135,21 @@ async def getStationById(CP_Id : str):
     response = await service.send_request("select", payload={"table": "Charge_Point", "filters":{"cp_id":CP_Id}, "mode":mode}, destination="SQL_DB")
     return response
 
+
+@app.post("/send_full_authorization_list/{CP_Id}", status_code=200)
+async def send_full_authorization_list(CP_Id: str):
+    response = await service.send_authList(CP_Id, "full")
+    return response
+
+@app.post("/differential_Auth_List_Add/{CP_Id}", status_code=200)
+async def differential_Auth_List_Add(CP_Id: str, id_tokens: List[str]):
+    response = await service.send_authList(CP_Id, "add", id_tokens)
+    return response
+
+@app.post("/differential_Auth_List_Delete/{CP_Id}", status_code=200)
+async def differential_Auth_List_Delete(CP_Id: str, id_tokens: List[str]):
+    response = await service.send_authList(CP_Id, "delete", id_tokens)
+    return response
 
 
 
@@ -254,42 +282,9 @@ async def ClearDisplayMessage(CP_Id: str, payload: payloads.ClearDisplayMessageP
     return response
 
 
-@app.post("/send_full_authorization_list/{CP_Id}", status_code=200)
-async def send_full_authorization_list(CP_Id: str):
-    response = await service.send_authList(CP_Id, "full")
-    return response
-
-
-@app.post("/differential_Auth_List_Add/{CP_Id}", status_code=200)
-async def differential_Auth_List_Add(CP_Id: str, id_tokens: List[str]):
-    response = await service.send_authList(CP_Id, "add", id_tokens)
-    return response
-
-@app.post("/differential_Auth_List_Delete/{CP_Id}", status_code=200)
-async def differential_Auth_List_Delete(CP_Id: str, id_tokens: List[str]):
-    response = await service.send_authList(CP_Id, "delete", id_tokens)
-    return response
-
-
 @app.post("/CRUD/", status_code=200)
 async def CRUD(payload: crud_schemas.CRUD_Payload):
     response = await service.send_request(payload.operation, payload=payload, destination="SQL_DB")
-    return response
-
-@app.get("/getTransactions")
-async def getTransactions():
-    response = await service.send_request("select", payload={"table" : crud_schemas.DB_Tables.Transaction}, destination="SQL_DB")
-    return response
-
-@app.get("/getTransactions_ById/{transactionId}")
-async def getTransactions(transactionId: str):
-    response = await service.send_request("select", payload={"table":crud_schemas.DB_Tables.Transaction, "filters":{"transaction_id":transactionId}}, destination="SQL_DB")
-    return response
-
-
-@app.get("/getConnected_ChargePoints/")
-async def getConnected_ChargePoints():
-    response = await service.send_request("get_connected_cps")
     return response
 
 
