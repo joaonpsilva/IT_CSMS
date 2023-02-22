@@ -130,7 +130,6 @@ class ChargePoint(cp):
         self.logger.info("DB could not identify transaction")
         return False
         
-        
 
     async def get_max_get_messages(self):
         if self.max_get_messages is None:
@@ -300,8 +299,9 @@ class ChargePoint(cp):
                 self.wait_start_transaction[request.remote_start_id] = future
                 response.transaction_id = await asyncio.wait_for(future, timeout=5)
 
-            message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
-            await ChargePoint.broker.ocpp_log(message)
+            if request.charging_profile is not None:
+                message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
+                await ChargePoint.broker.ocpp_log(message)
 
         return response                
 
