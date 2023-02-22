@@ -27,8 +27,8 @@ class API_Service:
                 await event_queue.put(json.dumps(message.content))
 
     
-    async def send_request(self, method, CP_Id=None, payload=None, destination="Ocpp_Server"):
-        message = Topic_Message(method=method, content=payload, cp_id = CP_Id, origin="API", destination=destination)
+    async def send_request(self, method, cp_id=None, payload=None, destination="Ocpp_Server"):
+        message = Topic_Message(method=method, content=payload, cp_id = cp_id, origin="API", destination=destination)
         try:
             if destination=="Ocpp_Server" and message.cp_id is None:
                 if "transaction_id" in message.content:
@@ -90,3 +90,47 @@ class API_Service:
         }
 
         return (await self.send_request("setChargingProfile", cp_id, {"evse_id":evse, "charging_profile" : charging_profile}))
+
+
+    async def send_authList(self, cp_id, update_type, idtokens=None):
+
+        #update is full, retrieve all idtoken info from db
+        if update_type=="full":
+            update_type = enums.UpdateType.full
+        
+            idtokens = await self.send_request("select", cp_id=cp_id,
+                payload={"table": "IdToken","mode" : {"id_token_info" : {"group_id_token":{}, "evse":{}}}},
+                destination="SQL_DB")
+        
+        local_authorization_list=[]
+        for id_token in idtokens:
+            
+            #if only adding or deleting need to get information regarding specific idtoken
+            mode = {}
+            if update_type == "add":
+                mode = {"id_token_info" : {"group_id_token":{}, "evse":{}}}
+
+            if update_type == "add" or update_type == "delete":
+                update_type = enums.UpdateType.differential
+        
+                response = await self.send_request("select", cp_id=cp_id,
+                    payload={"table": "IdToken","filters" : {"id_token" : id_token},"mode" : mode},
+                    destination="SQL_DB")
+                
+                if len(response) == 0:
+                    continue
+
+                id_token = response[0]
+
+            if "id_token_info" in id_token and id_token["id_token_info"]:
+                id_token_info = id_token.pop("id_token_info")
+                id_token_info["evse_id"] = id_token_info.pop("evse")
+            else:
+                id_token_info = None
+
+            local_authorization_list.append({"id_token":id_token, "id_token_info":id_token_info})
+        
+        if len(local_authorization_list) == 0:
+            raise HTTPException(400, detail="No valid id tokens were found")
+        
+        return (await self.send_request("sendAuhorizationList", cp_id, {"update_type":update_type, "local_authorization_list":local_authorization_list}))

@@ -256,21 +256,18 @@ async def ClearDisplayMessage(CP_Id: str, payload: payloads.ClearDisplayMessageP
 
 @app.post("/send_full_authorization_list/{CP_Id}", status_code=200)
 async def send_full_authorization_list(CP_Id: str):
-    payload = {"update_type" : enums.UpdateType.full}
-    response = await service.send_request("send_auhorization_list", CP_Id, payload)
+    response = await service.send_authList(CP_Id, "full")
     return response
 
 
 @app.post("/differential_Auth_List_Add/{CP_Id}", status_code=200)
-async def differential_Auth_List_Add(CP_Id: str, payload: List[datatypes.IdTokenType]):
-    payload = {"update_type" : enums.UpdateType.differential, "id_tokens" : payload, "operation" : "Add"}
-    response = await service.send_request("send_auhorization_list", CP_Id, payload)
+async def differential_Auth_List_Add(CP_Id: str, id_tokens: List[str]):
+    response = await service.send_authList(CP_Id, "add", id_tokens)
     return response
 
 @app.post("/differential_Auth_List_Delete/{CP_Id}", status_code=200)
-async def differential_Auth_List_Delete(CP_Id: str, payload: List[datatypes.IdTokenType]):
-    payload = {"update_type" : enums.UpdateType.differential, "id_tokens" : payload, "operation" : "Delete"}
-    response = await service.send_request("send_auhorization_list", CP_Id, payload)
+async def differential_Auth_List_Delete(CP_Id: str, id_tokens: List[str]):
+    response = await service.send_authList(CP_Id, "delete", id_tokens)
     return response
 
 
