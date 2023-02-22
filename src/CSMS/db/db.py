@@ -97,6 +97,7 @@ class DataBase:
 
         except Exception:
             LOGGER.info("Could not connect to the Database")
+            self.logger.error(traceback.format_exc())
             self.shut_down()
 
         try:
@@ -135,6 +136,11 @@ class DataBase:
         
         if user:
             raise ValidationError("User already exists")
+        
+        if content["_id_token"]:
+            id_token = self.session.query(IdToken).filter_by(id_token=content["_id_token"]).first()
+            if not id_token:
+                raise ValidationError("Invalid Id Token")
 
         user = User(**content)
         self.session.add(user)
@@ -148,8 +154,7 @@ class DataBase:
         if not user or not user.verify_password(password):
             raise OtherError("Invalid User or Password")
 
-        response = {"id" : user.id, "permission_level" : user.permission_level}
-        response["card_id_token"] = user.id_token.id_token if user.id_token else None
+        response = {"id" : user.id, "permission_level" : user.permission_level, "id_token" : user._id_token}
 
         return response
 

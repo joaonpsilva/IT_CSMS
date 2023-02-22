@@ -150,7 +150,9 @@ class User(CustomBase):
     permission_level = Column(Integer, server_default='1')
     _password_hash = Column(String(256))
 
+    _id_token = Column(String(36), ForeignKey("IdToken.id_token"))
     id_token = relationship("IdToken", backref=backref("user", uselist=False), uselist=False)
+
 
     def __init__(self, password=None, **kwargs):
         
@@ -178,8 +180,6 @@ class IdToken(CustomBase):
     __tablename__ = "IdToken"
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
-
-    _user_id = Column(Integer, ForeignKey("User.id"))
 
     def __init__(self, additional_info=None, **kwargs):
         super().__init__(**kwargs)
