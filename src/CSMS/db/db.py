@@ -296,15 +296,15 @@ class DataBase:
         self.session.merge(transaction_event)
     
 
-    def new_Reservation(self, cp_id, id_token, group_id_token, **reservation):
+    def new_Reservation(self, id_token, group_id_token=None, **reservation):
         
-        reservation = Reservation(**reservation, cp_id=cp_id)
+        reservation = Reservation(**reservation)
 
         id_token = self.session.query(IdToken).get(id_token["id_token"])
         if id_token is not None:
             reservation.id_token = id_token
         
-        group_id_token = self.session.query(GroupIdToken).get(group_id_token["id_token"])
+        group_id_token = self.session.query(GroupIdToken).get(group_id_token["id_token"]) if group_id_token else None
         if group_id_token is not None:
             reservation.group_id_token = group_id_token
         

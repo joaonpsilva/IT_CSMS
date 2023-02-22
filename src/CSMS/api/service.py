@@ -4,6 +4,7 @@ import json
 from fastapi import HTTPException
 from ocpp.v201 import call, call_result, enums, datatypes
 from Exceptions.exceptions import ValidationError, OtherError
+from datetime import datetime, timedelta
 import logging
 LOGGER = logging.getLogger("API")
 
@@ -48,7 +49,7 @@ class API_Service:
 
         if len(response) > 0:
             return response[0]["cp_id"]
-        raise HTTPException(400, detail="Unknown Transaction")
+        raise HTTPException(404, detail="Transaction not found")
 
 
     async def setmaxpower(self, transaction_id, max_power):
@@ -89,7 +90,7 @@ class API_Service:
             }]
         }
 
-        return (await self.send_request("setChargingProfile", cp_id, {"evse_id":evse, "charging_profile" : charging_profile}))
+        return await self.send_request("setChargingProfile", cp_id, {"evse_id":evse, "charging_profile" : charging_profile})
 
 
     async def send_authList(self, cp_id, update_type, idtokens=None):
@@ -133,4 +134,31 @@ class API_Service:
         if len(local_authorization_list) == 0:
             raise HTTPException(400, detail="No valid id tokens were found")
         
-        return (await self.send_request("sendAuhorizationList", cp_id, {"update_type":update_type, "local_authorization_list":local_authorization_list}))
+        return await self.send_request("sendAuhorizationList", cp_id, {"update_type":update_type, "local_authorization_list":local_authorization_list})
+
+
+    async def reserve(self, cp_id, evse_id, id_token):
+        id_token = await self.send_request("select", cp_id=cp_id,
+                    payload={"table": "IdToken","filters" : {"id_token" : id_token}},
+                    destination="SQL_DB")
+        
+        if len(id_token) == 0:
+            raise HTTPException(404, detail="Id_Token not found")
+        
+        request = {
+            "evse_id" : evse_id,
+            "id_token" : id_token[0],
+            "expiry_date_time" : datetime.utcnow() + timedelta(hours=1)            
+        }
+
+        return await self.send_request("reserveNow", cp_id, request)
+    
+    async def cancel_reservation(self, reservation_id):
+        reservation = (await self.send_request("select",
+                payload={"table": "Reservation", "filters" : {"id" : reservation_id}},
+                destination="SQL_DB"))
+        
+        if len(reservation) == 0:
+            raise HTTPException(404, detail="Reservation not found")
+
+        return await self.send_request("cancelReservation", reservation[0]["cp_id"], payload={"reservation_id" : reservation_id})

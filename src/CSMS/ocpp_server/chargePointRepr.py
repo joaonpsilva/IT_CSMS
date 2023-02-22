@@ -586,8 +586,8 @@ class ChargePoint(cp):
 
 
     async def reserveNow(self, **payload):
+        payload["id"] = ChargePoint.new_Id()
         request = call.ReserveNowPayload(**payload)
-        request.id = ChargePoint.new_Id()
             
         response = await self.call(request)
 
@@ -599,6 +599,11 @@ class ChargePoint(cp):
             await ChargePoint.broker.ocpp_log(message)
                     
         return response
+    
+
+    async def cancelReservation(self, reservation_id):
+        request = call.CancelReservationPayload(reservation_id=reservation_id)
+        return await self.call(request)
         
 
 #######################Funtions staring from the CP Initiative
@@ -651,16 +656,23 @@ class ChargePoint(cp):
         return call_result.MeterValuesPayload()
 
     
-    @on('Authorize')
-    async def on_Authorize(self, **kwargs):
+    def authorize_certificate(self, certificate, iso15118_certificate_hash_data):
+        return enums.CertificateSignedStatusType.accepted
+    
 
-        message = Topic_Message(method="Authorize", cp_id=self.id, content=kwargs)
-        await ChargePoint.broker.ocpp_log(message)
-        
+    @on('Authorize')
+    async def on_Authorize(self, id_token, certificate=None, iso15118_certificate_hash_data=None):
+
         #authorize id_token
-        id_token_info = await self.authorize_idToken(**kwargs)
-        return call_result.AuthorizePayload(id_token_info=id_token_info)
+        id_token_info = await self.authorize_idToken(id_token)
+
+        certificate_status = None
+        if certificate is not None:
+            certificate_status = self.authorize_certificate(certificate, iso15118_certificate_hash_data)
         
+        return call_result.AuthorizePayload(id_token_info=id_token_info, certificate_status=certificate_status)
+        
+
     @on('TransactionEvent')
     async def on_TransactionEvent(self, **kwargs):
         
@@ -675,7 +687,6 @@ class ChargePoint(cp):
         if kwargs["event_type"] == enums.TransactionEventType.ended:
             #Payment (show total cost)
             pass
-
         
         return transaction_response
     
@@ -729,6 +740,12 @@ class ChargePoint(cp):
             #last message
             if "tbc" not in message or message["tbc"] is None or message["tbc"]==False:
                 self.multiple_response_requests[message["request_id"]]["ready"].set_result(True)
+    
+
+    @on("ReservationStatusUpdate")
+    async def on_ReservationStatusUpdate(self, reservation_id, reservation_update_status):
+        message = Topic_Message(method="remove", cp_id=self.id, content={"table": "Reservation", "filters":{"id":reservation_id}},destination="SQL_DB")
+        await ChargePoint.broker.ocpp_log(message)
     
 
     @on("ReportChargingProfiles")
