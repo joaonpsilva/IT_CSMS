@@ -5,7 +5,7 @@ from passlib.context import CryptContext
 
 from CSMS.db.database_Base import *
 from sqlalchemy.sql import true
-
+import uuid
 
 
 PASSLIB_CONTEXT = CryptContext(
@@ -181,8 +181,14 @@ class IdToken(CustomBase):
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
 
-    def __init__(self, additional_info=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, additional_info=None, id_token=None, **kwargs):
+        if id_token is None:
+            id_token = self.generate_idToken()
+
+        super().__init__(**kwargs, id_token)
+    
+    def generate_idToken(self):
+        return uuid.uuid4()
 
 
 class GroupIdToken(CustomBase):

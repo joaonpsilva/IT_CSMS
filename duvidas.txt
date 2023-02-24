@@ -9,7 +9,7 @@ Notify event? tem tbc e seq no mas pode ter events diferentes
 
 
 
-
+quando a api cria users ou idtokens ainda nao da para criar em varias dbs pq necessita alguns dados de return
 
 
 
