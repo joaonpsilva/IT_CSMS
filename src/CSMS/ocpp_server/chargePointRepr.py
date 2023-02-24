@@ -481,11 +481,15 @@ class ChargePoint(cp):
 
         if request.charging_profile_id is None and (request.charging_profile_criteria is None or all(v is None for v in request.charging_profile_criteria.values())):
             raise ValidationError("Specify at least 1 field")
-            
-        message = Topic_Message(method="clearChargingProfile", cp_id=self.id, content=payload)
-        await ChargePoint.broker.ocpp_log(message)
+        
+        if request.charging_profile_criteria["charging_profile_purpose"] == enums.ChargingProfilePurposeType.charging_station_external_constraints:
+            raise ValidationError("CSMS cannot clear charging_station_external_constraints")
 
-        return await self.call(request)
+        response = await self.call(request)
+
+        if response.status == enums.ClearChargingProfileStatusType.accepted:
+            message = Topic_Message(method="clearChargingProfile", cp_id=self.id, content=payload)
+            await ChargePoint.broker.ocpp_log(message)
 
     
     async def changeAvailability(self, **payload):
@@ -659,7 +663,6 @@ class ChargePoint(cp):
     def authorize_certificate(self, certificate, iso15118_certificate_hash_data):
         return enums.CertificateSignedStatusType.accepted
     
-
     @on('Authorize')
     async def on_Authorize(self, id_token, certificate=None, iso15118_certificate_hash_data=None):
 

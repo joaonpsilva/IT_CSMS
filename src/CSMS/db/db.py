@@ -330,27 +330,37 @@ class DataBase:
         return [t.get_dict_obj() for t in transactions]
 
 
-    def get_charging_profiles(self, cp_id, evse_id, charging_profile_purpose, stack_level):
+    def get_charging_profiles_criteria(self, cp_id=None, evse_id=None, charging_profile_purpose=None, stack_level=None, id=None):
 
-        if evse_id == 0:
-            evse_ids = [evse.evse_id for evse in self.session.query(EVSE).filter(EVSE.cp_id==cp_id).all()]
-        else:
-            evse_ids = [evse_id]
+        profiles = self.session.query(ChargingProfile)
+        filters = []
+        
+        if cp_id is not None:
+            profiles = profiles.join(ChargingProfile.evse)
+            filters.append(EVSE.cp_id == cp_id)
 
-        result = []
-        for evse_id in evse_ids:
+            if evse_id == 0 or evse_id is None:
+                evse_id = None    
+            else:
+                filters.append(EVSE.evse_id == evse_id)
+        
+        if charging_profile_purpose:
+            filters.append(ChargingProfile.charging_profile_purpose == charging_profile_purpose)
+        if stack_level:
+            filters.append(ChargingProfile.stack_level == stack_level)
+        if id:
+            filters.append(ChargingProfile.id == id)
 
-            profiles = self.session.query(ChargingProfile).join(ChargingProfile.evse).filter(
-                EVSE.cp_id == cp_id,
-                EVSE.evse_id == evse_id,
-                ChargingProfile.charging_profile_purpose == charging_profile_purpose,
-                ChargingProfile.stack_level == stack_level
-            ).all()
+        return profiles.filter(*filters)
 
-            result += [obj.get_dict_obj() for obj in profiles]
 
-        return result
+    def get_charging_profiles(self, **kwargs):
+        return [obj.get_dict_obj() for obj in self.get_charging_profiles_criteria(**kwargs).all()]
+    
 
+    def clearChargingProfile(self, cp_id, charging_profile_id, charging_profile_criteria, **kwargs):
+        self.get_charging_profiles_criteria(cp_id, **charging_profile_criteria, id=charging_profile_id).delete()
+ 
 
     def create_Charging_profile(self, cp_id,  evse_id, charging_profile, **kwargs):
         
