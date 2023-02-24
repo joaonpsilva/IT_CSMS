@@ -74,10 +74,11 @@ class ChargePoint(cp):
 
         try:
             #send message
-            return await self.call(request)
-        except:
+            return await self.call(request, False)
+        except Exception as e:
             logging.error(traceback.format_exc())
-            return {}
+
+            return str(e.__class__.__name__)
     
 
 
@@ -89,31 +90,31 @@ class ChargePoint(cp):
             self.broker = broker
         
         async def handle_message(self, **kwargs):
-            try:
+            #try:
                 
-                #action to rabbitmq format
-                intent = re.sub(r'(?<!^)(?=[A-Z])', '_', self.action).lower()
-                message = Fanout_Message(intent=intent, content=kwargs)
+            #action to rabbitmq format
+            intent = re.sub(r'(?<!^)(?=[A-Z])', '_', self.action).lower()
+            message = Fanout_Message(intent=intent, content=kwargs)
 
-                #send message
-                response = await self.broker.send_request_wait_response(message, timeout=2)
+            #send message
+            response = await self.broker.send_request_wait_response(message, timeout=2)
 
-                #get correct payload
-                response = getattr(call_result, self.action + "Payload")(**response)
+            #get correct payload
+            response = getattr(call_result, self.action + "Payload")(**response)
             
-            except:
-                payload_type = getattr(call_result, self.action + "Payload")
+            # except:
+            #     payload_type = getattr(call_result, self.action + "Payload")
 
-                if payload_type == call_result.UnlockConnectorPayload:
-                    response = payload_type(status="UnlockFailed")
-                elif payload_type == call_result.ClearChargingProfilePayload:
-                    response = payload_type(status="Unknown")
-                elif payload_type == call_result.SendLocalListPayload:
-                    response = payload_type(status="Failed")
-                elif payload_type == call_result.GetChargingProfilesPayload:
-                    response = payload_type(status="NoProfiles")
-                else:
-                    response = payload_type(status="Rejected")
+            #     if payload_type == call_result.UnlockConnectorPayload:
+            #         response = payload_type(status="UnlockFailed")
+            #     elif payload_type == call_result.ClearChargingProfilePayload:
+            #         response = payload_type(status="Unknown")
+            #     elif payload_type == call_result.SendLocalListPayload:
+            #         response = payload_type(status="Failed")
+            #     elif payload_type == call_result.GetChargingProfilesPayload:
+            #         response = payload_type(status="NoProfiles")
+            #     else:
+            #         response = payload_type(status="Rejected")
                 
             return response
 
