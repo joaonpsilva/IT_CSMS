@@ -97,7 +97,7 @@ class DataBase:
 
         except Exception:
             LOGGER.info("Could not connect to the Database")
-            self.logger.error(traceback.format_exc())
+            LOGGER.error(traceback.format_exc())
             self.shut_down()
 
         try:
