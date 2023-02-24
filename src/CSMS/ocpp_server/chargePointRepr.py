@@ -818,3 +818,20 @@ class ChargePoint(cp):
             self.is_online = on
             message = Topic_Message(method="update", cp_id=self.id, content={"table":"Charge_Point", "filters" : {"cp_id" : self.id}, "values":{"is_online":self.is_online}})            
             await ChargePoint.broker.ocpp_log(message)
+    
+
+    @on("NotifyEVChargingNeeds")
+    async def on_NotifyEVChargingNeeds(self, **kwargs):
+        return call_result.NotifyEVChargingNeedsPayload(status=enums.NotifyEVChargingNeedsStatusType.accepted)
+    
+    @on("NotifyEVChargingSchedule")
+    async def on_NotifyEVChargingSchedule(self, **kwargs):
+        return call_result.NotifyEVChargingSchedulePayload(status=enums.GenericStatusType.accepted)
+    
+    @on("Get15118EVCertificate")
+    async def on_Get15118EVCertificate(self, **kwargs):
+        return call_result.Get15118EVCertificatePayload(status=enums.Iso15118EVCertificateStatusType.accepted, exi_response="")
+    
+    @on("GetCertificateStatus")
+    async def on_GetCertificateStatus(self, **kwargs):
+        return call_result.GetCertificateStatusPayload(status=enums.GetCertificateStatusType.accepted)
