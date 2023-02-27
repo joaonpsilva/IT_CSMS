@@ -5,7 +5,7 @@ from typing import List, Optional
 from ocpp.v201 import call, call_result, enums
 from .schemas import datatypes
 from .schemas import payloads
-from .schemas import crud_schemas
+from .schemas import schemas
 from .auth import AuthHandler
 from .service import API_Service
 from Exceptions.exceptions import OtherError
@@ -64,22 +64,40 @@ async def get_user_byEmail(email:str):
     return await service.send_request("select", payload={"table": "User", "filters":{"email":email}}, destination="SQL_DB")
 
 
+@app.post("/create_GroupidToken/", status_code=201)
+async def create_GroupidToken(type:enums.IdTokenType = enums.IdTokenType.local, user=Depends(auth_handler.check_permission_level_2)):
+    return await service.send_request("create_new_Group_IdToken", payload={"type": type}, destination="SQL_DB")
+
+@app.post("/create_idToken/", status_code=201)
+async def create_idToken(id_token_info:schemas.new_IdToken, user=Depends(auth_handler.check_permission_level_2)):
+    return await service.create_new_IdToken(id_token_info)
+
+@app.post("/give_group_to_idToken/", status_code=201)
+async def give_group_to_idToken(id_token:str, group_id_token:str, user=Depends(auth_handler.check_permission_level_2)):
+    return await service.send_request("update", payload={"table": "IdTokenInfo", "filters":{"_id_token":id_token}, "values":{"_group_id_token" : group_id_token}}, destination="SQL_DB")
+
+
+@app.get("/group_idTokens/", status_code=200)
+async def group_idTokens(user=Depends(auth_handler.check_permission_level_2)):
+    return await service.send_request("select", payload={"table": "GroupIdToken"}, destination="SQL_DB")
+
+
 @app.get("/transactions", status_code=200)
-async def getTransactions(transaction_id:str):
+async def getTransactions(transaction_id:str, user=Depends(auth_handler.check_permission_level_1)):
     return await service.send_request("select", payload={"table": "Transaction", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
 
 @app.get("/transactions/open", status_code=200)
-async def getOpenTransactionsByIdToken(user=Depends(auth_handler.auth_wrapper)):
+async def getOpenTransactionsByIdToken(user=Depends(auth_handler.check_permission_level_1)):
     return await service.send_request("get_IdToken_Transactions", payload={"id_token": user["id_token"]}, destination="SQL_DB")
 
 
 @app.get("/transactions/{date}", status_code=200)
-async def getOpenTransactionsByIdToken(date: datetime.datetime, user=Depends(auth_handler.auth_wrapper)):
+async def getOpenTransactionsByIdToken(date: datetime.datetime, user=Depends(auth_handler.check_permission_level_1)):
     return await service.send_request("get_Transactions_byDate", payload={"id_token": user["id_token"], "date":date}, destination="SQL_DB")
 
 
 @app.post("/charge/start", status_code=200)
-async def charge_start(evse_id: int, cp_id:str, user=Depends(auth_handler.auth_wrapper)):
+async def charge_start(evse_id: int, cp_id:str, user=Depends(auth_handler.check_permission_level_1)):
 
     payload = payloads.RequestStartTransactionPayload(
         id_token=datatypes.IdTokenType(id_token=user["id_token"], type=enums.IdTokenType.iso14443),
@@ -89,22 +107,18 @@ async def charge_start(evse_id: int, cp_id:str, user=Depends(auth_handler.auth_w
 
 
 @app.post("/charge/stop", status_code=200)
-async def charge_stop(transaction_id: str):
+async def charge_stop(transaction_id: str, user=Depends(auth_handler.check_permission_level_1)):
     return await service.send_request("requestStopTransaction", payload={"transaction_id" : transaction_id})
 
 
 @app.post("/setmaxpower", status_code=200)
-async def setmaxpower(transaction_id: str, max_power: int):
+async def setmaxpower(transaction_id: str, max_power: int, user=Depends(auth_handler.check_permission_level_1)):
     return await service.setmaxpower(transaction_id, max_power)
 
 
 @app.get("/getTransactions")
-async def getTransactions():
-    return await service.send_request("select", payload={"table" : crud_schemas.DB_Tables.Transaction}, destination="SQL_DB")
-
-@app.get("/getTransactions_ById/{transactionId}")
-async def getTransactions(transactionId: str):
-    return await service.send_request("select", payload={"table":crud_schemas.DB_Tables.Transaction, "filters":{"transaction_id":transactionId}}, destination="SQL_DB")
+async def getTransactions(user=Depends(auth_handler.check_permission_level_2)):
+    return await service.send_request("select", payload={"table" : schemas.DB_Tables.Transaction}, destination="SQL_DB")
 
 
 @app.get("/getConnected_ChargePoints/")
@@ -124,136 +138,136 @@ async def getStationById(cp_id : str):
 
 
 @app.post("/send_full_authorization_list/{cp_id}", status_code=200)
-async def send_full_authorization_list(cp_id: str):
+async def send_full_authorization_list(cp_id: str, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_authList(cp_id, "full")
 
 @app.post("/differential_Auth_List_Add/{cp_id}", status_code=200)
-async def differential_Auth_List_Add(cp_id: str, id_tokens: List[str]):
+async def differential_Auth_List_Add(cp_id: str, id_tokens: List[str], user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_authList(cp_id, "add", id_tokens)
 
 @app.post("/differential_Auth_List_Delete/{cp_id}", status_code=200)
-async def differential_Auth_List_Delete(cp_id: str, id_tokens: List[str]):
+async def differential_Auth_List_Delete(cp_id: str, id_tokens: List[str], user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_authList(cp_id, "delete", id_tokens)
 
 
 @app.post("/ReserveNow", status_code=200)
-async def reserve_now(cp_id: str, evse_id: int, user=Depends(auth_handler.auth_wrapper)):
+async def reserve_now(cp_id: str, evse_id: int, user=Depends(auth_handler.check_permission_level_1)):
     return await service.reserve(cp_id, evse_id, user["id_token"])
 
 @app.post("/cancel_Reservation", status_code=200)
-async def cancel_Reservation(reservation_id : int):
+async def cancel_Reservation(reservation_id : int, user=Depends(auth_handler.check_permission_level_1)):
     return await service.cancel_reservation(reservation_id)
 
 
 @app.post("/ChangeAvailability/{cp_id}", status_code=200)
-async def ChangeAvailability(cp_id: str, payload: payloads.ChangeAvailabilityPayload):
+async def ChangeAvailability(cp_id: str, payload: payloads.ChangeAvailabilityPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("changeAvailability", cp_id, payload)
 
 @app.post("/UnlockConnector/{cp_id}", status_code=200)
-async def UnlockConnector(cp_id: str, payload: payloads.UnlockConnectorPayload):
+async def UnlockConnector(cp_id: str, payload: payloads.UnlockConnectorPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("unlockConnector", cp_id, payload)
 
 
 @app.post("/GetVariables/{cp_id}", status_code=200)
-async def GetVariables(cp_id: str, payload: payloads.GetVariablesPayload):
+async def GetVariables(cp_id: str, payload: payloads.GetVariablesPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getVariables", cp_id, payload)
 
 
 @app.post("/SetVariables/{cp_id}", status_code=200)
-async def SetVariables(cp_id: str, payload: payloads.SetVariablesPayload):
+async def SetVariables(cp_id: str, payload: payloads.SetVariablesPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("setVariables", cp_id, payload)
 
 
 @app.post("/RequestStartTransaction/{cp_id}", status_code=200)
-async def RequestStartTransaction(cp_id: str, payload: payloads.RequestStartTransactionPayload):
+async def RequestStartTransaction(cp_id: str, payload: payloads.RequestStartTransactionPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("requestStartTransaction", cp_id, payload)
 
 
 @app.post("/RequestStopTransaction/{cp_id}", status_code=200)
-async def RequestStopTransaction(cp_id: str, payload: call.RequestStopTransactionPayload):
+async def RequestStopTransaction(cp_id: str, payload: call.RequestStopTransactionPayload, user=Depends(auth_handler.check_permission_level_2)):
     #TODO request stop transaction without cp id input?
     # request stop transaction with remote start id
     return await service.send_request("requestStopTransaction", cp_id, payload)
 
 
 @app.post("/TriggerMessage/{cp_id}", status_code=200)
-async def TriggerMessage(cp_id: str, payload: payloads.TriggerMessagePayload):
+async def TriggerMessage(cp_id: str, payload: payloads.TriggerMessagePayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("triggerMessage", cp_id, payload)
 
 
 @app.post("/GetCompositeSchedule/{cp_id}", status_code=200)
-async def GetCompositeSchedule(cp_id: str, payload: payloads.GetCompositeSchedulePayload):
+async def GetCompositeSchedule(cp_id: str, payload: payloads.GetCompositeSchedulePayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getCompositeSchedule", cp_id, payload)
     #TODO make a get 
 
 @app.post("/SetChargingProfile/{cp_id}", status_code=200)
-async def SetChargingProfile(cp_id: str, payload: payloads.SetChargingProfilePayload):
+async def SetChargingProfile(cp_id: str, payload: payloads.SetChargingProfilePayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("setChargingProfile", cp_id, payload)
 
 
 @app.post("/GetChargingProfiles/{cp_id}", status_code=200)
-async def GetChargingProfiles(cp_id: str, payload: payloads.GetChargingProfilesPayload):
+async def GetChargingProfiles(cp_id: str, payload: payloads.GetChargingProfilesPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getChargingProfiles", cp_id, payload)
     #TODO make a get 
 
 
 @app.post("/ClearChargingProfile/{cp_id}", status_code=200)
-async def ClearChargingProfile(cp_id: str, payload: payloads.ClearChargingProfilePayload):
+async def ClearChargingProfile(cp_id: str, payload: payloads.ClearChargingProfilePayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("clearChargingProfile", cp_id, payload)
 
 
 @app.post("/GetBaseReport/{cp_id}", status_code=200)
-async def GetBaseReport(cp_id: str, payload: payloads.GetBaseReportPayload):
+async def GetBaseReport(cp_id: str, payload: payloads.GetBaseReportPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getBaseReport", cp_id, payload)
     #TODO make a get
 
 
 @app.post("/ClearVariableMonitoring/{cp_id}", status_code=200)
-async def ClearVariableMonitoring(cp_id: str, payload: payloads.ClearVariableMonitoringPayload):
+async def ClearVariableMonitoring(cp_id: str, payload: payloads.ClearVariableMonitoringPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("clearVariableMonitoring", cp_id, payload)
 
 
 @app.post("/SetVariableMonitoring/{cp_id}", status_code=200)
-async def SetVariableMonitoring(cp_id: str, payload: payloads.SetVariableMonitoringPayload):
+async def SetVariableMonitoring(cp_id: str, payload: payloads.SetVariableMonitoringPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("setVariableMonitoring", cp_id, payload)
 
 
 @app.post("/Reset/{cp_id}", status_code=200)
-async def Reset(cp_id: str, payload: payloads.ResetPayload):
+async def Reset(cp_id: str, payload: payloads.ResetPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("reset", cp_id, payload)
 
 
 @app.post("/GetTransactionStatus/{cp_id}", status_code=200)
-async def GetTransactionStatus(cp_id: str, payload: payloads.GetTransactionStatusPayload):
+async def GetTransactionStatus(cp_id: str, payload: payloads.GetTransactionStatusPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getTransactionStatus", cp_id, payload)
 
 @app.get("/GetTransactionStatus", status_code=200)
-async def GetTransactionStatus(transaction_id: str):
+async def GetTransactionStatus(transaction_id: str, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getTransactionStatus", payload={"transaction_id":transaction_id})
 
 
 @app.post("/SetDisplayMessage/{cp_id}", status_code=200)
-async def SetDisplayMessage(cp_id: str, payload: payloads.SetDisplayMessagePayload):
+async def SetDisplayMessage(cp_id: str, payload: payloads.SetDisplayMessagePayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("setDisplayMessage", cp_id, payload)
 
 @app.post("/GetDisplayMessages/{cp_id}", status_code=200)
-async def GetDisplayMessages(cp_id: str, payload: payloads.GetDisplayMessagesPayload):
+async def GetDisplayMessages(cp_id: str, payload: payloads.GetDisplayMessagesPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getDisplayMessages", cp_id, payload)
 
 @app.post("/ClearDisplayMessage/{cp_id}", status_code=200)
-async def ClearDisplayMessage(cp_id: str, payload: payloads.ClearDisplayMessagePayload):
+async def ClearDisplayMessage(cp_id: str, payload: payloads.ClearDisplayMessagePayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("clearDisplayMessage", cp_id, payload)
 
 
 @app.post("/CRUD/", status_code=200)
-async def CRUD(payload: crud_schemas.CRUD_Payload):
+async def CRUD(payload: schemas.CRUD_Payload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request(payload.operation, payload=payload, destination="SQL_DB")
 
 
 @app.get('/stream')
 async def message_stream(request: Request, events: List[enums.Action]= Query(
                     [],
-                    title="Events")):
+                    title="Events"), user=Depends(auth_handler.check_permission_level_2)):
 
     if len(events) == 0:
         raise HTTPException(400, detail="specify at least 1 event")

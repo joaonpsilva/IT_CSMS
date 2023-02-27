@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from ocpp.v201 import enums
 
 class DB_Tables(str, Enum):
     Modem = "Modem"
@@ -31,4 +32,13 @@ class CRUD_Payload:
     filters: dict
     values: dict
     mode : dict
+
+
+@dataclass
+class new_IdToken:
+    charging_priority : int = None
+    language1 : str = None
+    language2 : str = None
+    valid : bool = True
+    type:enums.IdTokenType = enums.IdTokenType.local
 

@@ -185,10 +185,10 @@ class IdToken(CustomBase):
         if id_token is None:
             id_token = self.generate_idToken()
 
-        super().__init__(**kwargs, id_token)
+        super().__init__(**kwargs, id_token=id_token)
     
     def generate_idToken(self):
-        return uuid.uuid4()
+        return str(uuid.uuid4())
 
 
 class GroupIdToken(CustomBase):
@@ -196,8 +196,14 @@ class GroupIdToken(CustomBase):
     id_token = Column(String(36), primary_key=True)
     type = Column(Enum(enums.IdTokenType))
 
-    def __init__(self, additional_info=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, additional_info=None, id_token=None, **kwargs):
+        if id_token is None:
+            id_token = self.generate_idToken()
+
+        super().__init__(**kwargs, id_token=id_token)
+    
+    def generate_idToken(self):
+        return str(uuid.uuid4())
 
 
 class IdTokenInfo(CustomBase):
@@ -434,9 +440,6 @@ class EventData(CustomBase):
 
 
 
-
-
-
 def create_Tables(engine):
     #for tbl in reversed(Base.metadata.sorted_tables):
     #    try:
@@ -461,20 +464,8 @@ def insert_Hard_Coded(db):
     #start button
     objects.append(IdToken(id_token = "", type=enums.IdTokenType.no_authorization))
 
-    id_Token = IdToken(id_token = "123456789", type=enums.IdTokenType.iso14443)
-    group_id_token = GroupIdToken(id_token = "group123456789", type=enums.IdTokenType.iso14443)
-    
-    objects.append(id_Token)
-    objects.append(group_id_token)
-    info = IdTokenInfo(
-            id_token=id_Token, 
-            language1="PT", 
-            group_id_token=group_id_token,
-            valid=True
-            #cache_expiry_date_time = datetime.utcnow().isoformat()
-            )
-    info.evse.append(evse)
-    objects.append(info)
+    admin = User(password="admin", email="admin", permission_level=2)
+    objects.append(admin)
 
     db.session.add_all(objects)
     db.session.commit()

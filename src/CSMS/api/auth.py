@@ -31,5 +31,19 @@ class AuthHandler():
             raise HTTPException(401, detail="Invalid token")
     
 
-    def auth_wrapper(self, auth: HTTPAuthorizationCredentials = Security(security)):
-        return self.decode_token(auth.credentials)
+    def check_permission_level_1(self, auth: HTTPAuthorizationCredentials = Security(security)):
+        user = self.decode_token(auth.credentials)
+
+        if user["permission_level"] < 1:
+            raise HTTPException(401, "Not enough permission level")
+        
+        return user
+
+
+    def check_permission_level_2(self, auth: HTTPAuthorizationCredentials = Security(security)):
+        user = self.decode_token(auth.credentials)
+
+        if user["permission_level"] < 2:
+            raise HTTPException(401, "Not enough permission level")
+        
+        return user

@@ -89,10 +89,10 @@ class DataBase:
             self.session = Session()
 
             #Create SQL tables
-            create_Tables(self.engine)
-
+            #create_Tables(self.engine)
             #Insert some CPs (testing)
-            insert_Hard_Coded(self)
+            #insert_Hard_Coded(self)
+
             LOGGER.info("Connected to the database")
 
         except Exception:
@@ -116,22 +116,25 @@ class DataBase:
         statement = select(self.table_mapping[table]).filter_by(**filters)
         return [obj.get_dict_obj(mode, cp_id=cp_id) for obj in self.session.scalars(statement).all()]
     
+    #TODO change the return
     def create(self, table, values={}, **kwargs):
         obj = self.table_mapping[table](**values)
         self.session.add(obj)
+        return 0
     
     def remove(self, table, filters ={}, **kwargs):
         self.session.query(self.table_mapping[table]).filter_by(**filters).delete()
         #statement = delete(self.table_mapping[table]).filter_by(**filters)
         #self.session.execute(statement)
+        return 0
 
     def update(self, table, filters={},values={}, **kwargs):
         statement = update(self.table_mapping[table]).filter_by(**filters).values(**values)
         self.session.execute(statement)
+        return 0
 
 
     def register(self, cp_id=None, **content):
-        
         user = self.session.query(User).filter_by(email=content["email"]).first()
         
         if user:
@@ -167,17 +170,36 @@ class DataBase:
         
         except:
             return {"approved" : False}
+    
 
+    def create_new_Group_IdToken(self, type, **kwargs):
+        id_token = GroupIdToken(type=type)
+        self.session.add(id_token)
+        return id_token.get_dict_obj()
+    
+
+    def create_new_IdToken(self, type, cp_id, **kwargs):
+        
+        id_token = IdToken(type=type)
+        id_token_info = IdTokenInfo(**kwargs)
+        
+        evses = self.session.query(EVSE).all()
+        id_token_info.evse = evses
+        
+        id_token.id_token_info = id_token_info
+
+        self.session.add(id_token)
+        return id_token.get_dict_obj()
+    
 
     def BootNotification(self, cp_id, **content):
-
         content["charging_station"]["cp_id"] = cp_id
         bootNotification = BootNotification(**content)
         
         self.session.merge(bootNotification)
 
-    def StatusNotification(self, cp_id, connector_id,evse_id, **content):
 
+    def StatusNotification(self, cp_id, connector_id,evse_id, **content):
         content["connector"] = {"cp_id": cp_id, "evse_id":evse_id, "connector_id":connector_id, "connector_status":content["connector_status"]}
 
         statusNotification = StatusNotification(**content)
@@ -185,7 +207,6 @@ class DataBase:
         
 
     def MeterValues(self, cp_id, **content): 
-        
         evse_id = content["evse_id"]
 
         for meter_value_dict in content["meter_value"]:
@@ -198,7 +219,6 @@ class DataBase:
 
 
     def verify_received_all_transaction(self, cp_id, transaction_id, **kwargs):
-        
         response = {"status" : "OK"}
         try:
             
@@ -381,9 +401,6 @@ class DataBase:
         charging_profile.evse = evses
 
         self.session.add(charging_profile)
-        self.session.commit()
-        self.session.refresh(charging_profile)
-        
         #return charging_profile.get_dict_obj(mode={"relationships":{"charging_schedule":{}}})
     
     

@@ -91,8 +91,8 @@ class ChargePoint(cp):
     async def authorizeRequest(self):
         request = call.AuthorizePayload(
             id_token=datatypes.IdTokenType(
-                id_token="123456789",
-                type=enums.IdTokenType.iso14443
+                id_token="3e19b1cc-7858-440c-bd7f-7335555841bd",
+                type=enums.IdTokenType.local
             )
         )
         
@@ -153,8 +153,8 @@ class ChargePoint(cp):
             trigger_reason=enums.TriggerReasonType.ev_departed,
             seq_no=3,
             id_token=datatypes.IdTokenType(
-                id_token="123456789",
-                type=enums.IdTokenType.iso14443
+                id_token="3e19b1cc-7858-440c-bd7f-7335555841bd",
+                type=enums.IdTokenType.local
             ),
             transaction_info=datatypes.TransactionType(
                 transaction_id=transaction_id,
@@ -219,8 +219,8 @@ class ChargePoint(cp):
             trigger_reason=enums.TriggerReasonType.authorized,
             seq_no=2,
             id_token=datatypes.IdTokenType(
-                id_token="123456789",
-                type=enums.IdTokenType.iso14443
+                id_token="3e19b1cc-7858-440c-bd7f-7335555841bd",
+                type=enums.IdTokenType.local
             ),
             transaction_info=datatypes.TransactionType(
                 transaction_id=transaction_id,
@@ -247,8 +247,8 @@ class ChargePoint(cp):
             trigger_reason=enums.TriggerReasonType.ev_departed,
             seq_no=3,
             id_token=datatypes.IdTokenType(
-                id_token="123456789",
-                type=enums.IdTokenType.iso14443
+                id_token="3e19b1cc-7858-440c-bd7f-7335555841bd",
+                type=enums.IdTokenType.local
             ),
             transaction_info=datatypes.TransactionType(
                 transaction_id=transaction_id,
@@ -392,8 +392,8 @@ class ChargePoint(cp):
                 trigger_reason=enums.TriggerReasonType.authorized,
                 seq_no=1,
                 id_token=datatypes.IdTokenType(
-                    id_token="123456789",
-                    type=enums.IdTokenType.iso14443
+                    id_token="3e19b1cc-7858-440c-bd7f-7335555841bd",
+                    type=enums.IdTokenType.local
                 ),
                 transaction_info=datatypes.TransactionType(
                     transaction_id=transaction_id,

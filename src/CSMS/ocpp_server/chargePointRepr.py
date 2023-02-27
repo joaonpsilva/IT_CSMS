@@ -108,7 +108,7 @@ class ChargePoint(cp):
             response = await ChargePoint.broker.send_request_wait_response(message)
             total_evses = len(response)
             if total_evses == len(id_token_info["evse_id"]):
-                id_token_info["evse_id"] = []
+                id_token_info["evse_id"] = None
             
             #expired
             if id_token_info["cache_expiry_date_time"] != None and id_token_info["cache_expiry_date_time"] < datetime.utcnow().isoformat():

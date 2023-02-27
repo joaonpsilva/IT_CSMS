@@ -5,6 +5,8 @@ from fastapi import HTTPException
 from ocpp.v201 import call, call_result, enums, datatypes
 from Exceptions.exceptions import ValidationError, OtherError
 from datetime import datetime, timedelta
+import dataclasses
+
 import logging
 LOGGER = logging.getLogger("API")
 
@@ -162,3 +164,9 @@ class API_Service:
             raise HTTPException(404, detail="Reservation not found")
 
         return await self.send_request("cancelReservation", reservation[0]["cp_id"], payload={"reservation_id" : reservation_id})
+
+
+    async def create_new_IdToken(self, id_token_info):
+        id_token_info = dataclasses.asdict(id_token_info)
+        id_token_info["cache_expiry_date_time"] = datetime.utcnow() + timedelta(days=365)
+        return await self.send_request("create_new_IdToken", payload=id_token_info, destination="SQL_DB")
