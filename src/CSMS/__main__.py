@@ -9,8 +9,8 @@ db = subprocess.Popen(["python3", "-m", "CSMS.db.db"])
 
 def terminate(sig=None, frame=None):
     api.terminate()
-    ocpp_server.terminate()
-    db.terminate()
+    ocpp_server.send_signal(signal.SIGINT)
+    db.send_signal(signal.SIGINT)
     time.sleep(1)
     sys.exit(0)
 

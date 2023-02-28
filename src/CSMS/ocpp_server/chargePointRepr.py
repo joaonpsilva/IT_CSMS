@@ -21,10 +21,6 @@ class ChargePoint(cp):
     charging_profile_id = 0
     charging_schedule_id = 0
 
-    def read_variables():
-        #TODO read variables (request_Id) from file
-        pass
-
     def new_Id():
         ChargePoint.request_Id += 1
         return ChargePoint.request_Id

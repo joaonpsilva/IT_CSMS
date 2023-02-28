@@ -8,6 +8,7 @@ import asyncio
 import argparse
 import signal
 import sys
+import json
 
 logging.basicConfig(level=logging.INFO)
 
@@ -40,12 +41,22 @@ class OCPP_Server:
         self.broker = None
         self.connected_CPs = {}
     
+
     def shut_down(self, sig, frame):
         LOGGER.info("OCPP Server Shuting down")
+
+        variables = {
+            "request_Id":ChargePoint.request_Id,
+            "charging_profile_id":ChargePoint.charging_profile_id, 
+            "charging_schedule_id":ChargePoint.charging_schedule_id}
+        
+        with open(self.variables_file, "w") as outfile:
+            outfile.write(json.dumps(variables))
+
         sys.exit(0)
     
 
-    async def run(self, port, rb):
+    async def run(self, port, rb, variables_file):
         #broker handles the rabbit mq queues and communication between services
         try:
             self.broker = Rabbit_Handler("Ocpp_Server", self.handle_api_request)
@@ -55,7 +66,19 @@ class OCPP_Server:
 
         #set same broker for all charge point connections
         ChargePoint.broker = self.broker
-        
+
+        #read variables
+        try:
+            self.variables_file = variables_file
+            with open(self.variables_file, 'r') as openfile:
+                # Reading from json file
+                json_object = json.load(openfile)
+                ChargePoint.request_Id = json_object["request_Id"]
+                ChargePoint.charging_profile_id = json_object["charging_profile_id"]
+                ChargePoint.charging_schedule_id = json_object["charging_schedule_id"]
+        except:
+            LOGGER.error("Could not read variables file")
+
         #start server
         await self.start_server(port)
     
@@ -151,6 +174,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, default = 9000, help="OCPP server port")
     parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
+    parser.add_argument("-vf", type=str, default = "CSMS/ocpp_server/ocpp_server_variables.json", help="variables_file")
+
     args = parser.parse_args()
 
     #init server
@@ -159,4 +184,4 @@ if __name__ == '__main__':
     #shut down handler
     signal.signal(signal.SIGINT, ocpp_server.shut_down)
 
-    asyncio.run(ocpp_server.run(args.p, args.rb))
+    asyncio.run(ocpp_server.run(args.p, args.rb, args.vf))
