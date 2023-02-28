@@ -1,3 +1,4 @@
+import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean, JSON
 from sqlalchemy.orm import relationship, backref
 from ocpp.v201 import enums
@@ -440,18 +441,16 @@ class EventData(CustomBase):
 
 
 
-def create_Tables(engine):
-    #for tbl in reversed(Base.metadata.sorted_tables):
-    #    try:
-    #        engine.execute(tbl.delete())
-    #    except:
-    #        pass
+def create_Tables(engine, session, insert_hardCoded=False):
+    #Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine, checkfirst=True)
 
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
+    if insert_hardCoded:
+        #Insert some CPs (testing)
+        insert_Hard_Coded(session)
 
 
-def insert_Hard_Coded(db):
+def insert_Hard_Coded(session):
     objects = []
     objects.append(Charge_Point(cp_id = "CP_1", password="passcp1"))
     objects.append(Charge_Point(cp_id = "CP_2", password="passcp1"))
@@ -461,11 +460,10 @@ def insert_Hard_Coded(db):
     objects.append(evse)
     objects.append(evse2)
 
-    #start button
     objects.append(IdToken(id_token = "", type=enums.IdTokenType.no_authorization))
 
     admin = User(password="admin", email="admin", permission_level=2)
     objects.append(admin)
 
-    db.session.add_all(objects)
-    db.session.commit()
+    session.add_all(objects)
+    session.commit()
