@@ -457,8 +457,11 @@ def insert_Hard_Coded(session):
 
     evse = EVSE(cp_id = "CP_1", evse_id = 1)
     evse2 = EVSE(cp_id = "CP_1", evse_id = 2)
+    evse3 = EVSE(cp_id = "CP_1", evse_id = 3)
+
     objects.append(evse)
     objects.append(evse2)
+    objects.append(evse3)
 
     objects.append(IdToken(id_token = "", type=enums.IdTokenType.no_authorization))
 
