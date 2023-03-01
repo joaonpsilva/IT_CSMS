@@ -417,8 +417,11 @@ class ChargePoint(cp):
     
 
     async def async_request(self, request):
-        response = await self.call(request)
-        response = asdict(response)
+        try:
+            response = await self.call(request)
+            response = asdict(response)
+        except:
+            return
 
         if response["status"] == "Accepted":
             future = self.loop.create_future()
@@ -457,7 +460,7 @@ class ChargePoint(cp):
         request = {"charging_profile" : {"charging_profile_purpose":enums.ChargingProfilePurposeType.charging_station_external_constraints}}    
         reports = await self.getChargingProfiles(**request)
         
-        if reports["status"] != enums.GetChargingProfileStatusType.accepted:
+        if "status" in reports and reports["status"] != enums.GetChargingProfileStatusType.accepted:
             return
 
         #add new profiles
