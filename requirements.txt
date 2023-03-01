@@ -1,0 +1,10 @@
+uvicorn==0.19.0
+fastapi==0.85.1
+aio-pika==8.2.4
+ocpp==0.15.0  
+websockets==10.3  
+SQLAlchemy==1.4.42  
+PyMySQL==1.0.2
+passlib==1.7.4
+sse-starlette==1.2.1
+aioconsole==0.5.1
