@@ -98,7 +98,13 @@ class Rabbit_Handler:
         """
 
         #Declare connection
-        self.connection = await connect(url)
+        while True:
+            try:
+                self.connection = await connect(url)
+                break
+            except:
+                await asyncio.sleep(5)
+
 
         #declare channel
         self.channel = await self.connection.channel()
