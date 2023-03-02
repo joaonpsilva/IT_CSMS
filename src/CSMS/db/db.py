@@ -78,11 +78,11 @@ class DataBase:
             raise e        
 
 
-    async def run(self, rabbit, insert_hardCoded):
+    async def run(self, db_address, rabbit, insert_hardCoded):
 
         try:
             #MySql engine
-            self.engine = create_engine("mysql+pymysql://root:password123@localhost:3306/csms_db")
+            self.engine = create_engine("mysql+pymysql://root:password123@" + db_address + ":3306/csms_db")
 
             #Create new sqlachemy session
             Session = sessionmaker(bind=self.engine)
@@ -406,7 +406,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
+    parser.add_argument("-db", type=str, default = "localhost", help="RabbitMq")
+
     parser.add_argument("-i", action="store_true", help="insert hardcoded objects")
+    parser.add_argument("-w", action="store_true", help="sleep a bit before execution")
+
 
     args = parser.parse_args()
 
@@ -419,4 +423,10 @@ if __name__ == '__main__':
     #shut down handler
     signal.signal(signal.SIGINT, db.shut_down)
 
-    asyncio.run(db.run(args.rb, args.i))
+    #stupid solve problems with docker compose
+    if args.w:
+        import time
+        time.sleep(2)
+
+    
+    asyncio.run(db.run(args.db, args.rb, args.i))

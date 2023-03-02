@@ -3,11 +3,11 @@ from fastapi import FastAPI, Depends, Query, Response, status, Request, HTTPExce
 
 from typing import List, Optional
 from ocpp.v201 import call, call_result, enums
-from .schemas import datatypes
-from .schemas import payloads
-from .schemas import schemas
-from .auth import AuthHandler
-from .service import API_Service
+from CSMS.api.schemas import datatypes
+from CSMS.api.schemas import payloads
+from CSMS.api.schemas import schemas
+from CSMS.api.auth import AuthHandler
+from CSMS.api.service import API_Service
 from Exceptions.exceptions import OtherError
 import asyncio
 import logging

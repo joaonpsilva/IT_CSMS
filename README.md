@@ -1,19 +1,3 @@
-
-## Python libraries
-pip install uvicorn  
-pip install fastapi  
-pip install aio-pika  
-pip install ocpp  
-pip install websockets  
-pip install sqlalchemy  
-pip install pymysql  
-pip install passlib  
-pip install sse-starlette  
-pip install aioconsole (apenas para debug)  
-
-
-
-
 ## MySql Server
 
 ### DOCKER

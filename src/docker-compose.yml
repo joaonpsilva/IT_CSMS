@@ -1,0 +1,58 @@
+version: '3'
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3
+    container_name: rabbitmq
+    ports:
+      - 5672:5672 
+      - 15672:15672
+    logging:
+      driver: none
+    
+  mysql:
+    image: mysql/mysql-server
+    container_name: mysql_CSMS_docker
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'csms_db'
+      MYSQL_USER: 'root'
+      MYSQL_PASSWORD: 'password123'
+      MYSQL_ROOT_PASSWORD: 'password123'
+    ports:
+      - 3306:3306
+
+  
+  api:
+    build: 
+      context: .
+      dockerfile: ./CSMS/api/dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - 8000:8000
+    depends_on:
+      - rabbitmq
+  
+  db:
+    build: 
+      context: .
+      dockerfile: ./CSMS/db/dockerfile
+    volumes:
+      - .:/app
+    depends_on:
+      - rabbitmq
+      - mysql
+  
+  ocpp_server:
+    build: 
+      context: .
+      dockerfile: ./CSMS/ocpp_server/dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - 9000:9000
+    depends_on:
+      - rabbitmq  

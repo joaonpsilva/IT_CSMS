@@ -5,6 +5,9 @@ Notify event? tem tbc e seq no mas pode ter events diferentes
 
 
 
+datatransfer
+
+
 viajem-------------------------------------
 porto
 ir e vir de comboio
@@ -15,7 +18,7 @@ hoteis
 
 
 duvidas---------------------------
-idtoken uuid
+transaction uuid
 quao importante é usar multiplas dbs?
 quando a api cria users ou idtokens ainda nao da para criar em varias dbs pq necessita alguns dados de return
 
