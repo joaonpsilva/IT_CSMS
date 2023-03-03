@@ -221,7 +221,7 @@ class API_Service:
             
             response = await self.send_request("dataTransfer", cp_id, payload=payload)
             if response["status"] != enums.DataTransferStatusType.accepted:
-                raise HTTPException(503, "Charge Station rejected")
+                return response
             
             self.transaction_cache[transaction_id]["action"] = action
         
