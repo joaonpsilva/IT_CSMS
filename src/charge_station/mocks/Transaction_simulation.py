@@ -12,7 +12,6 @@ class Transaction:
         self.call = call
 
         self.loop = asyncio.get_running_loop()
-        self.new_charge_values = None
         self.periodic_meter = None
         self.last_meter_values_time = None
 
@@ -24,15 +23,22 @@ class Transaction:
         self.evse_id = evse_id
         self.connector_id = connector_id
         self.transaction_id = str(uuid.uuid4())
+
         self.ev_total_capacity = random.choice([20000,24000,40000])
         self.soc = min(max(random.gauss(50, 20), 5), 95)
         self.ev_current_capacity = self.soc/100 * self.ev_total_capacity
+
         self.time_charging_goal = random.randrange(30*60, 60*60*12)
-        self.time_current = 0
-        self.current_export = 0
-        self.current_import = 5000
+        self._time_current = 0
+        self.done_charging = asyncio.Event()
+
+        self._power = 0
         self.total_import = 0
         self.total_export = 0
+
+        self._charging_action = None
+        self.max_soc = None
+        self.min_soc = None
 
         logging.info(
             "Starting transaction\n \
@@ -53,8 +59,50 @@ class Transaction:
     def transaction_seq_no(self):
         self._transaction_seq_no+=1
         return self._transaction_seq_no - 1 
+    
+    @property
+    def charging_action(self):
+        return self._charging_action
+
+    @property
+    def time_current(self):
+        return self._time_current
+
+
+    @property
+    def power(self):
+        return self._power
+
+    @power.setter
+    async def power(self, p):
+        self._power = p
+
+        if self.charging_action == 3:
+            self.current_import = power
+        elif self.charging_action == 4:
+            self.current_export = power
+        
+        enums.TriggerReasonType.charging_rate_changed
+
+
+    @time_current.setter
+    def time_current(self, t):
+        self._time_current = t
+
+        #enough time has passed
+        if self._time_current >= self.time_charging_goal:
+            self.done_charging.set()
+
+
+    @charging_action.setter
+    def charging_action(self, action):
+        self._charging_action = action
+
+        if self._charging_action == 2:
+            self.power = 0
 
     
+
     async def status_notif(self, connector_status):
         #STATUS NOTIF
         request = call.StatusNotificationPayload(
@@ -173,7 +221,7 @@ class Transaction:
     def update_charging_variables(self):
 
         time_since_update = (time.time() - self.last_meter_values_time) * self.factor
-        self.time_current += time_since_update
+        self.time_current = self.time_current + time_since_update
 
         #w to wh
         amount_exported = self.current_export * time_since_update/60/60
@@ -184,66 +232,15 @@ class Transaction:
         
         self.ev_current_capacity = self.ev_current_capacity + amount_imported - amount_exported 
         self.soc = self.ev_current_capacity / self.ev_total_capacity * 100
+    
 
-
-    async def charging_events(self):
-
-        request = call.TransactionEventPayload(
-            event_type=enums.TransactionEventType.updated,
-            timestamp=datetime.utcnow().isoformat(),
-            trigger_reason=enums.TriggerReasonType.charging_state_changed,
-            seq_no=self.transaction_seq_no,
-            transaction_info=datatypes.TransactionType(
-                transaction_id=self.transaction_id,
-                charging_state=enums.ChargingStateType.charging
-            ),
-            evse=datatypes.EVSEType(id=self.evse_id, connector_id=self.connector_id),
-            meter_value=self.build_meter_values(self.total_export, self.total_import, self.current_export, self.current_import, self.soc)
-        )
-        await self.call(request)
-        self.last_meter_values_time = time.time()
-
-
-        #start periodic meter values
-        self.periodic_meter = self.loop.call_later(self.event_period_time/self.factor, self.loop.create_task, self.periodic_meter_values())
-
-        #wait csms corrections
-        while self.time_current < self.time_charging_goal:
-            
-            self.new_charge_values = self.loop.create_future()
-            result =  await asyncio.wait_for(self.new_charge_values, timeout=(self.time_charging_goal - self.time_current) / self.factor)
-            
-            self.current_export = result["current_export"]
-            self.current_import = result["current_import"]
-
-            self.update_charging_variables()
-
-            request = call.TransactionEventPayload(
-                event_type=enums.TransactionEventType.updated,
-                timestamp=datetime.utcnow().isoformat(),
-                trigger_reason=enums.TriggerReasonType.charging_rate_changed,
-                seq_no=self.transaction_seq_no,
-                transaction_info=datatypes.TransactionType(
-                    transaction_id=self.transaction_id,
-                    charging_state=enums.ChargingStateType.charging
-                ),
-                evse=datatypes.EVSEType(id=self.evse_id, connector_id=self.connector_id),
-                meter_value=self.build_meter_values(self.total_export, self.total_import, self.current_export, self.current_import, self.soc)
-            )
-            await self.call(request)
-            self.last_meter_values_time = time.time()
-
-        self.periodic_meter.cancel()
-        
-
-    async def periodic_meter_values(self):
-        
+    async def send_update_Transaction_Event(self, trigger_reason):
         self.update_charging_variables()
 
         request = call.TransactionEventPayload(
             event_type=enums.TransactionEventType.updated,
             timestamp=datetime.utcnow().isoformat(),
-            trigger_reason=enums.TriggerReasonType.meter_value_periodic,
+            trigger_reason=trigger_reason,
             seq_no=self.transaction_seq_no,
             transaction_info=datatypes.TransactionType(
                 transaction_id=self.transaction_id,
@@ -255,4 +252,24 @@ class Transaction:
         await self.call(request)
         self.last_meter_values_time = time.time()
 
+
+    async def charging_events(self):
+
+        
+        self.last_meter_values_time = time.time()
+
+        #start periodic meter values
+        self.periodic_meter = self.loop.call_later(self.event_period_time/self.factor, self.loop.create_task, self.periodic_meter_values())
+
+        #wait csms corrections until end of transaction
+        await self.done_charging.wait()
+     
+        await self.send_update_Transaction_Event(enums.TriggerReasonType.charging_rate_changed)
+
+
+        self.periodic_meter.cancel()
+        
+
+    async def periodic_meter_values(self):
+        await self.send_update_Transaction_Event(enums.TriggerReasonType.meter_value_periodic)
         self.periodic_meter = self.loop.call_later(self.event_period_time/self.factor, self.loop.create_task, self.periodic_meter_values())

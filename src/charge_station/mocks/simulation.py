@@ -17,9 +17,9 @@ class ChargePoint(cp):
         super().__init__(id, connection)
 
         self.evses = {
-            1: {"availale": True, "connectors" : [1,2]},
-            2: {"availale": True, "connectors" : [1,2,3]},
-            3: {"availale": True, "connectors" : [1,2]}
+            1: {"connectors" : [1,2], "transaction_id":None},
+            2: {"connectors" : [1,2,3], "transaction_id":None},
+            3: {"connectors" : [1,2], "transaction_id":None}
         }
 
         self.active_transactions = {}
@@ -54,7 +54,7 @@ class ChargePoint(cp):
 
     async def make_transaction(self):
 
-        available_evses = [evse for evse, info in self.evses.items() if info["availale"]]
+        available_evses = [evse for evse, info in self.evses.items() if info["transaction_id"] is None]
 
         if len(available_evses) == 0:
             logging.info("There are no free evses")
@@ -62,10 +62,10 @@ class ChargePoint(cp):
         
         evse_id = random.choice(available_evses)
         connector_id = random.choice(self.evses[evse_id]["connectors"])
-        self.evses[evse_id]["available"] = False
 
         transaction = Transaction(evse_id, connector_id, self.call)
         self.active_transactions[transaction.transaction_id] = transaction
+        self.evses["evse_id"]["transaction_id"] = transaction.transaction_id
 
         await transaction.start_event()
         await transaction.authorize_event()
@@ -73,7 +73,7 @@ class ChargePoint(cp):
         await transaction.end_event()
 
         self.active_transactions.pop(transaction.transaction_id)
-        self.evses[evse_id]["available"] = True
+        self.evses["evse_id"]["transaction_id"] = None
     
 
     @on("SetChargingProfile")
@@ -89,7 +89,24 @@ class ChargePoint(cp):
     @on("GetChargingProfiles")
     async def on_GetChargingProfiles(self, request_id, charging_profile, **kwargs):
         return call_result.GetChargingProfilesPayload(status=enums.GetChargingProfileStatusType.no_profiles)
+    
 
+    @on("DataTransfer")
+    async def on_DataTransfer(self, data, **kwargs):
+
+        transaction_id = self.evses[data["evse_id"]]["transaction_id"]
+        transaction = self.active_transactions[transaction_id]
+
+        if "v2g_action" in data:
+            transaction.charging_action = data["v2g_action"]["action"]
+            
+        if "change_profile" in data:
+            transaction.max_soc = data["change_profile"]["max_soc"]
+            transaction.min_soc = data["change_profile"]["min_soc"]
+            await transaction.set_power(data["change_profile"]["power"])
+            
+
+        return call_result.DataTransferPayload(status=enums.DataTransferStatusType.accepted)
 
 
 async def get_input(cp):
