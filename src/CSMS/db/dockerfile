@@ -12,4 +12,4 @@ COPY ./Exceptions /app/Exceptions
 
 RUN pip install -r CSMS/db/requirements.txt
 
-CMD ["python3", "-m", "CSMS.db.db", "-rb", "amqp://guest:guest@rabbitmq/", "-db", "mysql", "-w"]
+CMD ["python3", "-m", "CSMS.db.db", "-rb", "amqp://guest:guest@rabbitmq/", "-db", "mysql"]

@@ -3,7 +3,7 @@ from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, Fore
 from sqlalchemy.orm import relationship, backref
 from ocpp.v201 import enums
 from passlib.context import CryptContext
-
+import asyncio
 from CSMS.db.database_Base import *
 from sqlalchemy.sql import true
 import uuid
@@ -441,11 +441,18 @@ class EventData(CustomBase):
 
 
 
-def create_Tables(engine, session, insert_hardCoded=False):
+async def create_Tables(engine, session, insert_hardCoded=False):
     #Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine, checkfirst=True)
 
-    if insert_hardCoded:
+    while True:
+        try:
+            Base.metadata.create_all(engine, checkfirst=True)
+            break
+        except:
+            await asyncio.sleep(5)
+    
+
+    if len(session.query(Charge_Point).all()) == 0 or insert_hardCoded:
         #Insert some CPs (testing)
         insert_Hard_Coded(session)
 

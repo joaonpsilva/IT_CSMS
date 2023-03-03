@@ -89,7 +89,7 @@ class DataBase:
             self.session = Session()
 
             #Create SQL tables
-            create_Tables(self.engine, self.session, insert_hardCoded)
+            await create_Tables(self.engine, self.session, insert_hardCoded)
 
             LOGGER.info("Connected to the database")
 
@@ -409,8 +409,6 @@ if __name__ == '__main__':
     parser.add_argument("-db", type=str, default = "localhost", help="RabbitMq")
 
     parser.add_argument("-i", action="store_true", help="insert hardcoded objects")
-    parser.add_argument("-w", action="store_true", help="sleep a bit before execution")
-
 
     args = parser.parse_args()
 
@@ -422,11 +420,5 @@ if __name__ == '__main__':
 
     #shut down handler
     signal.signal(signal.SIGINT, db.shut_down)
-
-    #stupid solve problems with docker compose
-    if args.w:
-        import time
-        time.sleep(2)
-
     
     asyncio.run(db.run(args.db, args.rb, args.i))
