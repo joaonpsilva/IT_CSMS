@@ -3,7 +3,7 @@ version: '3'
 services:
 
   rabbitmq:
-    image: rabbitmq:3
+    image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
       - 5672:5672 
@@ -13,7 +13,7 @@ services:
     
   mysql:
     image: mysql/mysql-server
-    container_name: mysql_CSMS_docker
+    container_name: mysql_CSMS
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:

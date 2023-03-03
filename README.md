@@ -1,64 +1,69 @@
-## MySql Server
+# Charging Station Management System
 
-### DOCKER
-- Criar container  
+Central system to manage EV charging stations using OCPP 2.0.1 protocol
 
-sudo docker run -p 3306:3306 --name=mysql_CSMS -d mysql/mysql-server
+## Run With Docker Compose
 
-- Password gerada
+- cd src
+- docker-compose up
 
-sudo docker logs mysql_CSMS 2>&1 | grep GENERATED
+## Run individually
 
-- Acessar linha de comandos mysql  
+Install requirements:
+ - pip install -r requirements.txt
 
-sudo docker exec -it mysql_CSMS mysql -uroot -p
+### MySql Server Docker container
 
-- Substituir password para 'password123' e dar permissoes a outras conexoes  
+Criar container  
+-  sudo docker run -p 3306:3306 --name=mysql_CSMS -d mysql/mysql-server
 
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password123';
-update mysql.user set host = '%' where user='root';
-flush privileges;
+Password gerada
+- sudo docker logs mysql_CSMS 2>&1 | grep GENERATED
 
-- Criar base de dados
+Acessar linha de comandos mysql  
+- sudo docker exec -it mysql_CSMS mysql -uroot -p
 
-CREATE DATABASE csms_db;
+Substituir password para 'password123' e dar permissoes a outras conexoes  
+- ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password123';
+- update mysql.user set host = '%' where user='root';
+- flush privileges;
 
-- Start Container
+Criar base de dados
+- CREATE DATABASE csms_db;
+- cntr+D
 
-sudo docker start mysql_CSMS
+Start Container
+- sudo docker start mysql_CSMS
 
-
-
-### Or Install locally
-
-https://dev.to/gsudarshan/how-to-install-mysql-and-workbench-on-ubuntu-20-04-localhost-5828
-
-if workbench installed with snap (allow manager to connect):  
-sudo snap connect mysql-workbench-community:password-manager-service :password-manager-service
+Alternatively it should be possible to install mysql locally:  
+<https://dev.to/gsudarshan/how-to-install-mysql-and-workbench-on-ubuntu-20-04-localhost-5828>
 
 
-## CSMS
+### Rabbit MQ Server Docker
+- sudo docker run --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
 
-### Rabbit MQ Server
-sudo docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+### CSMS
+- cd src
+- python3 -m CSM
 
-### Start CSMS 
+**OR**
+
+- ./run_CSMS.sh
+
+**OR**
 
 - cd src
 - python3 -m CSMS.api.api
 - python3 -m CSMS.ocpp_server.ocpp_server
 - python3 -m CSMS.db.db
 
-OR
-- cd src
-- python3 -m CSMS
 
-OR 
-- ./run_CSMS.sh
+### Client
 
-
-## Client (needs rabbitMq running)
-
+Simple client that forwards messages
 - python3 -m charge_station.client.simple_ocpp_client
+
+Mock client to test messages
+- python3 charge_station/mocks/mock_charge_station.py CP_1
 
 
