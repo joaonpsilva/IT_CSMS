@@ -1,5 +1,6 @@
 import uvicorn
 from fastapi import FastAPI, Depends, Query, Response, status, Request, HTTPException
+from enum import Enum
 
 from typing import List, Optional
 from ocpp.v201 import call, call_result, enums
@@ -116,6 +117,12 @@ async def setmaxpower(transaction_id: str, max_power: int, user=Depends(auth_han
     return await service.setmaxpower(transaction_id, max_power)
 
 
+
+@app.post("/set_charging_limits", status_code=200)
+async def set_charging_power(transaction_id: str, action:schemas.Charger_Action, power: int, max_soc:int=None, min_soc:int=None,user=Depends(auth_handler.check_permission_level_2)):
+    return await service.set_transaction_limits(transaction_id, action, power, max_soc, min_soc)
+
+
 @app.get("/getTransactions")
 async def getTransactions(user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("select", payload={"table" : schemas.DB_Tables.Transaction}, destination="SQL_DB")
@@ -137,17 +144,9 @@ async def getStationById(cp_id : str):
     return await service.send_request("select", payload={"table": "Charge_Point", "filters":{"cp_id":cp_id}, "mode":mode}, destination="SQL_DB")
 
 
-@app.post("/send_full_authorization_list/{cp_id}", status_code=200)
-async def send_full_authorization_list(cp_id: str, user=Depends(auth_handler.check_permission_level_2)):
-    return await service.send_authList(cp_id, "full")
-
-@app.post("/differential_Auth_List_Add/{cp_id}", status_code=200)
-async def differential_Auth_List_Add(cp_id: str, id_tokens: List[str], user=Depends(auth_handler.check_permission_level_2)):
-    return await service.send_authList(cp_id, "add", id_tokens)
-
-@app.post("/differential_Auth_List_Delete/{cp_id}", status_code=200)
-async def differential_Auth_List_Delete(cp_id: str, id_tokens: List[str], user=Depends(auth_handler.check_permission_level_2)):
-    return await service.send_authList(cp_id, "delete", id_tokens)
+@app.post("/update_auth_list/{cp_id}", status_code=200)
+async def update_auth_list(cp_id: str, update_type:schemas.Update_type,id_tokens:List[str]=None,user=Depends(auth_handler.check_permission_level_2)):
+    return await service.send_authList(cp_id, update_type, id_tokens)
 
 
 @app.post("/ReserveNow", status_code=200)

@@ -607,6 +607,11 @@ class ChargePoint(cp):
     async def cancelReservation(self, reservation_id):
         request = call.CancelReservationPayload(reservation_id=reservation_id)
         return await self.call(request)
+    
+    
+    async def dataTransfer(self, **kwargs):
+        request = call.DataTransferPayload(**kwargs)
+        return await self.call(request)
         
 
 #######################Funtions staring from the CP Initiative

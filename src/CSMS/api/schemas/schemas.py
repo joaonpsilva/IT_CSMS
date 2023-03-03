@@ -18,6 +18,17 @@ class DB_Tables(str, Enum):
     ChargingProfile="ChargingProfile"
     EventData="EventData"
 
+class Charger_Action(str, Enum):
+    stop="stop"
+    normal_charge="normal_charge"
+    pause="pause"
+    charge="charge"
+    discharge="discharge"
+
+class Update_type(str, Enum):
+    full="full"
+    add="add"
+    delete="delete"
 
 class Operation(str, Enum):
     SELECT="select"

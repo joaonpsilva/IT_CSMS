@@ -16,15 +16,34 @@ class API_Service:
         self.event_listeners = {}
         self.broker = None
 
+        self.transaction_cache = {}
+
+
     async def start(self, rabbit): 
         try:
             self.broker = Rabbit_Handler("API", self.on_event)
             await self.broker.connect(rabbit, receive_requests=False)
         except:
             LOGGER.info("Could not connect to RabbitMq")
-    
+
+
+    def update_transaction_cache(self, message): 
+        
+        transaction_id = message.content["transaction_info"]["transaction_id"]
+        if transaction_id not in self.transaction_cache:
+            self.transaction_cache[transaction_id] = {"cp_id": message.cp_id , "evse_id":None, "action": None}
+
+        if "evse" in message.content:
+            self.transaction_cache[transaction_id]["evse_id"] = message.content["evse"]["id"]
+        
+        if message.content["event_type"] == enums.TransactionEventType.ended:
+            self.transaction_cache.pop(transaction_id)
+
 
     async def on_event(self, message):
+        if message.method == "TransactionEvent":
+            self.update_transaction_cache(message)
+
         if message.method in self.event_listeners:
             for event_queue in self.event_listeners[message.method]:
                 await event_queue.put(json.dumps(message.content))
@@ -35,7 +54,7 @@ class API_Service:
         try:
             if destination=="Ocpp_Server" and message.cp_id is None:
                 if "transaction_id" in message.content:
-                    message.cp_id = await self.get_cpID_by_TransactionId(message.content["transaction_id"])
+                    message.cp_id = (await self.getInfo_by_TransactionId(message.content["transaction_id"]))["cp_id"]
 
             return await self.broker.send_request_wait_response(message)
         except OtherError as e:
@@ -46,11 +65,15 @@ class API_Service:
             raise HTTPException(status_code=500, detail=e.args[0])
             
 
-    async def get_cpID_by_TransactionId(self, transaction_id):
+    async def getInfo_by_TransactionId(self, transaction_id):
+
+        if transaction_id in self.transaction_cache:
+            return self.transaction_cache[transaction_id]
+        
         response = await self.send_request("select", payload={"table":"Transaction", "filters": {"transaction_id" : transaction_id}}, destination="SQL_DB")
 
         if len(response) > 0:
-            return response[0]["cp_id"]
+            return response[0]
         raise HTTPException(404, detail="Transaction not found")
 
 
@@ -170,3 +193,50 @@ class API_Service:
         id_token_info = dataclasses.asdict(id_token_info)
         id_token_info["cache_expiry_date_time"] = datetime.utcnow() + timedelta(days=365)
         return await self.send_request("create_new_IdToken", payload=id_token_info, destination="SQL_DB")
+
+
+    async def set_transaction_limits(self, transaction_id, action, power, max_soc, min_soc):
+
+        power_map = {"stop": 0, "normal_charge":1, "pause":2, "charge":3, "discharge":4}
+        action = power_map[action]
+
+        transaction_info = await self.getInfo_by_TransactionId(transaction_id)
+        if "action" not in transaction_info:
+            raise HTTPException(404, "No active Transaction with that ID")
+
+        cp_id = transaction_info["cp_id"]
+        evse_id = transaction_info["evse_id"]        
+        current_action = transaction_info["action"] 
+
+        #Send message to change the v2g_action
+        if current_action is None or current_action != action:
+            payload ={
+                "vendor_id": "MagnumCap",
+                "message_id": "v2g_action",
+                "data": {
+                    "evse_id": evse_id,
+                    "v2g_action": {
+                        "action": action
+            }}}
+            
+            response = await self.send_request("dataTransfer", cp_id, payload=payload)
+            if response["status"] != enums.DataTransferStatusType.accepted:
+                raise HTTPException(503, "Charge Station rejected")
+            
+            self.transaction_cache[transaction_id]["action"] = action
+        
+        #Send message with charging limits
+        payload ={
+            "vendor_id": "MagnumCap",
+            "message_id": "v2g_action",
+            "data": {
+                "evse_id": evse_id,
+                "change_profile": {
+                    "power": power,
+                    "min_soc": min_soc,
+                    "max_soc": max_soc
+        }}}
+
+        return await self.send_request("dataTransfer", cp_id, payload=payload)
+
+

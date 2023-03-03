@@ -645,7 +645,9 @@ class ChargePoint(cp):
     async def on_UnlockConnector(self, **kwargs):
         return call_result.UnlockConnectorPayload(status=enums.UnlockStatusType.unlocked)
 
-
+    @on("DataTransfer")
+    async def on_DataTransfer(self, **kwargs):
+        return call_result.DataTransferPayload(status=enums.DataTransferStatusType.accepted)
 
 
 
