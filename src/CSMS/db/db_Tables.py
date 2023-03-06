@@ -471,6 +471,8 @@ def insert_Hard_Coded(session):
     objects.append(evse3)
 
     objects.append(IdToken(id_token = "", type=enums.IdTokenType.no_authorization))
+    objects.append(IdToken(id_token = "test_idToken", type=enums.IdTokenType.local))
+    objects.append(IdTokenInfo(_id_token = "test_idToken", valid=True, ))
 
     admin = User(password="admin", email="admin", permission_level=2)
     objects.append(admin)
