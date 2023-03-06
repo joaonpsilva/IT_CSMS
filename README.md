@@ -58,12 +58,15 @@ Alternatively it should be possible to install mysql locally:
 - python3 -m CSMS.db.db
 
 
-### Client
+# Client
 
 Simple client that forwards messages
 - python3 -m charge_station.client.simple_ocpp_client
 
 Mock client to test messages
 - python3 charge_station/mocks/mock_charge_station.py CP_1
+
+Simulation
+- python3 charge_station/mocks/simulation.py -p [update_period (will reflect in csms db)] -f [factor (speed up)]
 
 
