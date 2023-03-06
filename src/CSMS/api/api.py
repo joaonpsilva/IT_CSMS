@@ -87,9 +87,14 @@ async def group_idTokens(user=Depends(auth_handler.check_permission_level_2)):
 async def getTransactions(transaction_id:str, user=Depends(auth_handler.check_permission_level_1)):
     return await service.send_request("select", payload={"table": "Transaction", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
 
-@app.get("/transactions/open", status_code=200)
+@app.get("/transactions/open/by_IdToken", status_code=200)
 async def getOpenTransactionsByIdToken(user=Depends(auth_handler.check_permission_level_1)):
-    return await service.send_request("get_IdToken_Transactions", payload={"id_token": user["id_token"]}, destination="SQL_DB")
+    return await service.send_request("get_Open_Transactions_byIdToken", payload={"id_token": user["id_token"]}, destination="SQL_DB")
+
+
+@app.get("/transactions/open", status_code=200)
+async def getOpenTransactions(user=Depends(auth_handler.check_permission_level_2)):
+    return await service.send_request("select", payload={"table":"Transaction", "filters":{"active":True}}, destination="SQL_DB")
 
 
 @app.get("/transactions/{date}", status_code=200)

@@ -329,7 +329,7 @@ class DataBase:
         self.session.add(reservation)
     
 
-    def get_IdToken_Transactions(self, id_token, **kwargs):
+    def get_Open_Transactions_byIdToken(self, id_token, **kwargs):
         """method for a specific api endpoint"""
         transactions = self.session.query(Transaction).join(Transaction.id_token).filter(
             IdToken.id_token == id_token,
@@ -337,6 +337,7 @@ class DataBase:
         ).all()
 
         return [t.get_dict_obj() for t in transactions]
+    
     
     def get_Transactions_byDate(self, id_token, date, **kwargs):
         """method for a specific api endpoint"""

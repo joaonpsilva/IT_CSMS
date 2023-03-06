@@ -14,7 +14,7 @@ class AuthHandler():
     def encode_token(self, user_info):
         
         exp_info = {
-            "exp" : datetime.utcnow() + timedelta(minutes=10),
+            "exp" : datetime.utcnow() + timedelta(minutes=30),
             "iat" : datetime.utcnow()
         }
         payload = {**user_info, **exp_info}
