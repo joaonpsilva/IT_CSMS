@@ -112,13 +112,7 @@ class ChargePoint(cp):
 
     @on("SetChargingProfile")
     async def on_SetChargingProfile(self, evse_id, charging_profile):
-
-        charging_profile = datatypes.ChargingProfileType(**charging_profile)
-
-        if charging_profile.transaction_id is not None:
-            self.active_transactions[charging_profile.transaction_id].new_charge_values.set_result("XXXXXXXX")
-
-        return call_result.SetChargingProfilePayload(status=enums.ChargingProfileStatus.accepted)
+        return call_result.SetChargingProfilePayload(status=enums.ChargingProfileStatus.rejected)
 
     @on("GetChargingProfiles")
     async def on_GetChargingProfiles(self, request_id, charging_profile, **kwargs):
