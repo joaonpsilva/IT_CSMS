@@ -7,6 +7,7 @@ RUN mkdir -p /app/rabbit_mp
 WORKDIR /app
 
 COPY ./CSMS/api /app/CSMS/api
+COPY ./.env /.env
 COPY ./rabbit_mq /app/rabbit_mq
 COPY ./Exceptions /app/Exceptions
 

@@ -3,13 +3,12 @@ from fastapi import HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
-import os
-import binascii
+from decouple import config
 
 class AuthHandler():
     
     security = HTTPBearer()
-    secret = binascii.hexlify(os.urandom(24))
+    secret = config('KEY')
 
     def encode_token(self, user_info):
         

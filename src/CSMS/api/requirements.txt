@@ -5,3 +5,4 @@ ocpp==0.15.0
 passlib==1.7.4
 sse-starlette==1.2.1
 PyJWT==1.7.1
+python-decouple==3.8

@@ -10,3 +10,4 @@ sse-starlette==1.2.1
 aioconsole==0.5.1
 PyJWT==1.7.1
 python-dateutil==2.8.1
+python-decouple==3.8
