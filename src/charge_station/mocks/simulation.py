@@ -9,13 +9,19 @@ from Transaction_simulation import Transaction
 from aioconsole import ainput
 from ocpp.routing import after,on
 logging.basicConfig(level=logging.INFO)
-
+import random
+import argparse
+import signal
 
 class ChargePoint(cp):
 
-    def __init__(self, id, connection):
+    def __init__(self, id, connection, p, f):
         super().__init__(id, connection)
 
+        self.period = p
+        self.factor = f
+
+        self.loop = asyncio.get_running_loop()
         self.evses = {
             1: {"connectors" : [1,2], "transaction_id":None},
             2: {"connectors" : [1,2,3], "transaction_id":None},
@@ -23,7 +29,21 @@ class ChargePoint(cp):
         }
 
         self.active_transactions = {}
+        self.shut_down_flag = asyncio.Event()
+    
+
+    def shut_down(self, sig=None, frame=None):
+        self.shut_down_flag.set()
+
+
+    async def wait_shut_down(self):
+        await self.shut_down_flag.wait()
+     
+        for i, t in self.active_transactions.items():
+            await t.end_event()
         
+        exit(0)
+
 
     async def cold_Boot(self):
 
@@ -49,7 +69,21 @@ class ChargePoint(cp):
                     connector_status=enums.ConnectorStatusType.available
                 )
                 response = await self.call(request)
-    
+
+        await self.random_simulation()
+            
+
+    async def random_simulation(self):
+        
+        while True:
+
+            available_evses = [evse for evse, info in self.evses.items() if info["transaction_id"] is None]
+            if len(available_evses) > 0:
+                
+                if random.random() > 0.6:
+                    self.loop.create_task(self.make_transaction())
+
+            await asyncio.sleep(5 * 60 / self.factor)
 
 
     async def make_transaction(self):
@@ -63,9 +97,9 @@ class ChargePoint(cp):
         evse_id = random.choice(available_evses)
         connector_id = random.choice(self.evses[evse_id]["connectors"])
 
-        transaction = Transaction(evse_id, connector_id, self.call)
+        transaction = Transaction(evse_id, connector_id, self.call, self.period, self.factor)
         self.active_transactions[transaction.transaction_id] = transaction
-        self.evses["evse_id"]["transaction_id"] = transaction.transaction_id
+        self.evses[evse_id]["transaction_id"] = transaction.transaction_id
 
         await transaction.start_event()
         await transaction.authorize_event()
@@ -73,7 +107,7 @@ class ChargePoint(cp):
         await transaction.end_event()
 
         self.active_transactions.pop(transaction.transaction_id)
-        self.evses["evse_id"]["transaction_id"] = None
+        self.evses[evse_id]["transaction_id"] = None
     
 
     @on("SetChargingProfile")
@@ -92,27 +126,34 @@ class ChargePoint(cp):
     
 
     @on("DataTransfer")
-    async def on_DataTransfer(self, data, **kwargs):
+    async def on_DataTransfer(self, data, **kwargs):            
+        return call_result.DataTransferPayload(status=enums.DataTransferStatusType.accepted)
 
+    @after("DataTransfer")
+    async def after_DataTransfer(self, data, **kwargs):
         transaction_id = self.evses[data["evse_id"]]["transaction_id"]
         transaction = self.active_transactions[transaction_id]
 
         if "v2g_action" in data:
-            transaction.charging_action = data["v2g_action"]["action"]
+            await transaction.set_charging_action(data["v2g_action"]["action"])
             
         if "change_profile" in data:
-            transaction.max_soc = data["change_profile"]["max_soc"]
-            transaction.min_soc = data["change_profile"]["min_soc"]
-            await transaction.set_power(data["change_profile"]["power"])
+            if "max_soc" in data["change_profile"]:
+                transaction.max_soc = data["change_profile"]["max_soc"]
             
+            if "min_soc" in data["change_profile"]:
+                transaction.min_soc = data["change_profile"]["min_soc"]
+            
+            if "power" in data["change_profile"]:
+                await transaction.set_power(data["change_profile"]["power"])
 
-        return call_result.DataTransferPayload(status=enums.DataTransferStatusType.accepted)
 
 
 async def get_input(cp):
     
     command_map={
-        "start":cp.make_transaction,
+        "trans":cp.make_transaction,
+        "start":cp.random_simulation,
     }
 
     while True:
@@ -121,7 +162,7 @@ async def get_input(cp):
             await command_map[command]()
 
 
-async def main(cp_id="CP_1"):
+async def main(p, f, cp_id="CP_1"):
 
     logging.info("Trying to connect to csms with id %s", cp_id)
 
@@ -131,10 +172,20 @@ async def main(cp_id="CP_1"):
             subprotocols=['ocpp2.0.1']
     ) as ws:
 
-        cp = ChargePoint(cp_id, ws)
-        await asyncio.gather(cp.start(), cp.cold_Boot(), get_input(cp))
+        cp = ChargePoint(cp_id, ws, p, f)
+
+        #shut down handler
+        signal.signal(signal.SIGINT, cp.shut_down)
+
+        await asyncio.gather(cp.start(), cp.cold_Boot(), cp.wait_shut_down())
 
 
 
 if __name__ == '__main__':
-   asyncio.run(main())
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", type=int, default = 5*60, help="event_period_time")
+    parser.add_argument("-f", type=str, default = 60, help="factor")
+    args = parser.parse_args()    
+
+    asyncio.run(main(args.p, args.f))

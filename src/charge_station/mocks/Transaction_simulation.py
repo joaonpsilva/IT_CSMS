@@ -32,11 +32,12 @@ class Transaction:
         self._time_current = 0
         self.done_charging = asyncio.Event()
 
-        self._power = 0
+        self.next_charging_action = None
+        self.charging_action = None
+        self.power = 0
         self.total_import = 0
         self.total_export = 0
 
-        self._charging_action = None
         self.max_soc = None
         self.min_soc = None
 
@@ -60,30 +61,23 @@ class Transaction:
         self._transaction_seq_no+=1
         return self._transaction_seq_no - 1 
     
-    @property
-    def charging_action(self):
-        return self._charging_action
 
     @property
     def time_current(self):
         return self._time_current
 
 
-    @property
-    def power(self):
-        return self._power
+    async def set_power(self, p):
+        await self.send_update_Transaction_Event(enums.TriggerReasonType.charging_rate_changed)
+        self.power = p
+    
 
-    @power.setter
-    async def power(self, p):
-        self._power = p
+    async def set_charging_action(self, action):
+        self.next_charging_action = action
 
-        if self.charging_action == 3:
-            self.current_import = power
-        elif self.charging_action == 4:
-            self.current_export = power
+        if action == 2:
+            await self.set_power(0)
         
-        enums.TriggerReasonType.charging_rate_changed
-
 
     @time_current.setter
     def time_current(self, t):
@@ -92,15 +86,6 @@ class Transaction:
         #enough time has passed
         if self._time_current >= self.time_charging_goal:
             self.done_charging.set()
-
-
-    @charging_action.setter
-    def charging_action(self, action):
-        self._charging_action = action
-
-        if self._charging_action == 2:
-            self.power = 0
-
     
 
     async def status_notif(self, connector_status):
@@ -129,7 +114,7 @@ class Transaction:
                 charging_state=enums.ChargingStateType.ev_connected
             ),
             evse=datatypes.EVSEType(id=self.evse_id, connector_id=self.connector_id),
-            meter_value=self.build_meter_values(0, 0, 0, 0, self.soc)
+            meter_value=self.build_meter_values()
         )
         await self.call(request)
     
@@ -145,7 +130,7 @@ class Transaction:
                 transaction_id=self.transaction_id,
                 charging_state=enums.ChargingStateType.idle
             ),
-            meter_value=self.build_meter_values(self.total_export, self.total_import, 0, 0, self.soc)
+            meter_value=self.build_meter_values()
         )
         await self.call(request)
 
@@ -155,7 +140,7 @@ class Transaction:
     async def authorizeRequest(self):
         request = call.AuthorizePayload(
             id_token=datatypes.IdTokenType(
-                id_token="3e19b1cc-7858-440c-bd7f-7335555841bd",
+                id_token="test_idToken",
                 type=enums.IdTokenType.local
             )
         )
@@ -180,38 +165,38 @@ class Transaction:
                 charging_state=enums.ChargingStateType.idle
             ),
             id_token=datatypes.IdTokenType(
-                id_token="3e19b1cc-7858-440c-bd7f-7335555841bd",
+                id_token="test_idToken",
                 type=enums.IdTokenType.local
             ),
             evse=datatypes.EVSEType(id=self.evse_id, connector_id=self.connector_id),
-            meter_value=self.build_meter_values(0, 0, 0, 0, self.soc)
+            meter_value=self.build_meter_values()
         )
         await self.call(request)
     
 
-    def build_meter_values(self, export_register, import_register, active_export, active_import, soc):
+    def build_meter_values(self):
         meter_value=[
             datatypes.MeterValueType(
                 timestamp=datetime.utcnow().isoformat(),
                 sampled_value=[
                     datatypes.SampledValueType(
-                        value=export_register,
+                        value=self.total_export,
                         measurand=enums.MeasurandType.energy_active_export_register
                     ),
                     datatypes.SampledValueType(
-                        value=import_register,
+                        value=self.total_import,
                         measurand=enums.MeasurandType.energy_active_import_register
                     ),
                     datatypes.SampledValueType(
-                        value=active_export,
+                        value=self.power if self.charging_action == 4 else 0,
                         measurand=enums.MeasurandType.power_active_export
                     ),
                     datatypes.SampledValueType(
-                        value=active_import,
+                        value=self.power if self.charging_action == 3 else 0,
                         measurand=enums.MeasurandType.power_active_import
                     ),
                     datatypes.SampledValueType(
-                        value=soc,
+                        value=self.soc,
                         measurand=enums.MeasurandType.soc
                     )])]
 
@@ -224,13 +209,20 @@ class Transaction:
         self.time_current = self.time_current + time_since_update
 
         #w to wh
-        amount_exported = self.current_export * time_since_update/60/60
-        amount_imported = self.current_import * time_since_update/60/60
+        if self.charging_action == 2:
+            amount_exported = 0
+            amount_imported = 0
 
-        self.total_export += amount_exported
-        self.total_import += amount_imported
+        elif self.charging_action == 3:
+            amount_imported = self.power * time_since_update/60/60
+            self.total_import += amount_imported
+            self.ev_current_capacity += amount_imported
+
+        elif self.charging_action == 4:
+            amount_exported = self.power * time_since_update/60/60
+            self.total_export += amount_exported
+            self.ev_current_capacity -= amount_exported 
         
-        self.ev_current_capacity = self.ev_current_capacity + amount_imported - amount_exported 
         self.soc = self.ev_current_capacity / self.ev_total_capacity * 100
     
 
@@ -247,14 +239,15 @@ class Transaction:
                 charging_state=enums.ChargingStateType.charging
             ),
             evse=datatypes.EVSEType(id=self.evse_id, connector_id=self.connector_id),
-            meter_value=self.build_meter_values(self.total_export, self.total_import, self.current_export, self.current_import, self.soc)
+            meter_value=self.build_meter_values()
         )
         await self.call(request)
         self.last_meter_values_time = time.time()
 
+        self.charging_action = self.next_charging_action
+
 
     async def charging_events(self):
-
         
         self.last_meter_values_time = time.time()
 
@@ -265,7 +258,6 @@ class Transaction:
         await self.done_charging.wait()
      
         await self.send_update_Transaction_Event(enums.TriggerReasonType.charging_rate_changed)
-
 
         self.periodic_meter.cancel()
         
