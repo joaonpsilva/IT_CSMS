@@ -14,15 +14,19 @@ logging.basicConfig(level=logging.INFO)
 
 LOGGER = logging.getLogger("Ocpp_Server")
 
-def Basic_auth_with_broker(broker):
+def Basic_auth_with_broker(broker, not_secure):
     class BasicAuth(websockets.BasicAuthWebSocketServerProtocol):
         def __init__(self, *args, **kwargs):
             super(BasicAuth, self).__init__(*args, **kwargs)
             self.broker = broker
+            self.not_secure = not_secure
         
         async def check_credentials(self, username, password):
             self.user = username
             self.password = password
+
+            if self.not_secure:
+                return True
 
             try:
                 content = {"CP_ID" : username,"password": password}
@@ -56,7 +60,7 @@ class OCPP_Server:
         sys.exit(0)
     
 
-    async def run(self, port, rb, variables_file):
+    async def run(self, port, rb, variables_file, not_secure):
         #broker handles the rabbit mq queues and communication between services
         try:
             self.broker = Rabbit_Handler("Ocpp_Server", self.handle_api_request)
@@ -80,12 +84,12 @@ class OCPP_Server:
             LOGGER.error("Could not read variables file")
 
         #start server
-        await self.start_server(port)
+        await self.start_server(port, not_secure)
     
 
-    async def start_server(self, port):
+    async def start_server(self, port, not_secure):
 
-        BasicAuth_Custom_Handler = Basic_auth_with_broker(self.broker)
+        BasicAuth_Custom_Handler = Basic_auth_with_broker(self.broker, not_secure)
         server = await websockets.serve(
             self.on_cp_connect,
             '0.0.0.0',
@@ -175,6 +179,7 @@ if __name__ == '__main__':
     parser.add_argument("-p", type=int, default = 9000, help="OCPP server port")
     parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
     parser.add_argument("-vf", type=str, default = "CSMS/ocpp_server/ocpp_server_variables.json", help="variables_file")
+    parser.add_argument("-ns", action="store_true", help="turn off security")
 
     args = parser.parse_args()
 
@@ -184,4 +189,4 @@ if __name__ == '__main__':
     #shut down handler
     signal.signal(signal.SIGINT, ocpp_server.shut_down)
 
-    asyncio.run(ocpp_server.run(args.p, args.rb, args.vf))
+    asyncio.run(ocpp_server.run(args.p, args.rb, args.vf, args.ns))
