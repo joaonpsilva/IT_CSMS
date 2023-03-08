@@ -101,7 +101,7 @@ class ChargePoint(cp):
             message = Topic_Message(method="select", cp_id=self.id, content={"table": "EVSE", "filters":{"cp_id" : self.id}}, destination="SQL_DB")
             response = await ChargePoint.broker.send_request_wait_response(message)
             total_evses = len(response)
-            if total_evses == len(id_token_info["evse_id"]):
+            if total_evses == len(id_token_info["evse_id"]) or len(id_token_info["evse_id"])==0:
                 id_token_info["evse_id"] = None
             
             #expired
@@ -111,6 +111,7 @@ class ChargePoint(cp):
             return id_token_info
             
         except:
+            self.logger.error(traceback.format_exc())
             return {"status" : enums.AuthorizationStatusType.invalid}
 
 

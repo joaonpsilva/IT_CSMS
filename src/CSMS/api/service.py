@@ -197,9 +197,6 @@ class API_Service:
 
     async def set_transaction_limits(self, transaction_id, action, power, max_soc, min_soc):
 
-        power_map = {"stop": 0, "normal_charge":1, "pause":2, "charge":3, "discharge":4}
-        action = power_map[action]
-
         transaction_info = await self.getInfo_by_TransactionId(transaction_id)
         if "action" not in transaction_info:
             raise HTTPException(404, "No active Transaction with that ID")
@@ -208,35 +205,40 @@ class API_Service:
         evse_id = transaction_info["evse_id"]        
         current_action = transaction_info["action"] 
 
-        #Send message to change the v2g_action
-        if current_action is None or current_action != action:
+        if action is not None:
+            power_map = {"stop": 0, "normal_charge":1, "pause":2, "charge":3, "discharge":4}
+            action = power_map[action]
+
+            #Send message to change the v2g_action
+            if current_action is None or current_action != action:
+                payload ={
+                    "vendor_id": "MagnumCap",
+                    "message_id": "v2g_action",
+                    "data": {
+                        "evse_id": evse_id,
+                        "v2g_action": {
+                            "action": action
+                }}}
+                
+                response = await self.send_request("dataTransfer", cp_id, payload=payload)
+                if response["status"] != enums.DataTransferStatusType.accepted:
+                    return response
+                
+                self.transaction_cache[transaction_id]["action"] = action
+        
+        if power is not None or min_soc is not None or max_soc is not None:
+            #Send message with charging limits
             payload ={
                 "vendor_id": "MagnumCap",
                 "message_id": "v2g_action",
                 "data": {
                     "evse_id": evse_id,
-                    "v2g_action": {
-                        "action": action
+                    "change_profile": {
+                        "power": power,
+                        "min_soc": min_soc,
+                        "max_soc": max_soc
             }}}
-            
-            response = await self.send_request("dataTransfer", cp_id, payload=payload)
-            if response["status"] != enums.DataTransferStatusType.accepted:
-                return response
-            
-            self.transaction_cache[transaction_id]["action"] = action
-        
-        #Send message with charging limits
-        payload ={
-            "vendor_id": "MagnumCap",
-            "message_id": "v2g_action",
-            "data": {
-                "evse_id": evse_id,
-                "change_profile": {
-                    "power": power,
-                    "min_soc": min_soc,
-                    "max_soc": max_soc
-        }}}
 
-        return await self.send_request("dataTransfer", cp_id, payload=payload)
+            return await self.send_request("dataTransfer", cp_id, payload=payload)
 
 

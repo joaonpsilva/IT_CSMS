@@ -124,7 +124,7 @@ async def setmaxpower(transaction_id: str, max_power: int, user=Depends(auth_han
 
 
 @app.post("/set_charging_limits", status_code=200)
-async def set_charging_power(transaction_id: str, action:schemas.Charger_Action, power: int, max_soc:int=None, min_soc:int=None,user=Depends(auth_handler.check_permission_level_2)):
+async def set_charging_power(transaction_id: str, action:schemas.Charger_Action=None, power: int=None, max_soc:int=None, min_soc:int=None,user=Depends(auth_handler.check_permission_level_2)):
     return await service.set_transaction_limits(transaction_id, action, power, max_soc, min_soc)
 
 

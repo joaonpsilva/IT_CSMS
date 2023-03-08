@@ -114,6 +114,10 @@ class ChargePoint(cp):
     async def on_SetChargingProfile(self, evse_id, charging_profile):
         return call_result.SetChargingProfilePayload(status=enums.ChargingProfileStatus.rejected)
 
+    @on('GetTransactionStatus')
+    def on_GetTransactionStatus(self, **kwargs):
+        return call_result.GetTransactionStatusPayload(messages_in_queue=False)
+
     @on("GetChargingProfiles")
     async def on_GetChargingProfiles(self, request_id, charging_profile, **kwargs):
         return call_result.GetChargingProfilesPayload(status=enums.GetChargingProfileStatusType.no_profiles)
@@ -178,8 +182,8 @@ async def main(p, f, cp_id="CP_1"):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", type=int, default = 5*60, help="event_period_time")
-    parser.add_argument("-f", type=str, default = 60, help="factor")
+    parser.add_argument("-p", type=int, default = 2*60, help="event_period_time")
+    parser.add_argument("-f", type=int, default = 1, help="factor")
     args = parser.parse_args()    
 
     asyncio.run(main(args.p, args.f))

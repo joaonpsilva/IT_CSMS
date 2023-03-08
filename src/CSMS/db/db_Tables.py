@@ -234,7 +234,7 @@ class IdTokenInfo(CustomBase):
         
         result = super().get_dict_obj(mode, **kwargs)
 
-        if evse:
+        if evse is not None:
             result["evse"] = evse
 
         return result 
@@ -472,7 +472,7 @@ def insert_Hard_Coded(session):
 
     objects.append(IdToken(id_token = "", type=enums.IdTokenType.no_authorization))
     objects.append(IdToken(id_token = "test_idToken", type=enums.IdTokenType.local))
-    objects.append(IdTokenInfo(_id_token = "test_idToken", valid=True, ))
+    objects.append(IdTokenInfo(_id_token = "test_idToken", valid=True, evse=[evse, evse2, evse3]))
 
     admin = User(password="admin", email="admin", permission_level=2)
     objects.append(admin)

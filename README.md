@@ -7,7 +7,7 @@ Central system to manage EV charging stations using OCPP 2.0.1 protocol
 - cd src
 - docker-compose up
 
-## Run individually
+## (ALTERNATIVELY) Run individually
 
 Install requirements:
  - pip install -r requirements.txt
