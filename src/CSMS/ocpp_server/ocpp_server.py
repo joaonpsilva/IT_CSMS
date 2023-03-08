@@ -49,13 +49,8 @@ class OCPP_Server:
     def shut_down(self, sig, frame):
         LOGGER.info("OCPP Server Shuting down")
 
-        variables = {
-            "request_Id":ChargePoint.request_Id,
-            "charging_profile_id":ChargePoint.charging_profile_id, 
-            "charging_schedule_id":ChargePoint.charging_schedule_id}
-        
         with open(self.variables_file, "w") as outfile:
-            outfile.write(json.dumps(variables))
+            outfile.write(json.dumps(ChargePoint.server_variables))
 
         sys.exit(0)
     
@@ -77,9 +72,7 @@ class OCPP_Server:
             with open(self.variables_file, 'r') as openfile:
                 # Reading from json file
                 json_object = json.load(openfile)
-                ChargePoint.request_Id = json_object["request_Id"]
-                ChargePoint.charging_profile_id = json_object["charging_profile_id"]
-                ChargePoint.charging_schedule_id = json_object["charging_schedule_id"]
+                ChargePoint.server_variables = json_object
         except:
             LOGGER.error("Could not read variables file")
 
@@ -188,5 +181,6 @@ if __name__ == '__main__':
     
     #shut down handler
     signal.signal(signal.SIGINT, ocpp_server.shut_down)
+    signal.signal(signal.SIGTERM, ocpp_server.shut_down)
 
     asyncio.run(ocpp_server.run(args.p, args.rb, args.vf, args.ns))

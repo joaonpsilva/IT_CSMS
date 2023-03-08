@@ -17,13 +17,11 @@ from rabbit_mq.rabbit_handler import Topic_Message
 class ChargePoint(cp):
 
     broker = None
-    request_Id = 0
-    charging_profile_id = 0
-    charging_schedule_id = 0
+    server_variables={}
 
     def new_Id():
-        ChargePoint.request_Id += 1
-        return ChargePoint.request_Id
+        ChargePoint.server_variables["request_Id"] += 1
+        return ChargePoint.server_variables["request_Id"]
 
     def __init__(self, id, connection, response_timeout=30):
         super().__init__(id, connection, response_timeout)
@@ -379,13 +377,13 @@ class ChargePoint(cp):
     
     def choose_profile_id(self, request):
         if "id" not in request.charging_profile or request.charging_profile["id"] is None:
-            request.charging_profile["id"] = ChargePoint.charging_profile_id
-            ChargePoint.charging_profile_id+=1
+            request.charging_profile["id"] = ChargePoint.server_variables["charging_profile_id"]
+            ChargePoint.server_variables["charging_profile_id"]+=1
         
         for schedule in request.charging_profile["charging_schedule"]:
             if "id" not in schedule or schedule["id"] is None:
-                schedule["id"] = ChargePoint.charging_schedule_id
-                ChargePoint.charging_schedule_id +=1
+                schedule["id"] = ChargePoint.server_variables["charging_schedule_id"]
+                ChargePoint.server_variables["charging_schedule_id"] +=1
         
         return request
 
@@ -466,12 +464,12 @@ class ChargePoint(cp):
         #add new profiles
         for r in reports["data"]:
             for profile in r["charging_profile"]:
-                if profile["id"] > ChargePoint.charging_profile_id:
-                    ChargePoint.charging_profile_id = profile["id"]+1
+                if profile["id"] > ChargePoint.server_variables["charging_profile_id"]:
+                    ChargePoint.server_variables["charging_profile_id"] = profile["id"]+1
                 
                 for schedule in profile["charging_schedule"]:
-                    if schedule["id"] > ChargePoint.charging_schedule_id:
-                        ChargePoint.charging_schedule_id = schedule["id"]+1
+                    if schedule["id"] > ChargePoint.server_variables["charging_schedule_id"]:
+                        ChargePoint.server_variables["charging_schedule_id"] = schedule["id"]+1
 
 
     async def clearChargingProfile(self, **payload):
@@ -628,7 +626,7 @@ class ChargePoint(cp):
 
         return call_result.BootNotificationPayload(
             current_time=datetime.utcnow().isoformat(),
-            interval=30,
+            interval=ChargePoint.server_variables["heartBeat_time"],
             status=enums.RegistrationStatusType.accepted
         )
 
@@ -809,7 +807,7 @@ class ChargePoint(cp):
             await self.set_on_off(True)
         
         try:
-            self.change_is_online = asyncio.create_task(self.set_on_off(False, wait=40)) 
+            self.change_is_online = asyncio.create_task(self.set_on_off(False, wait=ChargePoint.server_variables["heartBeat_time"]+10)) 
         except asyncio.CancelledError:
             pass
 
