@@ -13,6 +13,7 @@ import random
 import argparse
 import signal
 
+
 class ChargePoint(cp):
 
     def __init__(self, id, connection, p, f):
@@ -27,21 +28,12 @@ class ChargePoint(cp):
             2: {"connectors" : [1,2,3], "transaction_id":None},
             3: {"connectors" : [1,2], "transaction_id":None}
         }
-
         self.active_transactions = {}
-        self.shut_down_flag = asyncio.Event()
-    
-
-    def shut_down(self, sig=None, frame=None):
-        self.shut_down_flag.set()
 
 
-    async def wait_shut_down(self):
-        await self.shut_down_flag.wait()
-     
+    async def shut_down(self, sig=None):
         for i, t in self.active_transactions.items():
-            await t.end_event()
-        
+            await t.end_event()      
         exit(0)
 
 
@@ -74,17 +66,20 @@ class ChargePoint(cp):
             
 
     async def random_simulation(self):
+
+        frst_car = True
         
         while True:
 
             available_evses = [evse for evse, info in self.evses.items() if info["transaction_id"] is None]
             if len(available_evses) > 0:
                 
-                if random.random() > 0.6:
+                if random.random() > 0.6 or frst_car:
+                    frst_car = False
                     self.loop.create_task(self.make_transaction())
 
             await asyncio.sleep(5 * 60 / self.factor)
-
+            
 
     async def make_transaction(self):
 
@@ -146,20 +141,6 @@ class ChargePoint(cp):
                 await transaction.set_power(data["change_profile"]["power"])
 
 
-
-async def get_input(cp):
-    
-    command_map={
-        "trans":cp.make_transaction,
-        "start":cp.random_simulation,
-    }
-
-    while True:
-        command = await ainput("")
-        if command in command_map:
-            await command_map[command]()
-
-
 async def main(p, f, cp_id="CP_1"):
 
     logging.info("Trying to connect to csms with id %s", cp_id)
@@ -172,12 +153,13 @@ async def main(p, f, cp_id="CP_1"):
 
         cp = ChargePoint(cp_id, ws, p, f)
 
-        #shut down handler
-        signal.signal(signal.SIGINT, cp.shut_down)
 
-        await asyncio.gather(cp.start(), cp.cold_Boot(), cp.wait_shut_down())
+        loop = asyncio.get_event_loop()
+        loop.add_signal_handler(getattr(signal, "SIGINT"),
+                                lambda: asyncio.ensure_future(cp.shut_down("SIGINT")))
 
 
+        await asyncio.gather(cp.start(), cp.cold_Boot())
 
 if __name__ == '__main__':
 
