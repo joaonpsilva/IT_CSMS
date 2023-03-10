@@ -89,7 +89,9 @@ async def getTransactions(transaction_id:str, user=Depends(auth_handler.check_pe
 
 @app.get("/transactions/open/by_IdToken", status_code=200)
 async def getOpenTransactionsByIdToken(user=Depends(auth_handler.check_permission_level_1)):
-    return await service.send_request("get_Open_Transactions_byIdToken", payload={"id_token": user["id_token"]}, destination="SQL_DB")
+    if user["id_token"] is None:
+        raise HTTPException(400, detail="User doesn't have an Id Token")
+    return await service.send_request("get_Open_Transactions_byIdToken", payload={"id_token": user["id_token"]["id_token"]}, destination="SQL_DB")
 
 
 @app.get("/transactions/open", status_code=200)
@@ -99,14 +101,21 @@ async def getOpenTransactions(user=Depends(auth_handler.check_permission_level_2
 
 @app.get("/transactions/{date}", status_code=200)
 async def getOpenTransactionsByIdToken(date: datetime.datetime, user=Depends(auth_handler.check_permission_level_1)):
-    return await service.send_request("get_Transactions_byDate", payload={"id_token": user["id_token"], "date":date}, destination="SQL_DB")
+    if user["id_token"] is None:
+        raise HTTPException(400, detail="User doesn't have an Id Token")
+    return await service.send_request("get_Transactions_byDate", payload={"id_token": user["id_token"]["id_token"], "date":date}, destination="SQL_DB")
 
 
 @app.post("/charge/start", status_code=200)
 async def charge_start(evse_id: int, cp_id:str, user=Depends(auth_handler.check_permission_level_1)):
 
+    if user["id_token"] is None:
+        raise HTTPException(400, detail="User doesn't have an Id Token")
+
+    id_token=datatypes.IdTokenType(id_token=user["id_token"]["id_token"], type=user["id_token"]["type"])
+
     payload = payloads.RequestStartTransactionPayload(
-        id_token=datatypes.IdTokenType(id_token=user["id_token"], type=enums.IdTokenType.iso14443),
+        id_token=id_token,
         evse_id=evse_id
     )
     return await service.send_request("requestStartTransaction", cp_id=cp_id, payload=payload)
@@ -156,7 +165,9 @@ async def update_auth_list(cp_id: str, update_type:schemas.Update_type,id_tokens
 
 @app.post("/ReserveNow", status_code=200)
 async def reserve_now(cp_id: str, evse_id: int, user=Depends(auth_handler.check_permission_level_1)):
-    return await service.reserve(cp_id, evse_id, user["id_token"])
+    if user["id_token"] is None:
+        raise HTTPException(400, detail="User doesn't have an Id Token")
+    return await service.reserve(cp_id, evse_id, user["id_token"]["id_token"])
 
 @app.post("/cancel_Reservation", status_code=200)
 async def cancel_Reservation(reservation_id : int, user=Depends(auth_handler.check_permission_level_1)):

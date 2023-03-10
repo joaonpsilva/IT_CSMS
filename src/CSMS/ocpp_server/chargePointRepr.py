@@ -64,12 +64,13 @@ class ChargePoint(cp):
         
         response = await ChargePoint.broker.send_request_wait_response(message)
 
+        if len(response) == 0:
+            return {"status" : enums.AuthorizationStatusType.unknown}
+
         id_token = response[0]
         id_token_info = id_token["id_token_info"]
 
-        if id_token is None:
-            return {"status" : enums.AuthorizationStatusType.unknown}
-
+        
         #assert its the same idtoken
         assert(id_token["id_token"] == req_id_token["id_token"])
         assert(id_token["type"] == req_id_token["type"])
@@ -137,7 +138,7 @@ class ChargePoint(cp):
             response = await self.call(request)
             
 
-            if response.get_variable_result[0]["attribute_status"] == enums.GetVariableStatusType.accepted:
+            if response is not None and response.get_variable_result[0]["attribute_status"] == enums.GetVariableStatusType.accepted:
                 self.max_get_messages = int(response.get_variable_result[0]["attribute_value"])
             else:
                 #if no response assume high number
@@ -285,7 +286,7 @@ class ChargePoint(cp):
         if request.remote_start_id is None:
             request.remote_start_id = ChargePoint.new_Id()
 
-        response = await self.call(request)
+        response = await self.call(request, suppress=False)
 
         if response.status == enums.RequestStartStopStatusType.accepted:
 
@@ -303,7 +304,7 @@ class ChargePoint(cp):
     
     async def requestStopTransaction(self, **payload):
         request = call.RequestStopTransactionPayload(**payload)
-        return await self.call(request)
+        return await self.call(request, suppress=False)
     
 
     async def triggerMessage(self, **payload):
@@ -312,7 +313,7 @@ class ChargePoint(cp):
         if request.requested_message == enums.MessageTriggerType.status_notification and request.evse["connector_id"] == None:
             raise ValidationError("Connector ID is required for status_notification")
 
-        return await self.call(request)
+        return await self.call(request, suppress=False)
 
 
     async def getTransactionStatus(self, transaction_id=None, **payload):
@@ -320,7 +321,7 @@ class ChargePoint(cp):
             payload["transaction_id"] = transaction_id
         
         request = call.GetTransactionStatusPayload(**payload)
-        return await self.call(request)
+        return await self.call(request, suppress=False)
 
     
     def dates_overlap(self, valid_from1, valid_to1, valid_from2, valid_to2):
@@ -401,7 +402,7 @@ class ChargePoint(cp):
         await self.charging_profile_assert_no_conflicts(request.evse_id, request.charging_profile)
 
         #send message to the cp
-        response = await self.call(request)
+        response = await self.call(request, suppress=False)
 
         if response.status == enums.ChargingProfileStatus.accepted:
             message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
@@ -412,12 +413,12 @@ class ChargePoint(cp):
     
     async def getCompositeSchedule(self, **payload):
         request = call.GetCompositeSchedulePayload(**payload)
-        return await self.call(request)
+        return await self.call(request, suppress=False)
     
 
     async def async_request(self, request):
         try:
-            response = await self.call(request)
+            response = await self.call(request, suppress=False)
             response = asdict(response)
         except:
             return
@@ -459,7 +460,7 @@ class ChargePoint(cp):
         request = {"charging_profile" : {"charging_profile_purpose":enums.ChargingProfilePurposeType.charging_station_external_constraints}}    
         reports = await self.getChargingProfiles(**request)
         
-        if "status" in reports and reports["status"] != enums.GetChargingProfileStatusType.accepted:
+        if reports is None or reports["status"] != enums.GetChargingProfileStatusType.accepted:
             return
 
         #add new profiles
@@ -483,7 +484,7 @@ class ChargePoint(cp):
         if request.charging_profile_criteria["charging_profile_purpose"] == enums.ChargingProfilePurposeType.charging_station_external_constraints:
             raise ValidationError("CSMS cannot clear charging_station_external_constraints")
 
-        response = await self.call(request)
+        response = await self.call(request, suppress=False)
 
         if response.status == enums.ClearChargingProfileStatusType.accepted:
             message = Topic_Message(method="clearChargingProfile", cp_id=self.id, content=payload)
@@ -492,7 +493,7 @@ class ChargePoint(cp):
     
     async def changeAvailability(self, **payload):
         request = call.ChangeAvailabilityPayload(**payload)
-        return await self.call(request)
+        return await self.call(request, suppress=False)
     
 
     async def setVariableMonitoring(self, **payload):
@@ -515,11 +516,11 @@ class ChargePoint(cp):
 
     async def reset(self, **payload):
         request = call.ResetPayload(**payload)
-        return await self.call(request)
+        return await self.call(request, suppress=False)
 
     async def getLocalListVersion(self, **payload):
         request = call.GetLocalListVersionPayload()
-        return await self.call(request)
+        return await self.call(request, suppress=False)
         
     
     async def sendAuhorizationList(self, update_type, local_authorization_list):
@@ -559,7 +560,7 @@ class ChargePoint(cp):
 
     async def setDisplayMessage(self, **payload):
         request = call.SetDisplayMessagePayload(**payload)
-        return await self.call(request)
+        return await self.call(request, suppress=False)
 
     async def getDisplayMessages(self, **payload):
         if "request_id" not in payload or payload["request_id"] is None:
@@ -570,11 +571,11 @@ class ChargePoint(cp):
     
     async def clearDisplayMessage(self, **payload):
         request = call.ClearDisplayMessagePayload(**payload)
-        return await self.call(request)
+        return await self.call(request, suppress=False)
     
     async def unlockConnector(self, **payload):
         request = call.UnlockConnectorPayload(**payload)
-        return await self.call(request)
+        return await self.call(request, suppress=False)
 
     
     async def wait_for_evse(self, id):
@@ -591,7 +592,7 @@ class ChargePoint(cp):
         payload["id"] = ChargePoint.new_Id()
         request = call.ReserveNowPayload(**payload)
             
-        response = await self.call(request)
+        response = await self.call(request, suppress=False)
 
         if response.status == enums.ReserveNowStatusType.accepted:
             if request.evse_id is None:
@@ -605,12 +606,12 @@ class ChargePoint(cp):
 
     async def cancelReservation(self, reservation_id):
         request = call.CancelReservationPayload(reservation_id=reservation_id)
-        return await self.call(request)
+        return await self.call(request, suppress=False)
     
     
     async def dataTransfer(self, **kwargs):
         request = call.DataTransferPayload(**kwargs)
-        return await self.call(request)
+        return await self.call(request, suppress=False)
         
 
 #######################Funtions staring from the CP Initiative

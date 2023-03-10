@@ -7,11 +7,11 @@ from typing import MutableMapping
 from aio_pika.abc import AbstractIncomingMessage
 import logging
 import datetime
-from Exceptions.exceptions import ValidationError, OtherError
+from Exceptions import exceptions
+from ocpp.exceptions import OCPPError 
+
 import traceback
 
-#SEE TODO
-#https://stackoverflow.com/questions/53374144/rabbitmq-ack-timeout
 
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
@@ -27,6 +27,10 @@ class Rabbit_Message:
     def routing_key(self):
         raise NotImplementedError
     def prepare_Response(self):
+        raise NotImplementedError
+    def to_dict(self):
+        raise NotImplementedError
+    def create_request_id(self):
         raise NotImplementedError
 
 
@@ -57,6 +61,8 @@ class Topic_Message(Rabbit_Message):
         self.status = status
         return self
 
+    def create_request_id(self):
+        return str(uuid.uuid4())
 
 class Fanout_Message(Rabbit_Message):
     def __init__(self, intent = None, type = None,content = None):
@@ -75,6 +81,9 @@ class Fanout_Message(Rabbit_Message):
         self.type = "response"
         self.content = None
         return self
+
+    def create_request_id(self):
+        return self.intent
     
 
 class Rabbit_Handler:
@@ -104,7 +113,6 @@ class Rabbit_Handler:
                 break
             except:
                 await asyncio.sleep(5)
-
 
         #declare channel
         self.channel = await self.connection.channel()
@@ -144,15 +152,8 @@ class Rabbit_Handler:
 
             
     async def on_response(self, message: AbstractIncomingMessage) -> None:
-        """
-        callback funtion. Will be executed when a message is received in the callback queue
-        """
-
         #load json content
         response = await self.unpack(message)
-
-        if response.type != "response":
-            return
         
         if not message.correlation_id:
             message.correlation_id = response.intent
@@ -172,24 +173,21 @@ class Rabbit_Handler:
         #load json content
         request = await self.unpack(message)
 
-        if request.type not in ["request", "ocpp_log"]:
-            return
-
         self.logger.info("RECEIVED: %s", request.__dict__)
 
         try:
             #pass content to be handled
             response_content = await self.handle_request(request)
             status = "OK"
-        except (ValidationError, OtherError) as e:
-            status = e.status
+        except (exceptions.ValidationError, exceptions.OtherError) as e:
+            status = e.__class__.__name__
             response_content = e.args[0]
-        except TimeoutError as e:
-            status = "ERROR"
-            response_content = e.args[0]
-        except Exception:
-            status = "ERROR"
-            response_content = self.name + " error"
+        except OCPPError:
+            status = "Error"
+            response_content = "Ocpp Comunication Error"
+        except Exception as e:
+            status = "Error"
+            response_content = self.name + " error" if len(e.args) == 0 else e.args[0]
             self.logger.error(traceback.format_exc())
         
         #send response to the entity that made the request
@@ -199,40 +197,32 @@ class Rabbit_Handler:
             
             await self.send_Message(response, message.correlation_id)
             
-
         
     async def send_request_wait_response(self, message, timeout=5):
         """
         Send a request and wait for response
         """
+
         if isinstance(message, Topic_Message):
             message.origin = self.name
         message.type = "request"
 
         #create an ID for the request
-        if isinstance(message, Fanout_Message):
-            requestID = message.intent
-        else:
-            requestID = str(uuid.uuid4())
-
+        requestID = message.create_request_id()
         #create a future and introduce it in the request map
         future = self.loop.create_future()
         self.futures[requestID] = future
 
         #send request
-        await self.send_Message(message, requestID, self.response_queue.name)
+        await self.send_Message(message, requestID)
 
         try:
             #wait for the future to have a value and then return it
             result = await asyncio.wait_for(future, timeout=timeout)
 
             if isinstance(result, Topic_Message):
-                if result.status == "VAL_ERROR":
-                    raise ValidationError(result.content)
-                elif result.status == "OTHER_ERROR":
-                    raise OtherError(result.content)
-                elif result.status == "ERROR":
-                    raise Exception(result.content)
+                if result.status != "OK":
+                    raise getattr(exceptions, result.status)(result.content)
             
             return result.content
 
@@ -252,7 +242,7 @@ class Rabbit_Handler:
             return
 
     
-    async def send_Message(self, message, requestID=None, reply_to=None, routing_key=None):
+    async def send_Message(self, message, requestID=None, routing_key=None):
         json_message = json.dumps(message, cls=EnhancedJSONEncoder)
         self.logger.info("RabbitMQ SENDING Message: %s", str(json_message))
         
@@ -261,7 +251,6 @@ class Rabbit_Handler:
                 body=json_message.encode(),
                 content_type="application/json",
                 correlation_id=requestID,
-                reply_to=reply_to,  #tell consumer: reply to this queue
             ),
             routing_key=routing_key if routing_key != None else message.routing_key(),
         )

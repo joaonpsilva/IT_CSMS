@@ -2,7 +2,7 @@ import logging
 import asyncio
 from datetime import datetime
 from aioconsole import ainput
-
+import uuid
 from rabbit_mq.fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
 
 from ocpp.v201 import call
@@ -68,7 +68,7 @@ async def main():
             timestamp=datetime.utcnow().isoformat(),
             trigger_reason=enums.TriggerReasonType.ev_detected,
             seq_no=1,
-            transaction_info=datatypes.TransactionType(transaction_id="jkhsdalkvsdj"),
+            transaction_info=datatypes.TransactionType(transaction_id=str(uuid.uuid4())),
             evse=datatypes.EVSEType(id=1)
         )
     )

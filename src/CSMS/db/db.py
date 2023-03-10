@@ -154,8 +154,12 @@ class DataBase:
 
         if not user or not user.verify_password(password):
             raise OtherError("Invalid User or Password")
+        
+        id_token = None
+        if user.id_token is not None:
+            id_token = user.id_token.get_dict_obj()
 
-        response = {"id" : user.id, "permission_level" : user.permission_level, "id_token" : user._id_token}
+        response = {"id" : user.id, "permission_level" : user.permission_level, "id_token" : id_token}
 
         return response
 

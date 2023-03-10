@@ -1,20 +1,21 @@
-import logging
 import asyncio
 import websockets
 import argparse
 import sys
+import signal
+import re
+import traceback
 
 from rabbit_mq.fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
 
 from ocpp.v201 import call
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
-import traceback
+
+import logging
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("websockets").setLevel(logging.CRITICAL)
-import signal
 
-import re
 
 class ChargePoint(cp):
 
@@ -61,6 +62,7 @@ class ChargePoint(cp):
         """
         try:
             #remove "request_"
+            assert(request.intent[:8] == "request_")
             words = request.intent[8:].split("_")
 
             #transform snake to camel and add "Payload"
@@ -90,31 +92,16 @@ class ChargePoint(cp):
             self.broker = broker
         
         async def handle_message(self, **kwargs):
-            #try:
                 
             #action to rabbitmq format
             intent = re.sub(r'(?<!^)(?=[A-Z])', '_', self.action).lower()
             message = Fanout_Message(intent=intent, content=kwargs)
 
             #send message
-            response = await self.broker.send_request_wait_response(message, timeout=2)
+            response = await self.broker.send_request_wait_response(message, timeout=30)
 
             #get correct payload
             response = getattr(call_result, self.action + "Payload")(**response)
-            
-            # except:
-            #     payload_type = getattr(call_result, self.action + "Payload")
-
-            #     if payload_type == call_result.UnlockConnectorPayload:
-            #         response = payload_type(status="UnlockFailed")
-            #     elif payload_type == call_result.ClearChargingProfilePayload:
-            #         response = payload_type(status="Unknown")
-            #     elif payload_type == call_result.SendLocalListPayload:
-            #         response = payload_type(status="Failed")
-            #     elif payload_type == call_result.GetChargingProfilesPayload:
-            #         response = payload_type(status="NoProfiles")
-            #     else:
-            #         response = payload_type(status="Rejected")
                 
             return response
 

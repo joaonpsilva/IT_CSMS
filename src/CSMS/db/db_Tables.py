@@ -227,15 +227,15 @@ class IdTokenInfo(CustomBase):
 
     def get_dict_obj(self, mode={}, cp_id=None, **kwargs):
         #override to only include evse permissions for given cp_id
-        evse = None
         if "evse" in mode and cp_id is not None:
             evse = [evse.evse_id for evse in self.evse if evse.cp_id == cp_id] 
-            mode.pop("evse")
-        
-        result = super().get_dict_obj(mode, **kwargs)
 
-        if evse is not None:
+            mode_no_evse = {**mode}
+            mode_no_evse.pop("evse")
+            result = super().get_dict_obj(mode_no_evse, **kwargs)
             result["evse"] = evse
+        else:   
+            result = super().get_dict_obj(mode, **kwargs)
 
         return result 
         

@@ -56,7 +56,7 @@ class API_Service:
                 if "transaction_id" in message.content:
                     message.cp_id = (await self.getInfo_by_TransactionId(message.content["transaction_id"]))["cp_id"]
 
-            return await self.broker.send_request_wait_response(message)
+            return await self.broker.send_request_wait_response(message, timeout=30)
         except OtherError as e:
             raise e
         except ValidationError as e:
