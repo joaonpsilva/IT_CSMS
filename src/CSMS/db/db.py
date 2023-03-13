@@ -240,6 +240,9 @@ class DataBase:
 
 
     def collect_important_metervalues(self, transaction_event, transaction_info):
+
+        transaction_info["cable_max_current"] = transaction_event.cable_max_current
+
         #check meter values
         if len(transaction_event.meter_value) > 0:
             for mv in transaction_event.meter_value:

@@ -312,6 +312,8 @@ class Transaction(CustomBase):
     power_export = Column(Float)
     power_import = Column(Float)
 
+    cable_max_current = Column(Integer)
+
     cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
     evse_id = Column(Integer)
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
@@ -441,7 +443,7 @@ class EventData(CustomBase):
 
 
 async def create_Tables(engine, session, insert_hardCoded=False):
-    #Base.metadata.drop_all(engine)
+    Base.metadata.drop_all(engine)
 
     while True:
         try:

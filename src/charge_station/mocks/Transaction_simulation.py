@@ -114,6 +114,7 @@ class Transaction:
                 transaction_id=self.transaction_id,
                 charging_state=enums.ChargingStateType.ev_connected
             ),
+            cable_max_current=32,
             evse=datatypes.EVSEType(id=self.evse_id, connector_id=self.connector_id),
             meter_value=self.build_meter_values()
         )
@@ -131,6 +132,7 @@ class Transaction:
                 transaction_id=self.transaction_id,
                 charging_state=enums.ChargingStateType.idle
             ),
+            cable_max_current=32,
             meter_value=self.build_meter_values()
         )
         await self.call(request)
@@ -169,6 +171,7 @@ class Transaction:
                 id_token="test_idToken",
                 type=enums.IdTokenType.local
             ),
+            cable_max_current=32,
             evse=datatypes.EVSEType(id=self.evse_id, connector_id=self.connector_id),
             meter_value=self.build_meter_values()
         )
@@ -244,6 +247,7 @@ class Transaction:
                 transaction_id=self.transaction_id,
                 charging_state=enums.ChargingStateType.charging
             ),
+            cable_max_current=32,
             evse=datatypes.EVSEType(id=self.evse_id, connector_id=self.connector_id),
             meter_value=self.build_meter_values()
         )
