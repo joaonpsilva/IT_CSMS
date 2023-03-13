@@ -6,7 +6,8 @@ import signal
 import re
 import traceback
 
-from rabbit_mq.fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
+from rabbit_mq.fanout_Rabbit_Handler import Fanout_Rabbit_Handler
+from rabbit_mq.Rabbit_Message import Fanout_Message
 
 from ocpp.v201 import call
 from ocpp.v201 import ChargePoint as cp
@@ -101,8 +102,8 @@ class ChargePoint(cp):
             response = await self.broker.send_request_wait_response(message, timeout=30)
 
             #get correct payload
-            response = getattr(call_result, self.action + "Payload")(**response)
-                
+            response = getattr(call_result, self.action + "Payload")(**response)    
+
             return response
 
 

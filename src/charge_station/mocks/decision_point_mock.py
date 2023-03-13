@@ -3,7 +3,8 @@ import asyncio
 from datetime import datetime
 from aioconsole import ainput
 import uuid
-from rabbit_mq.fanout_Rabbit_Handler import Fanout_Rabbit_Handler, Fanout_Message
+from rabbit_mq.fanout_Rabbit_Handler import Fanout_Rabbit_Handler
+from rabbit_mq.Rabbit_Message import Fanout_Message
 
 from ocpp.v201 import call
 from ocpp.v201 import ChargePoint as cp

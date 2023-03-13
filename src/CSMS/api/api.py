@@ -9,7 +9,7 @@ from CSMS.api.schemas import payloads
 from CSMS.api.schemas import schemas
 from CSMS.api.auth import AuthHandler
 from CSMS.api.service import API_Service
-from Exceptions.exceptions import OtherError
+from rabbit_mq.exceptions import OtherError
 import asyncio
 import logging
 from sse_starlette.sse import EventSourceResponse

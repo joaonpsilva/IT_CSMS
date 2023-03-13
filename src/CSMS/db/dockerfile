@@ -1,14 +1,12 @@
 FROM python:latest
 
 RUN mkdir -p /app/CSMS/db
-RUN mkdir -p /app/Exceptions
 RUN mkdir -p /app/rabbit_mp
 
 WORKDIR /app
 
 COPY ./CSMS/db /app/CSMS/db
 COPY ./rabbit_mq /app/rabbit_mq
-COPY ./Exceptions /app/Exceptions
 
 RUN pip install -r CSMS/db/requirements.txt
 

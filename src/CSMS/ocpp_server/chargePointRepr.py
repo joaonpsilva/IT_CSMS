@@ -9,9 +9,9 @@ import logging
 import dateutil.parser
 from sys import getsizeof
 import traceback
-from Exceptions.exceptions import ValidationError, OtherError
+from rabbit_mq.exceptions import ValidationError, OtherError
 
-from rabbit_mq.rabbit_handler import Topic_Message
+from rabbit_mq.Rabbit_Message import Topic_Message
 
 
 class ChargePoint(cp):
@@ -65,7 +65,7 @@ class ChargePoint(cp):
         response = await ChargePoint.broker.send_request_wait_response(message)
 
         if len(response) == 0:
-            return {"status" : enums.AuthorizationStatusType.unknown}
+            return None
 
         id_token = response[0]
         id_token_info = id_token["id_token_info"]
@@ -87,6 +87,9 @@ class ChargePoint(cp):
         try:
             if not id_token_info:
                 id_token_info = await self.get_id_token_info(id_token)
+            
+            if id_token_info is None:
+                return {"status" : enums.AuthorizationStatusType.unknown}
             
             #If id token is valid and known, check status
             if not id_token_info.pop("valid"): 
@@ -197,7 +200,7 @@ class ChargePoint(cp):
 
             else:
                 #send
-                results.append(await self.call(request))
+                results.append(await self.call(request, suppress=False))
 
                 #special cases after 1st message
                 if flag:
@@ -235,12 +238,14 @@ class ChargePoint(cp):
             else:
                 variables.remove(variable)
         
-        results = await self.getVariables(**{"get_variable_data":requests})
+        try:
+            results = await self.getVariables(get_variable_data=requests)
 
-
-        return {request: result['attribute_value'] if result['attribute_status'] == enums.GetVariableStatusType.accepted else None
-            for request, result in zip(variables, results["get_variable_result"]) 
-            }
+            return {request: result['attribute_value'] if result is not None and result['attribute_status'] == enums.GetVariableStatusType.accepted else None
+                for request, result in zip(variables, results["get_variable_result"]) 
+                }
+        except:
+            return {request: None for request in variables}
         
 #######################Functions starting from CSMS Initiative
 
@@ -417,11 +422,8 @@ class ChargePoint(cp):
     
 
     async def async_request(self, request):
-        try:
-            response = await self.call(request, suppress=False)
-            response = asdict(response)
-        except:
-            return
+        response = await self.call(request, suppress=False)
+        response = asdict(response)
 
         if response["status"] == "Accepted":
             future = self.loop.create_future()
@@ -458,7 +460,10 @@ class ChargePoint(cp):
 
     async def new_external_profiles(self):
         request = {"charging_profile" : {"charging_profile_purpose":enums.ChargingProfilePurposeType.charging_station_external_constraints}}    
-        reports = await self.getChargingProfiles(**request)
+        try:
+            reports = await self.getChargingProfiles(**request)
+        except:
+            return
         
         if reports is None or reports["status"] != enums.GetChargingProfileStatusType.accepted:
             return

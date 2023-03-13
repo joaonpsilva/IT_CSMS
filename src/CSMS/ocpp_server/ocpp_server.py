@@ -2,8 +2,10 @@ import websockets
 import logging
 from CSMS.ocpp_server.chargePointRepr import ChargePoint
 
-from rabbit_mq.rabbit_handler import Rabbit_Handler, Topic_Message
-from Exceptions.exceptions import ValidationError
+from rabbit_mq.rabbit_handler import Rabbit_Handler
+from rabbit_mq.Rabbit_Message import Topic_Message
+
+from rabbit_mq.exceptions import ValidationError
 import asyncio
 import argparse
 import signal

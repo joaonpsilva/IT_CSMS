@@ -11,7 +11,7 @@ import traceback
 import argparse
 import signal
 import sys
-from Exceptions.exceptions import ValidationError, OtherError
+from rabbit_mq.exceptions import ValidationError, OtherError
 
 import dateutil.parser
 

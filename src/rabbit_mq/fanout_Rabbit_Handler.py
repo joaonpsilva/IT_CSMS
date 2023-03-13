@@ -1,6 +1,8 @@
 from aio_pika import ExchangeType, Message, connect
 
-from rabbit_mq.rabbit_handler import Rabbit_Handler, Fanout_Message
+from rabbit_mq.rabbit_handler import Rabbit_Handler
+from rabbit_mq.Rabbit_Message import Fanout_Message
+
 from aio_pika.abc import AbstractIncomingMessage
 
 import logging

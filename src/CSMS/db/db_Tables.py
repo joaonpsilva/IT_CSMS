@@ -1,4 +1,3 @@
-import sqlalchemy
 from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Enum, ForeignKeyConstraint, Float, Table, Boolean, JSON
 from sqlalchemy.orm import relationship, backref
 from ocpp.v201 import enums
