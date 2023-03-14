@@ -32,7 +32,7 @@ class ChargePoint(cp):
         sys.exit(0)
     
 
-    async def run(self, rabbit, server_port, password):
+    async def run(self, ocpp_server, rabbit, server_port, password):
 
         #broker handles the rabbit mq queues and communication between services
         self.broker = Fanout_Rabbit_Handler("OCPPclient", self.rabbit_to_ocpp)
@@ -40,7 +40,7 @@ class ChargePoint(cp):
 
         #Connect to server CSMS        
         async for websocket in websockets.connect(
-        'ws://{cp_id}:{password}@localhost:{server_port}/{cp_id}'.format(cp_id = self.id, password=password, server_port=server_port),
+        'ws://{cp_id}:{password}@{ocpp_server}:{server_port}/{cp_id}'.format(cp_id = self.id, password=password, ocpp_server=ocpp_server, server_port=server_port),
             subprotocols=['ocpp2.0.1']
         ):
             try:
@@ -82,11 +82,9 @@ class ChargePoint(cp):
             logging.error(traceback.format_exc())
 
             return str(e.__class__.__name__)
-    
 
 
     #HANDLE OCPP MESSAGES-----
-
     class Ocpp_Message_Handler:
         def __init__(self, action, broker):
             self.action = action
@@ -122,11 +120,12 @@ async def main(args):
     #shut down handler
     signal.signal(signal.SIGINT, cp.shut_down)
 
-    await cp.run(args.rb, args.p, args.pw)
+    await cp.run(args.s, args.rb, args.p, args.pw)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, default = 9000, help="OCPP server port")
+    parser.add_argument("-s", type=str, default = "localhost", help="ocpp server")
     parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
     parser.add_argument("-cp", type=str, default = "CP_1", help="Cp_id")
     parser.add_argument("-pw", type=str, default = "passcp1", help="Cp password")

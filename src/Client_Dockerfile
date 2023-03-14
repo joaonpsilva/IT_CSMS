@@ -1,0 +1,14 @@
+FROM python:latest
+
+RUN mkdir -p /app/charge_station
+RUN mkdir -p /app/rabbit_mp
+
+WORKDIR /app
+
+COPY ./charge_station/simple_ocpp_client.py /app/charge_station/simple_ocpp_client.py
+COPY ./charge_station/requirements.txt /app/charge_station/requirements.txt
+COPY ./rabbit_mq /app/rabbit_mq
+
+RUN pip install -r ./charge_station/requirements.txt
+
+CMD ["python3", "-m", "charge_station.simple_ocpp_client"]

@@ -414,7 +414,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
-    parser.add_argument("-db", type=str, default = "localhost", help="RabbitMq")
+    parser.add_argument("-db", type=str, default = "localhost", help="database address")
 
     parser.add_argument("-i", action="store_true", help="insert hardcoded objects")
 

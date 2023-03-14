@@ -1,5 +1,5 @@
 from aio_pika import ExchangeType, Message, connect
-
+import asyncio
 from rabbit_mq.rabbit_handler import Rabbit_Handler
 from rabbit_mq.Rabbit_Message import Fanout_Message
 
@@ -23,7 +23,12 @@ class Fanout_Rabbit_Handler(Rabbit_Handler):
         """
 
         #Declare connection
-        self.connection = await connect(url)
+        while True:
+            try:
+                self.connection = await connect(url)
+                break
+            except:
+                await asyncio.sleep(5)
 
         #declare channel
         self.channel = await self.connection.channel()

@@ -106,8 +106,6 @@ class OCPP_Server:
                     "Closing Connection")
             return await websocket.close()
         
-        #print(requested_protocols)
-
         if websocket.subprotocol:
             LOGGER.info("Protocols Matched: %s", websocket.subprotocol)
         else:
