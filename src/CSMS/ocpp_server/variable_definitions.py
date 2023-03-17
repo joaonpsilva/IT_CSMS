@@ -64,5 +64,12 @@ VARIABLES ={
         "variable" : datatypes.VariableType(
             name="BytesPerMessage"
         )
+    },
+    "ItemsPerMessageGetReport":{
+        "component" : component_DeviceDataCtrlr,
+            "variable" : datatypes.VariableType(
+                name="ItemsPerMessage",
+                instance="GetReport"
+            ) 
     }
 }

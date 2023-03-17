@@ -247,6 +247,11 @@ async def SetVariableMonitoring(cp_id: str, payload: payloads.SetVariableMonitor
     return await service.send_request("setVariableMonitoring", cp_id, payload)
 
 
+@app.post("/GetMonitoringReport/{cp_id}", status_code=200)
+async def getMonitoringReport(cp_id: str, payload: payloads.GetMonitoringReportPayload, user=Depends(auth_handler.check_permission_level_2)):
+    return await service.send_request("getMonitoringReport", cp_id, payload)
+
+
 @app.post("/Reset/{cp_id}", status_code=200)
 async def Reset(cp_id: str, payload: payloads.ResetPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("reset", cp_id, payload)

@@ -28,7 +28,8 @@ class ChargePoint(cp):
             "MonitoringCtrlrItemsPerMessageClearVariableMonitoringActual" : 10,
             "MonitoringCtrlrBytesPerMessageClearVariableMonitoringActual" : 1000,
             "LocalAuthListCtrlrItemsPerMessageActual":10,
-            "LocalAuthListCtrlrBytesPerMessageActual":1000
+            "LocalAuthListCtrlrBytesPerMessageActual":1000,
+            "DeviceDataCtrlrItemsPerMessageGetReportActual":10
         }
 
         self.version_number=0
@@ -648,7 +649,32 @@ class ChargePoint(cp):
     @on("DataTransfer")
     async def on_DataTransfer(self, **kwargs):
         return call_result.DataTransferPayload(status=enums.DataTransferStatusType.accepted)
+    
+    @on("GetMonitoringReport")
+    async def on_GetMonitoringReport(self, **kwargs):
+        return call_result.GetMonitoringReportPayload(status=enums.GenericDeviceModelStatusType.accepted)
 
+    @after("GetMonitoringReport")
+    async def after_GetMonitoringReport(self, request_id, **kwargs):
+        request = call.NotifyMonitoringReportPayload(
+            request_id = request_id,
+            tbc=True,
+            seq_no=0,
+            generated_at=datetime.utcnow().isoformat(),
+            monitor=[datatypes.MonitoringDataType(
+                component=datatypes.ComponentType(name="aaa"),
+                variable=datatypes.VariableType(name="aaa"),
+                variable_monitoring=[datatypes.VariableMonitoringType(
+                    id=0,
+                    transaction=False,
+                    value=0.1,
+                    type=enums.MonitorType.delta,
+                    severity=1
+                )])])
+        await self.call(request)
+        request.tbc=False
+        request.seq_no=1
+        await self.call(request)
 
 
 async def get_input(cp):

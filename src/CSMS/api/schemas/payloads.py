@@ -156,9 +156,8 @@ class GetLogPayload:
 
 @dataclass
 class GetMonitoringReportPayload:
-    request_id: int
-    component_variable: Optional[List] = None
-    monitoring_criteria: Optional[List] = None
+    component_variable: Optional[List[datatypes.ComponentVariableType]] = None
+    monitoring_criteria: Optional[List[enums.MonitoringCriterionType]] = None
 
 
 @dataclass

@@ -152,7 +152,7 @@ class ChargePoint(cp):
         return self.max_get_messages
 
     
-    async def sendListByChunks(self, Payload_type, request_dict, var_with_list, max_items=None, max_bytes=None):
+    async def sendListByChunks(self, Payload_type, request_dict, var_with_list, max_items=None, max_bytes=None, async_req=False):
         """
         Divide single request (that contains a list of items) in several smaller requests,
         in order to fullfill the limitations max_items and max_bytes per message
@@ -185,22 +185,28 @@ class ChargePoint(cp):
             request_dict[var_with_list] = current_list
             request = Payload_type(**request_dict)
 
-            #exceeded restrictions
-            if (max_items and len(request_dict[var_with_list]) > max_items) or \
-                (max_bytes and getsizeof(request) > max_bytes):
-
-                #message was as small as it could be
-                if len(request_dict[var_with_list]) == 1:
+            #Check if exceeded restrictions
+            split_point=None
+            if max_items and len(current_list) > max_items:
+                split_point = max_items
+            
+            if (max_bytes and getsizeof(request) > max_bytes):
+                split_point = len(current_list) // 2
+            
+            if split_point is not None:
+                if len(current_list) == 1:
+                    #message was as small as it could be
                     raise ValidationError("Charge Station doesnt allow a single item")
 
                 #insert splitted entries
-                half_of_list = len(current_list) // 2
-                item_list.insert(0, current_list[half_of_list:len(current_list)])
-                item_list.insert(0, current_list[0:half_of_list])
-
+                item_list.insert(0, current_list[split_point:len(current_list)])
+                item_list.insert(0, current_list[0:split_point])
             else:
                 #send
-                results.append(await self.call(request, suppress=False))
+                if async_req:
+                    results.append(await self.async_request(request))
+                else:
+                    results.append(await self.call(request, suppress=False))
 
                 #special cases after 1st message
                 if flag:
@@ -511,13 +517,25 @@ class ChargePoint(cp):
 
     
     async def clearVariableMonitoring(self, **payload):
-        vars = await self.getVariablesByName(["ItemsPerMessageClearVariableMonitoring", "BytesPerMessageClearVariableMonitoring"])
+        vars = await self.getVariablesByName(["ItemsPerMessageGetReport", "BytesPerMessageClearVariableMonitoring"])
 
         results = await self.sendListByChunks(call.ClearVariableMonitoringPayload, payload, "id", vars["ItemsPerMessageClearVariableMonitoring"], vars["BytesPerMessageClearVariableMonitoring"])
         result = {"clear_monitoring_result" : [var for r in results for var in r.clear_monitoring_result]}
 
         return result
     
+
+    async def getMonitoringReport(self, **payload):
+        vars = await self.getVariablesByName(["ItemsPerMessageGetReport"])
+
+        if "request_id" not in payload or payload["request_id"] is None:
+            payload["request_id"] = ChargePoint.new_Id()
+
+        if len(payload["component_variable"]) > 0:
+            return await self.sendListByChunks(call.GetMonitoringReportPayload, payload, "component_variable", max_items=vars["ItemsPerMessageGetReport"], async_req=True)
+        else:
+            return await self.async_request(call.GetMonitoringReportPayload(**payload))
+        
 
     async def reset(self, **payload):
         request = call.ResetPayload(**payload)
@@ -799,6 +817,11 @@ class ChargePoint(cp):
     @after("NotifyChargingLimit")
     async def after_NotifyChargingLimit(self, **kwargs):
         await self.new_external_profiles()
+    
+    @on("NotifyMonitoringReport")
+    async def on_NotifyMonitoringReport(self, **kwargs):
+        self.received_message_async_request(kwargs)  
+        return call_result.NotifyMonitoringReportPayload()
 
 
     @on('Heartbeat')
