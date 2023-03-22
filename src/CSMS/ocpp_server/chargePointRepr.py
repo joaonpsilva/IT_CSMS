@@ -635,6 +635,11 @@ class ChargePoint(cp):
     async def dataTransfer(self, **kwargs):
         request = call.DataTransferPayload(**kwargs)
         return await self.call(request, suppress=False)
+
+
+    async def getInstalledCertificateIds(self, **kwargs):
+        request = call.GetInstalledCertificateIdsPayload(**kwargs)
+        return await self.call(request, suppress=False)
         
 
 #######################Funtions staring from the CP Initiative
@@ -687,8 +692,31 @@ class ChargePoint(cp):
         return call_result.MeterValuesPayload()
 
     
-    def authorize_certificate(self, certificate, iso15118_certificate_hash_data):
-        return enums.CertificateSignedStatusType.accepted
+    def authorize_certificate(self, hash_algorithm, issuer_name_hash, issuer_key_hash, serial_number, responder_url):
+        # from cryptography.x509 import ocsp
+        # import base64
+        # from cryptography.hazmat.primitives import serialization
+        # import urllib
+
+        # builder = ocsp.OCSPRequestBuilder()
+        # builder.add_certificate_by_hash(issuer_name_hash, issuer_key_hash, serial_number, hash_algorithm)
+
+        # req = builder.build()
+        # der_res = req.public_bytes(serialization.Encoding.DER)
+        # req_path = base64.b64encode(der_res).decode("ascii")
+        # ocsp_req_url = f"{responder_url}{req_path}"
+        # print(ocsp_req_url)
+
+        # req = urllib.request.Request(ocsp_req_url)
+
+        # with urllib.request.urlopen(req) as res:
+        #     body = res.read()
+        # # validate the OCSP check
+        # ocsp_resp = ocsp.load_der_ocsp_response(body)
+        # print("ocsp response status: " + str(ocsp_resp.response_status))
+
+        return True
+    
     
     @on('Authorize')
     async def on_Authorize(self, id_token, certificate=None, iso15118_certificate_hash_data=None):
@@ -696,9 +724,15 @@ class ChargePoint(cp):
         #authorize id_token
         id_token_info = await self.authorize_idToken(id_token)
 
+        #iso15118
         certificate_status = None
-        if certificate is not None:
-            certificate_status = self.authorize_certificate(certificate, iso15118_certificate_hash_data)
+        if iso15118_certificate_hash_data is not None:
+            certificate_status = enums.AuthorizeCertificateStatusType.accepted
+
+            for i in iso15118_certificate_hash_data:                
+                if not self.authorize_certificate(**i): 
+                    certificate_status = enums.AuthorizeCertificateStatusType.cert_chain_error
+                    break
         
         return call_result.AuthorizePayload(id_token_info=id_token_info, certificate_status=certificate_status)
         
@@ -865,5 +899,6 @@ class ChargePoint(cp):
         return call_result.Get15118EVCertificatePayload(status=enums.Iso15118EVCertificateStatusType.accepted, exi_response="")
     
     @on("GetCertificateStatus")
-    async def on_GetCertificateStatus(self, **kwargs):
+    async def on_GetCertificateStatus(self, ocsp_request_data):
+        status = enums.GetCertificateStatusType.accepted if self.authorize_certificate(**ocsp_request_data) else enums.GetCertificateStatusType.failed
         return call_result.GetCertificateStatusPayload(status=enums.GetCertificateStatusType.accepted)

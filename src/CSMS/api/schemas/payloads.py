@@ -137,7 +137,7 @@ class GetDisplayMessagesPayload:
 
 @dataclass
 class GetInstalledCertificateIdsPayload:
-    certificate_type: Optional[List] = None
+    certificate_type: Optional[enums.GetCertificateIdUseType] = None
 
 
 @dataclass

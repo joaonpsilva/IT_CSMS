@@ -279,6 +279,11 @@ async def ClearDisplayMessage(cp_id: str, payload: payloads.ClearDisplayMessageP
     return await service.send_request("clearDisplayMessage", cp_id, payload)
 
 
+@app.post("/getInstalledCertificateIds/{cp_id}", status_code=200)
+async def getInstalledCertificateIds(cp_id: str, payload: payloads.GetInstalledCertificateIdsPayload, user=Depends(auth_handler.check_permission_level_2)):
+    return await service.send_request("getInstalledCertificateIds", cp_id, payload)
+
+
 @app.post("/CRUD/", status_code=200)
 async def CRUD(payload: schemas.CRUD_Payload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request(payload.operation, payload=payload, destination="SQL_DB")
