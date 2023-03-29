@@ -3,8 +3,8 @@ import signal
 import sys
 import time
 
-api = subprocess.Popen(["python3", "-m", "CSMS.api.api"])
 ocpp_server = subprocess.Popen(["python3", "-m", "CSMS.ocpp_server.ocpp_server"])
+api = subprocess.Popen(["python3", "-m", "CSMS.api.api"])
 db = subprocess.Popen(["python3", "-m", "CSMS.db.db"])
 
 def terminate(sig=None, frame=None):

@@ -1,0 +1,94 @@
+INFO:Ocpp_Server:Connected to the RMQ Broker
+INFO:websockets.server:server listening on 0.0.0.0:9000
+INFO:Ocpp_Server:WebSocket Server Started
+INFO:     Started server process [22258]
+INFO:     Waiting for application startup.
+API - INFO - Connected to the RMQ Broker
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+SQL_DB - INFO - Connected to the database
+SQL_DB - INFO - Connected to the RMQ Broker
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "verify_password", "type": "request", "content": {"CP_ID": "CP_1", "password": "12345678901234567890"}, "cp_id": "CP_1", "status": null}
+SQL_DB - INFO - RECEIVED: {'destination': 'SQL_DB', 'origin': 'Ocpp_Server', 'method': 'verify_password', 'type': 'request', 'content': {'CP_ID': 'CP_1', 'password': '12345678901234567890'}, 'cp_id': 'CP_1', 'status': None}
+SQL_DB - INFO - RabbitMQ SENDING Message: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "verify_password", "type": "response", "content": {"approved": false}, "cp_id": "CP_1", "status": "OK"}
+INFO:Ocpp_Server:RESPONSE: {'destination': 'Ocpp_Server', 'origin': 'SQL_DB', 'method': 'verify_password', 'type': 'response', 'content': {'approved': False}, 'cp_id': 'CP_1', 'status': 'OK'}
+INFO:websockets.server:connection failed (401 Unauthorized)
+INFO:websockets.server:connection closed
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "verify_password", "type": "request", "content": {"CP_ID": "cp6k", "password": "12345678901234567890"}, "cp_id": "cp6k", "status": null}
+SQL_DB - INFO - RECEIVED: {'destination': 'SQL_DB', 'origin': 'Ocpp_Server', 'method': 'verify_password', 'type': 'request', 'content': {'CP_ID': 'cp6k', 'password': '12345678901234567890'}, 'cp_id': 'cp6k', 'status': None}
+SQL_DB - INFO - RabbitMQ SENDING Message: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "verify_password", "type": "response", "content": {"approved": true}, "cp_id": "cp6k", "status": "OK"}
+INFO:Ocpp_Server:RESPONSE: {'destination': 'Ocpp_Server', 'origin': 'SQL_DB', 'method': 'verify_password', 'type': 'response', 'content': {'approved': True}, 'cp_id': 'cp6k', 'status': 'OK'}
+INFO:websockets.server:connection open
+INFO:Ocpp_Server:Protocols Matched: ocpp2.0.1
+INFO:ocpp:cp6k: receive message [2,"5df3262594cfdff32575a25a0615a5bc","BootNotification",{"chargingStation":{"firmwareVersion":"0.9.1+2022.02.10.86-alpha","model":"FALC-B","serialNumber":"223576029140","vendorName":"com.chargepoint"},"reason":"ApplicationReset"}]
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": null, "origin": "Ocpp_Server", "method": "BootNotification", "type": "ocpp_log", "content": {"charging_station": {"firmware_version": "0.9.1+2022.02.10.86-alpha", "model": "FALC-B", "serial_number": "223576029140", "vendor_name": "com.chargepoint"}, "reason": "ApplicationReset", "timestamp": "2023-03-29T09:07:03.347107"}, "cp_id": "cp6k", "status": null}
+INFO:ocpp:cp6k: send [3,"5df3262594cfdff32575a25a0615a5bc",{"currentTime":"2023-03-29T09:07:03.348680","interval":30,"status":"Accepted"}]
+INFO:ocpp:cp6k: send [2,"5db6205e-acc9-4d68-9799-40403a087be6","GetChargingProfiles",{"requestId":80,"chargingProfile":{"chargingProfilePurpose":"ChargingStationExternalConstraints"}}]
+SQL_DB - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'BootNotification', 'type': 'ocpp_log', 'content': {'charging_station': {'firmware_version': '0.9.1+2022.02.10.86-alpha', 'model': 'FALC-B', 'serial_number': '223576029140', 'vendor_name': 'com.chargepoint'}, 'reason': 'ApplicationReset', 'timestamp': '2023-03-29T09:07:03.347107'}, 'cp_id': 'cp6k', 'status': None}
+API - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'BootNotification', 'type': 'ocpp_log', 'content': {'charging_station': {'firmware_version': '0.9.1+2022.02.10.86-alpha', 'model': 'FALC-B', 'serial_number': '223576029140', 'vendor_name': 'com.chargepoint'}, 'reason': 'ApplicationReset', 'timestamp': '2023-03-29T09:07:03.347107'}, 'cp_id': 'cp6k', 'status': None}
+INFO:ocpp:cp6k: receive message [2,"5526bda870416a25fa7e121eebbaed09","NotifyEvent",{"eventData":[{"actualValue":"Available","component":{"evse":{"id":1},"name":"EVSE"},"eventId":0,"eventNotificationType":"HardWiredMonitor","timestamp":"2023-03-29T09:07:03Z","trigger":"Delta","variable":{"name":"AvailabilityState"}},{"actualValue":"Available","component":{"evse":{"id":2},"name":"EVSE"},"eventId":0,"eventNotificationType":"HardWiredMonitor","timestamp":"2023-03-29T09:07:03Z","trigger":"Delta","variable":{"name":"AvailabilityState"}},{"actualValue":"Available","component":{"name":"ChargingStation"},"eventId":0,"eventNotificationType":"HardWiredMonitor","timestamp":"2023-03-29T09:07:03Z","trigger":"Delta","variable":{"name":"AvailabilityState"}}],"generatedAt":"2023-03-29T09:07:03Z","seqNo":0}]
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": null, "origin": "Ocpp_Server", "method": "NotifyEvent", "type": "ocpp_log", "content": {"event_data": [{"actual_value": "Available", "component": {"evse": {"id": 1}, "name": "EVSE"}, "event_id": 0, "event_notification_type": "HardWiredMonitor", "timestamp": "2023-03-29T09:07:03Z", "trigger": "Delta", "variable": {"name": "AvailabilityState"}}, {"actual_value": "Available", "component": {"evse": {"id": 2}, "name": "EVSE"}, "event_id": 0, "event_notification_type": "HardWiredMonitor", "timestamp": "2023-03-29T09:07:03Z", "trigger": "Delta", "variable": {"name": "AvailabilityState"}}, {"actual_value": "Available", "component": {"name": "ChargingStation"}, "event_id": 0, "event_notification_type": "HardWiredMonitor", "timestamp": "2023-03-29T09:07:03Z", "trigger": "Delta", "variable": {"name": "AvailabilityState"}}], "generated_at": "2023-03-29T09:07:03Z", "seq_no": 0}, "cp_id": "cp6k", "status": null}
+INFO:ocpp:cp6k: send [3,"5526bda870416a25fa7e121eebbaed09",{}]
+SQL_DB - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'NotifyEvent', 'type': 'ocpp_log', 'content': {'event_data': [{'actual_value': 'Available', 'component': {'evse': {'id': 1}, 'name': 'EVSE'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T09:07:03Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}, {'actual_value': 'Available', 'component': {'evse': {'id': 2}, 'name': 'EVSE'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T09:07:03Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}, {'actual_value': 'Available', 'component': {'name': 'ChargingStation'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T09:07:03Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}], 'generated_at': '2023-03-29T09:07:03Z', 'seq_no': 0}, 'cp_id': 'cp6k', 'status': None}
+API - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'NotifyEvent', 'type': 'ocpp_log', 'content': {'event_data': [{'actual_value': 'Available', 'component': {'evse': {'id': 1}, 'name': 'EVSE'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T09:07:03Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}, {'actual_value': 'Available', 'component': {'evse': {'id': 2}, 'name': 'EVSE'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T09:07:03Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}, {'actual_value': 'Available', 'component': {'name': 'ChargingStation'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T09:07:03Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}], 'generated_at': '2023-03-29T09:07:03Z', 'seq_no': 0}, 'cp_id': 'cp6k', 'status': None}
+INFO:ocpp:cp6k: receive message [3,"5db6205e-acc9-4d68-9799-40403a087be6",{"status":"NoProfiles"}]
+INFO:ocpp:cp6k: receive message [2,"436e130cd19232df1f6cb6023690461b","DataTransfer",{"data":{"installconf":"ewogICAgImRlZmF1bHRMYW5nIjogIkVOIiwKICAgICJjaXJjdWl0Q3VycmVudExpbWl0IjogMTYuMCwKICAgICJwb3J0Q3VycmVudExpbWl0IjogMTYuMCwKICAgICJpd2l6U3RhdHVzIjogMjU1LAogICAgImNpcmN1aXRTaGFyaW5nIjogMSwKICAgICJpbnB1dENhYmxlQ291bnQiOiAxLAogICAgInBhbmVsUGhhc2VzIjogMSwKICAgICJpbnB1dENhYmxlUGhhc2VzIjogMSwKICAgICJvdXRsZXQyUGhhc2UiOiAxLAogICAgIm91dGxldDFQaGFzZSI6IDIsCiAgICAiaXdpelZlcnNpb24iOiAyCn0="},"messageId":"NotifyInstallConfig","vendorId":"com.chargepoint"}]
+ERROR:ocpp:Error while handling request '<Call - unique_id=436e130cd19232df1f6cb6023690461b, action=DataTransfer, payload={'data': {'installconf': 'ewogICAgImRlZmF1bHRMYW5nIjogIkVOIiwKICAgICJjaXJjdWl0Q3VycmVudExpbWl0IjogMTYuMCwKICAgICJwb3J0Q3VycmVudExpbWl0IjogMTYuMCwKICAgICJpd2l6U3RhdHVzIjogMjU1LAogICAgImNpcmN1aXRTaGFyaW5nIjogMSwKICAgICJpbnB1dENhYmxlQ291bnQiOiAxLAogICAgInBhbmVsUGhhc2VzIjogMSwKICAgICJpbnB1dENhYmxlUGhhc2VzIjogMSwKICAgICJvdXRsZXQyUGhhc2UiOiAxLAogICAgIm91dGxldDFQaGFzZSI6IDIsCiAgICAiaXdpelZlcnNpb24iOiAyCn0='}, 'messageId': 'NotifyInstallConfig', 'vendorId': 'com.chargepoint'}>'
+Traceback (most recent call last):
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/charge_point.py", line 172, in _handle_call
+    handlers = self.route_map[msg.action]
+KeyError: 'DataTransfer'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/charge_point.py", line 150, in route_message
+    await self._handle_call(msg)
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/charge_point.py", line 174, in _handle_call
+    raise NotSupportedError(
+ocpp.exceptions.NotSupportedError: NotSupportedError: Request Action is recognized but not supported by the receiver, {'cause': 'No handler for DataTransfer registered.'}
+INFO:ocpp:cp6k: send [4,"436e130cd19232df1f6cb6023690461b","NotSupported","Request Action is recognized but not supported by the receiver",{"cause":"No handler for DataTransfer registered."}]
+INFO:ocpp:cp6k: receive message [2,"4153ece6d47db7bbbee036f1e8f088ee","StatusNotification",{"connectorId":1,"connectorStatus":"Available","evseId":2,"timestamp":"2023-03-29T09:07:05Z"}]
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"connector_id": 1, "connector_status": "Available", "evse_id": 2, "timestamp": "2023-03-29T09:07:05Z"}, "cp_id": "cp6k", "status": null}
+INFO:ocpp:cp6k: send [3,"4153ece6d47db7bbbee036f1e8f088ee",{}]
+API - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'StatusNotification', 'type': 'ocpp_log', 'content': {'connector_id': 1, 'connector_status': 'Available', 'evse_id': 2, 'timestamp': '2023-03-29T09:07:05Z'}, 'cp_id': 'cp6k', 'status': None}
+SQL_DB - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'StatusNotification', 'type': 'ocpp_log', 'content': {'connector_id': 1, 'connector_status': 'Available', 'evse_id': 2, 'timestamp': '2023-03-29T09:07:05Z'}, 'cp_id': 'cp6k', 'status': None}
+INFO:ocpp:cp6k: receive message [2,"cb0fee08596c88bc14075f0a8fc42eba","StatusNotification",{"connectorId":1,"connectorStatus":"Available","evseId":1,"timestamp":"2023-03-29T09:07:05Z"}]
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"connector_id": 1, "connector_status": "Available", "evse_id": 1, "timestamp": "2023-03-29T09:07:05Z"}, "cp_id": "cp6k", "status": null}
+INFO:ocpp:cp6k: send [3,"cb0fee08596c88bc14075f0a8fc42eba",{}]
+API - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'StatusNotification', 'type': 'ocpp_log', 'content': {'connector_id': 1, 'connector_status': 'Available', 'evse_id': 1, 'timestamp': '2023-03-29T09:07:05Z'}, 'cp_id': 'cp6k', 'status': None}
+SQL_DB - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'StatusNotification', 'type': 'ocpp_log', 'content': {'connector_id': 1, 'connector_status': 'Available', 'evse_id': 1, 'timestamp': '2023-03-29T09:07:05Z'}, 'cp_id': 'cp6k', 'status': None}
+INFO:ocpp:cp6k: receive message [2,"ce1a392a7ed8a9ae5f564df3b8d7cceb","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-9.0,"rssi":-64.0,"snr":10.0,"vendorId":"com.chargepoint"}}]
+INFO:ocpp:cp6k: send [3,"ce1a392a7ed8a9ae5f564df3b8d7cceb",{"currentTime":"2023-03-29T09:07:33.431254"}]
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "cp6k"}, "values": {"is_online": true}}, "cp_id": "cp6k", "status": null}
+API - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'update', 'type': 'ocpp_log', 'content': {'table': 'Charge_Point', 'filters': {'cp_id': 'cp6k'}, 'values': {'is_online': True}}, 'cp_id': 'cp6k', 'status': None}
+SQL_DB - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'update', 'type': 'ocpp_log', 'content': {'table': 'Charge_Point', 'filters': {'cp_id': 'cp6k'}, 'values': {'is_online': True}}, 'cp_id': 'cp6k', 'status': None}
+INFO:ocpp:cp6k: receive message [2,"8f6ce61baf3cf51b4a74603b12e35505","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-9.0,"rssi":-58.0,"snr":10.200000000000001,"vendorId":"com.chargepoint"}}]
+INFO:ocpp:cp6k: send [3,"8f6ce61baf3cf51b4a74603b12e35505",{"currentTime":"2023-03-29T09:08:03.472504"}]
+INFO:ocpp:cp6k: receive message [2,"312baece1114a747029a936c5a1f2589","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-9.0,"rssi":-58.0,"snr":13.4,"vendorId":"com.chargepoint"}}]
+INFO:ocpp:cp6k: send [3,"312baece1114a747029a936c5a1f2589",{"currentTime":"2023-03-29T09:08:33.464097"}]
+INFO:ocpp:cp6k: receive message [2,"7447ce58db5af03e3ac89c01a5d2de2c","Authorize",{"idToken":{"additionalInfo":[{"additionalIdToken":"NEMA","type":"CardType"},{"additionalIdToken":"HCE","type":"CardSubtype"}],"customData":{"data":"QDAxOEU9MDhFMDJDMTcqKioqKioqKioqKio9MDAwMDAwMDA2NDI0MUMzNz04NDc2QTA2MD1CQkJGQTgzMD0wMz1GRkZGODkxMTIwNkYxQzg0MTBBMDAwMDAwNTk2MDUwMTAwMDAwMDAwMDAwMDAwMDAwMEE1MDhERjgxNDYwNDAxMDAwMDAwOTAwMD1GRkZGODkxMjRCNzA0N0RGODE0MDNBNzU3MjZFM0E2RTY1NkQ2MTNBMzU2NTc2NzM2NTNBNjQ2RTNBNzYzMTNBNjM2ODYxNzI2NzY1NzA2RjY5NkU3NDJFNjM2RjZEM0E2MzY0Njk2NDNBNjg2MzY1MzgzMDM3MzEzMDM3MzIzMzM1MzYzNjM5MzVERjgxNDEwNTY1NkUyRDU1NTM5MDAwPUZGRkY4OTEzMkU3NzJBREY4MTE3MDIwMDAyREY4MTQ1MDQwMTAwMDAwMERGODExNjE4MTVCRDNCRjU0NkVBQTAxNEI4MTZGOTFEMzNCQzE2QjJDNThDM0M0RDE4NTc0MUJGOTAwMD8=","id":"urn:nema:5evse:dn:v1:chargepoint.com:cdid:hce8071072356695","vendorId":"com.chargepoint"},"idToken":"08E02C17","type":"ISO14443"}}]
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "IdToken", "filters": {"id_token": "08E02C17"}, "mode": {"id_token_info": {"group_id_token": {}, "evse": {}}}}, "cp_id": "cp6k", "status": null}
+SQL_DB - INFO - RECEIVED: {'destination': 'SQL_DB', 'origin': 'Ocpp_Server', 'method': 'select', 'type': 'request', 'content': {'table': 'IdToken', 'filters': {'id_token': '08E02C17'}, 'mode': {'id_token_info': {'group_id_token': {}, 'evse': {}}}}, 'cp_id': 'cp6k', 'status': None}
+SQL_DB - INFO - RabbitMQ SENDING Message: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [], "cp_id": "cp6k", "status": "OK"}
+INFO:Ocpp_Server:RESPONSE: {'destination': 'Ocpp_Server', 'origin': 'SQL_DB', 'method': 'select', 'type': 'response', 'content': [], 'cp_id': 'cp6k', 'status': 'OK'}
+INFO:ocpp:cp6k: send [3,"7447ce58db5af03e3ac89c01a5d2de2c",{"idTokenInfo":{"status":"Unknown"}}]
+INFO:ocpp:cp6k: receive message [2,"ef6e11b688e549fb0a857858d72aa12b","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-14.0,"rssi":-58.0,"snr":9.0,"vendorId":"com.chargepoint"}}]
+INFO:ocpp:cp6k: send [3,"ef6e11b688e549fb0a857858d72aa12b",{"currentTime":"2023-03-29T09:09:03.453252"}]
+INFO:ocpp:cp6k: receive message [2,"77ecd9245d96354e7f28ff793c96d04c","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-14.0,"rssi":-58.0,"snr":8.8,"vendorId":"com.chargepoint"}}]
+INFO:ocpp:cp6k: send [3,"77ecd9245d96354e7f28ff793c96d04c",{"currentTime":"2023-03-29T09:09:33.471046"}]
+INFO:ocpp:cp6k: receive message [2,"972118091edff429699dd69c4c7391ab","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-14.0,"rssi":-58.0,"snr":8.200000000000001,"vendorId":"com.chargepoint"}}]
+INFO:ocpp:cp6k: send [3,"972118091edff429699dd69c4c7391ab",{"currentTime":"2023-03-29T09:10:03.479627"}]
+INFO:ocpp:cp6k: receive message [2,"7e18d9962a88b297a0e9d3adaaebaae5","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-14.0,"rssi":-58.0,"snr":10.0,"vendorId":"com.chargepoint"}}]
+INFO:ocpp:cp6k: send [3,"7e18d9962a88b297a0e9d3adaaebaae5",{"currentTime":"2023-03-29T09:10:33.477851"}]
+INFO:ocpp:cp6k: receive message [2,"9de879ce1b8a4eb598574df5b623d2ea","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-14.0,"rssi":-58.0,"snr":11.200000000000001,"vendorId":"com.chargepoint"}}]
+INFO:ocpp:cp6k: send [3,"9de879ce1b8a4eb598574df5b623d2ea",{"currentTime":"2023-03-29T09:11:03.504924"}]
+INFO:ocpp:cp6k: receive message [2,"0adb4f81dd14ce5d1bcfa3744aaa3b5a","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-14.0,"rssi":-58.0,"snr":8.8,"vendorId":"com.chargepoint"}}]
+INFO:ocpp:cp6k: send [3,"0adb4f81dd14ce5d1bcfa3744aaa3b5a",{"currentTime":"2023-03-29T09:11:33.501839"}]
+INFO:Ocpp_Server:OCPP Server Shuting down
+SQL_DB - INFO - DB Shuting down
+INFO:websockets.server:connection closed
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22258]

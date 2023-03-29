@@ -78,7 +78,7 @@ class BootNotification(CustomBase):
 
     message_id = Column(Integer, primary_key=True)
     reason = Column(Enum(enums.BootReasonType))
-    timestamp = Column(DateTime)
+    timestamp = Column(String(50))
     cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
 
     charging_station = relationship("Charge_Point", backref="boot_nofications", uselist=False)
@@ -118,7 +118,7 @@ class StatusNotification(CustomBase):
 
     message_id = Column(Integer, primary_key=True)
     connector_status = Column(Enum(enums.ConnectorStatusType))
-    timestamp = Column(DateTime)
+    timestamp = Column(String(50))
     
     cp_id = Column(String(20))
     evse_id = Column(Integer)
@@ -214,7 +214,7 @@ class IdTokenInfo(CustomBase):
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
     id_token = relationship("IdToken", backref=backref("id_token_info", uselist=False), uselist=False)
 
-    cache_expiry_date_time = Column(DateTime)
+    cache_expiry_date_time = Column(String(50))
     charging_priority = Column(Integer)
     language1 = Column(String(8))
     language2 = Column(String(8))
@@ -243,7 +243,7 @@ class IdTokenInfo(CustomBase):
 class MeterValue(CustomBase):
     __tablename__ = "MeterValue"
     id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime)
+    timestamp = Column(String(50))
 
     cp_id = Column(String(20))
     evse_id = Column(Integer)
@@ -329,7 +329,7 @@ class Transaction_Event(CustomBase):
     __tablename__ = "Transaction_Event"
 
     event_type = Column(Enum(enums.TransactionEventType))
-    timestamp = Column(DateTime)
+    timestamp = Column(String(50))
     trigger_reason = Column(Enum(enums.TriggerReasonType))
     offline = Column(Boolean)
     number_of_phases_used = Column(Integer)
@@ -358,7 +358,7 @@ class Reservation(CustomBase):
     __tablename__ = "Reservation"
 
     id = Column(Integer, primary_key = True)
-    expiry_date_time = Column(DateTime)
+    expiry_date_time = Column(String(50))
     connector_type = Column(Enum(enums.ConnectorType))
     
     cp_id = Column(String(20))
@@ -397,8 +397,8 @@ class ChargingProfile(CustomBase):
     charging_profile_purpose = Column(Enum(enums.ChargingProfilePurposeType))
     charging_profile_kind = Column(Enum(enums.ChargingProfileKindType))
     recurrency_kind = Column(Enum(enums.RecurrencyKindType))
-    valid_from = Column(DateTime)
-    valid_to = Column(DateTime)
+    valid_from = Column(String(50))
+    valid_to = Column(String(50))
 
     transaction_id = Column(String(36), ForeignKey('Transaction.transaction_id'))
     transaction = relationship("Transaction", backref="charging_profile",uselist=False)
@@ -411,7 +411,7 @@ class ChargingSchedule(CustomBase):
     __tablename__ = "ChargingSchedule"
 
     id = Column(Integer, primary_key = True)
-    start_schedule = Column(DateTime)
+    start_schedule = Column(String(50))
     duration = Column(Integer)
     charging_rate_unit = Column(Enum(enums.ChargingRateUnitType))
     min_charging_rate = Column(Float)
@@ -426,7 +426,7 @@ class ChargingSchedule(CustomBase):
 class EventData(CustomBase):
     __tablename__ = "EventData"
     event_id = Column(Integer, primary_key = True)
-    timestamp = Column(DateTime)
+    timestamp = Column(String(50))
     trigger = Column(Enum(enums.EventTriggerType))
     cause = Column(Integer, ForeignKey("EventData.event_id"))
     actual_value = Column(String(2500)) 
@@ -460,16 +460,30 @@ async def create_Tables(engine, session, insert_hardCoded=False):
 
 def insert_Hard_Coded(session):
     objects = []
-    objects.append(Charge_Point(cp_id = "CP_1", password="passcp1"))
+    objects.append(Charge_Point(cp_id = "cp6k", password="12345678901234567890"))
     objects.append(Charge_Point(cp_id = "CP_2", password="passcp1"))
 
-    evse = EVSE(cp_id = "CP_1", evse_id = 1)
-    evse2 = EVSE(cp_id = "CP_1", evse_id = 2)
-    evse3 = EVSE(cp_id = "CP_1", evse_id = 3)
+    evse = EVSE(cp_id = "cp6k", evse_id = 1)
+    evse2 = EVSE(cp_id = "cp6k", evse_id = 2)
+    evse3 = EVSE(cp_id = "cp6k", evse_id = 3)
 
     objects.append(evse)
     objects.append(evse2)
     objects.append(evse3)
+
+
+    test_idtoken = IdToken(id_token = "41C56A05", type=enums.IdTokenType.iso14443)
+    test_idtoken_info = IdTokenInfo(_id_token = "41C56A05", valid=True, evse=[evse, evse2, evse3])
+    objects.append(test_idtoken)
+    objects.append(test_idtoken_info)
+
+
+    i = IdToken(id_token = "1dee35d6-ed03-4882-9762-86197f258a74", type=enums.IdTokenType.iso14443)
+    i2 = IdTokenInfo(id_token=i, valid=True,language1="PT", evse=[evse, evse2])
+    objects.append(i)
+    objects.append(i2)
+    objects.append(User(password="user1", email="user1", id_token=i))
+
 
     objects.append(IdToken(id_token = "", type=enums.IdTokenType.no_authorization))
     objects.append(IdToken(id_token = "test_idToken", type=enums.IdTokenType.local))
