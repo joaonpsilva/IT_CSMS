@@ -102,7 +102,7 @@ class Rabbit_Handler:
 
         #get the future with key = correlationid
         if message.correlation_id in self.futures:
-            self.logger.info("RESPONSE: %s", response.__dict__)
+            #self.logger.info("RECEIVED RESPONSE: %s", response.__dict__)
 
             future: asyncio.Future = self.futures.pop(message.correlation_id)
             #set a result to that future
@@ -115,7 +115,7 @@ class Rabbit_Handler:
         #load json content
         request = await self.unpack(message)
 
-        self.logger.info("RECEIVED: %s", request.__dict__)
+        #self.logger.info("RECEIVED: %s", request.__dict__)
 
         try:
             #pass content to be handled
@@ -186,7 +186,7 @@ class Rabbit_Handler:
     
     async def send_Message(self, message, requestID=None, routing_key=None):
         json_message = json.dumps(message, cls=EnhancedJSONEncoder)
-        self.logger.info("RabbitMQ SENDING Message: %s", str(json_message))
+        self.logger.info("SEND: %s", str(json_message))
         
         await self.exchange.publish(
             Message(
