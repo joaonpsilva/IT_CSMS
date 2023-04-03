@@ -624,6 +624,8 @@ class ChargePoint(cp):
             message = Topic_Message(method="new_Reservation", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
             await ChargePoint.broker.ocpp_log(message)
                     
+        response = response.__dict__
+        response["id"] = request.id
         return response
     
 
@@ -867,3 +869,7 @@ class ChargePoint(cp):
     @on("GetCertificateStatus")
     async def on_GetCertificateStatus(self, **kwargs):
         return call_result.GetCertificateStatusPayload(status=enums.GetCertificateStatusType.failed)
+    
+    @on("SecurityEventNotification")
+    async def on_SecurityEventNotification(self, **kwargs):
+        return call_result.SecurityEventNotificationPayload()

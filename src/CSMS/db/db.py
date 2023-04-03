@@ -283,9 +283,6 @@ class DataBase:
         #separate transation object and remove Nones
         transaction_info = content.pop("transaction_info")
 
-        #DELETE LATER
-        transaction_info.pop("custom_data")
-
         transaction_info = {k: v for k, v in transaction_info.items() if v is not None}
 
         #Instantiate event obj

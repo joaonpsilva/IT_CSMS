@@ -6,6 +6,7 @@ import asyncio
 from CSMS.db.database_Base import *
 from sqlalchemy.sql import true
 import uuid
+import dateutil.parser
 
 
 PASSLIB_CONTEXT = CryptContext(
@@ -78,11 +79,15 @@ class BootNotification(CustomBase):
 
     message_id = Column(Integer, primary_key=True)
     reason = Column(Enum(enums.BootReasonType))
-    timestamp = Column(String(50))
+    timestamp = Column(DateTime)
     cp_id = Column(String(20), ForeignKey("Charge_Point.cp_id"))
 
     charging_station = relationship("Charge_Point", backref="boot_nofications", uselist=False)
 
+    def __init__(self, timestamp=None, **kwargs):
+        if timestamp:
+            timestamp = dateutil.parser.parse(timestamp)
+        super().__init__(timestamp=timestamp, **kwargs)
 
 
 class EVSE(CustomBase):
@@ -118,7 +123,7 @@ class StatusNotification(CustomBase):
 
     message_id = Column(Integer, primary_key=True)
     connector_status = Column(Enum(enums.ConnectorStatusType))
-    timestamp = Column(String(50))
+    timestamp = Column(DateTime)
     
     cp_id = Column(String(20))
     evse_id = Column(Integer)
@@ -127,6 +132,11 @@ class StatusNotification(CustomBase):
                                             [ "Connector.cp_id", "Connector.evse_id", "Connector.connector_id"]),{})
 
     connector = relationship("Connector", backref="status_nofications", uselist=False)
+
+    def __init__(self, timestamp=None, **kwargs):
+        if timestamp:
+            timestamp = dateutil.parser.parse(timestamp)
+        super().__init__(timestamp=timestamp, **kwargs)
 
 ####################################################################################
 
@@ -214,7 +224,7 @@ class IdTokenInfo(CustomBase):
     _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
     id_token = relationship("IdToken", backref=backref("id_token_info", uselist=False), uselist=False)
 
-    cache_expiry_date_time = Column(String(50))
+    cache_expiry_date_time = Column(DateTime)
     charging_priority = Column(Integer)
     language1 = Column(String(8))
     language2 = Column(String(8))
@@ -243,7 +253,7 @@ class IdTokenInfo(CustomBase):
 class MeterValue(CustomBase):
     __tablename__ = "MeterValue"
     id = Column(Integer, primary_key=True)
-    timestamp = Column(String(50))
+    timestamp = Column(DateTime)
 
     cp_id = Column(String(20))
     evse_id = Column(Integer)
@@ -256,6 +266,12 @@ class MeterValue(CustomBase):
                                     ["EVSE.cp_id", "EVSE.evse_id"]),
                     ForeignKeyConstraint(["transaction_id", "seq_no"],
                                     ["Transaction_Event.transaction_id", "Transaction_Event.seq_no"]),{})
+    
+    def __init__(self, timestamp=None, **kwargs):
+        if timestamp:
+            timestamp = dateutil.parser.parse(timestamp)
+        super().__init__(timestamp=timestamp, **kwargs)
+                                    
 
 
 class SampledValue(CustomBase):
@@ -329,7 +345,7 @@ class Transaction_Event(CustomBase):
     __tablename__ = "Transaction_Event"
 
     event_type = Column(Enum(enums.TransactionEventType))
-    timestamp = Column(String(50))
+    timestamp = Column(DateTime)
     trigger_reason = Column(Enum(enums.TriggerReasonType))
     offline = Column(Boolean)
     number_of_phases_used = Column(Integer)
@@ -351,6 +367,11 @@ class Transaction_Event(CustomBase):
     #Meter value
     meter_value = relationship("MeterValue", backref=backref("transaction_event", uselist=False))
 
+    def __init__(self, timestamp=None, **kwargs):
+        if timestamp:
+            timestamp = dateutil.parser.parse(timestamp)
+        super().__init__(timestamp=timestamp, **kwargs)
+
 
 ############################
 
@@ -358,7 +379,7 @@ class Reservation(CustomBase):
     __tablename__ = "Reservation"
 
     id = Column(Integer, primary_key = True)
-    expiry_date_time = Column(String(50))
+    expiry_date_time = Column(DateTime)
     connector_type = Column(Enum(enums.ConnectorType))
     
     cp_id = Column(String(20))
@@ -426,7 +447,7 @@ class ChargingSchedule(CustomBase):
 class EventData(CustomBase):
     __tablename__ = "EventData"
     event_id = Column(Integer, primary_key = True)
-    timestamp = Column(String(50))
+    timestamp = Column(DateTime)
     trigger = Column(Enum(enums.EventTriggerType))
     cause = Column(Integer, ForeignKey("EventData.event_id"))
     actual_value = Column(String(2500)) 
@@ -460,23 +481,17 @@ async def create_Tables(engine, session, insert_hardCoded=False):
 
 def insert_Hard_Coded(session):
     objects = []
-    objects.append(Charge_Point(cp_id = "cp6k", password="12345678901234567890"))
-    objects.append(Charge_Point(cp_id = "CP_2", password="passcp1"))
+    objects.append(Charge_Point(cp_id = "CP_1", password="passcp1"))
 
-    evse = EVSE(cp_id = "cp6k", evse_id = 1)
-    evse2 = EVSE(cp_id = "cp6k", evse_id = 2)
-    evse3 = EVSE(cp_id = "cp6k", evse_id = 3)
+    evse = EVSE(cp_id = "CP_1", evse_id = 1)
+    evse2 = EVSE(cp_id = "CP_1", evse_id = 2)
+    evse3 = EVSE(cp_id = "CP_1", evse_id = 3)
 
     objects.append(evse)
     objects.append(evse2)
     objects.append(evse3)
 
-
-    test_idtoken = IdToken(id_token = "41C56A05", type=enums.IdTokenType.iso14443)
-    test_idtoken_info = IdTokenInfo(_id_token = "41C56A05", valid=True, evse=[evse, evse2, evse3])
-    objects.append(test_idtoken)
-    objects.append(test_idtoken_info)
-
+    objects.append(Connector(cp_id="CP_1", evse_id=1,connector_id=1))
 
     i = IdToken(id_token = "1dee35d6-ed03-4882-9762-86197f258a74", type=enums.IdTokenType.iso14443)
     i2 = IdTokenInfo(id_token=i, valid=True,language1="PT", evse=[evse, evse2])
