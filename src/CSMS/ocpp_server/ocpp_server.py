@@ -16,19 +16,15 @@ logging.basicConfig(level=logging.INFO)
 
 LOGGER = logging.getLogger("Ocpp_Server")
 
-def Basic_auth_with_broker(broker, not_secure):
+def Basic_auth_with_broker(broker):
     class BasicAuth(websockets.BasicAuthWebSocketServerProtocol):
         def __init__(self, *args, **kwargs):
             super(BasicAuth, self).__init__(*args, **kwargs)
             self.broker = broker
-            self.not_secure = not_secure
         
         async def check_credentials(self, username, password):
             self.user = username
             self.password = password
-
-            if self.not_secure:
-                return True
 
             try:
                 content = {"CP_ID" : username,"password": password}
@@ -84,7 +80,7 @@ class OCPP_Server:
 
     async def start_server(self, port, not_secure):
 
-        BasicAuth_Custom_Handler = Basic_auth_with_broker(self.broker, not_secure)
+        BasicAuth_Custom_Handler = Basic_auth_with_broker(self.broker) if not not_secure else None
         server = await websockets.serve(
             self.on_cp_connect,
             '0.0.0.0',

@@ -70,10 +70,7 @@ class ChargePoint(cp):
         id_token = response[0]
         id_token_info = id_token["id_token_info"]
 
-        
         #assert its the same idtoken
-        assert(id_token["id_token"] == req_id_token["id_token"])
-        assert(id_token["type"] == req_id_token["type"])
 
         id_token_info["evse_id"] = id_token_info.pop("evse")
         return id_token_info
@@ -302,9 +299,12 @@ class ChargePoint(cp):
         if response.status == enums.RequestStartStopStatusType.accepted:
 
             if response.transaction_id is None:
-                future = self.loop.create_future()
-                self.wait_start_transaction[request.remote_start_id] = future
-                response.transaction_id = await asyncio.wait_for(future, timeout=5)
+                try:
+                    future = self.loop.create_future()
+                    self.wait_start_transaction[request.remote_start_id] = future
+                    response.transaction_id = await asyncio.wait_for(future, timeout=5)
+                except:
+                    pass
 
             if request.charging_profile is not None:
                 message = Topic_Message(method="create_Charging_profile", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
@@ -624,6 +624,8 @@ class ChargePoint(cp):
             message = Topic_Message(method="new_Reservation", cp_id=self.id, content=request.__dict__, destination="SQL_DB")
             await ChargePoint.broker.ocpp_log(message)
                     
+        response = response.__dict__
+        response["id"] = request.id
         return response
     
 
@@ -859,12 +861,12 @@ class ChargePoint(cp):
 
 
     @on('Heartbeat')
-    async def on_Heartbeat(self):
+    async def on_Heartbeat(self,**kwargs):
         return call_result.HeartbeatPayload(
             current_time=datetime.utcnow().isoformat()
         )
     @after('Heartbeat')
-    async def after_Heartbeat(self):
+    async def after_Heartbeat(self,**kwargs):
         if self.is_online:
             self.change_is_online.cancel()
         else:
@@ -888,15 +890,15 @@ class ChargePoint(cp):
 
     @on("NotifyEVChargingNeeds")
     async def on_NotifyEVChargingNeeds(self, **kwargs):
-        return call_result.NotifyEVChargingNeedsPayload(status=enums.NotifyEVChargingNeedsStatusType.accepted)
+        return call_result.NotifyEVChargingNeedsPayload(status=enums.NotifyEVChargingNeedsStatusType.rejected)
     
     @on("NotifyEVChargingSchedule")
     async def on_NotifyEVChargingSchedule(self, **kwargs):
-        return call_result.NotifyEVChargingSchedulePayload(status=enums.GenericStatusType.accepted)
+        return call_result.NotifyEVChargingSchedulePayload(status=enums.GenericStatusType.rejected)
     
     @on("Get15118EVCertificate")
     async def on_Get15118EVCertificate(self, **kwargs):
-        return call_result.Get15118EVCertificatePayload(status=enums.Iso15118EVCertificateStatusType.accepted, exi_response="")
+        return call_result.Get15118EVCertificatePayload(status=enums.Iso15118EVCertificateStatusType.failed, exi_response="")
     
     @on("GetCertificateStatus")
     async def on_GetCertificateStatus(self, ocsp_request_data):

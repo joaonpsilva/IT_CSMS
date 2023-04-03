@@ -1,0 +1,285 @@
+INFO:Ocpp_Server:Connected to the RMQ Broker
+INFO:websockets.server:server listening on 0.0.0.0:9000
+INFO:Ocpp_Server:WebSocket Server Started
+INFO:     Started server process [21351]
+INFO:     Waiting for application startup.
+API - INFO - Connected to the RMQ Broker
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+SQL_DB - INFO - Connected to the database
+SQL_DB - INFO - Connected to the RMQ Broker
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "verify_password", "type": "request", "content": {"CP_ID": "CP_1", "password": "12345678901234567890"}, "cp_id": "CP_1", "status": null}
+SQL_DB - INFO - RECEIVED: {'destination': 'SQL_DB', 'origin': 'Ocpp_Server', 'method': 'verify_password', 'type': 'request', 'content': {'CP_ID': 'CP_1', 'password': '12345678901234567890'}, 'cp_id': 'CP_1', 'status': None}
+SQL_DB - INFO - RabbitMQ SENDING Message: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "verify_password", "type": "response", "content": {"approved": true}, "cp_id": "CP_1", "status": "OK"}
+INFO:Ocpp_Server:RESPONSE: {'destination': 'Ocpp_Server', 'origin': 'SQL_DB', 'method': 'verify_password', 'type': 'response', 'content': {'approved': True}, 'cp_id': 'CP_1', 'status': 'OK'}
+INFO:websockets.server:connection open
+INFO:Ocpp_Server:Protocols Matched: ocpp2.0.1
+INFO:ocpp:cp6k: receive message [2,"6ca7ce5cc71cb3ee50e887eee0c7f1ac","BootNotification",{"chargingStation":{"firmwareVersion":"0.9.1+2022.02.10.86-alpha","model":"FALC-B","serialNumber":"223576029140","vendorName":"com.chargepoint"},"reason":"ApplicationReset"}]
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": null, "origin": "Ocpp_Server", "method": "BootNotification", "type": "ocpp_log", "content": {"charging_station": {"firmware_version": "0.9.1+2022.02.10.86-alpha", "model": "FALC-B", "serial_number": "223576029140", "vendor_name": "com.chargepoint"}, "reason": "ApplicationReset", "timestamp": "2023-03-29T08:55:14.639121"}, "cp_id": "cp6k", "status": null}
+INFO:ocpp:cp6k: send [3,"6ca7ce5cc71cb3ee50e887eee0c7f1ac",{"currentTime":"2023-03-29T08:55:14.643416","interval":30,"status":"Accepted"}]
+SQL_DB - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'BootNotification', 'type': 'ocpp_log', 'content': {'charging_station': {'firmware_version': '0.9.1+2022.02.10.86-alpha', 'model': 'FALC-B', 'serial_number': '223576029140', 'vendor_name': 'com.chargepoint'}, 'reason': 'ApplicationReset', 'timestamp': '2023-03-29T08:55:14.639121'}, 'cp_id': 'cp6k', 'status': None}
+API - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'BootNotification', 'type': 'ocpp_log', 'content': {'charging_station': {'firmware_version': '0.9.1+2022.02.10.86-alpha', 'model': 'FALC-B', 'serial_number': '223576029140', 'vendor_name': 'com.chargepoint'}, 'reason': 'ApplicationReset', 'timestamp': '2023-03-29T08:55:14.639121'}, 'cp_id': 'cp6k', 'status': None}
+INFO:ocpp:cp6k: send [2,"2aa8b318-610e-47f3-ac88-c055c118d1a8","GetChargingProfiles",{"requestId":79,"chargingProfile":{"chargingProfilePurpose":"ChargingStationExternalConstraints"}}]
+INFO:ocpp:cp6k: receive message [2,"5adaa6ef26a2338516caa134c7111159","NotifyEvent",{"eventData":[{"actualValue":"Available","component":{"evse":{"id":1},"name":"EVSE"},"eventId":0,"eventNotificationType":"HardWiredMonitor","timestamp":"2023-03-29T08:55:13Z","trigger":"Delta","variable":{"name":"AvailabilityState"}},{"actualValue":"Available","component":{"evse":{"id":2},"name":"EVSE"},"eventId":0,"eventNotificationType":"HardWiredMonitor","timestamp":"2023-03-29T08:55:13Z","trigger":"Delta","variable":{"name":"AvailabilityState"}},{"actualValue":"Available","component":{"name":"ChargingStation"},"eventId":0,"eventNotificationType":"HardWiredMonitor","timestamp":"2023-03-29T08:55:13Z","trigger":"Delta","variable":{"name":"AvailabilityState"}}],"generatedAt":"2023-03-29T08:55:15Z","seqNo":0}]
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": null, "origin": "Ocpp_Server", "method": "NotifyEvent", "type": "ocpp_log", "content": {"event_data": [{"actual_value": "Available", "component": {"evse": {"id": 1}, "name": "EVSE"}, "event_id": 0, "event_notification_type": "HardWiredMonitor", "timestamp": "2023-03-29T08:55:13Z", "trigger": "Delta", "variable": {"name": "AvailabilityState"}}, {"actual_value": "Available", "component": {"evse": {"id": 2}, "name": "EVSE"}, "event_id": 0, "event_notification_type": "HardWiredMonitor", "timestamp": "2023-03-29T08:55:13Z", "trigger": "Delta", "variable": {"name": "AvailabilityState"}}, {"actual_value": "Available", "component": {"name": "ChargingStation"}, "event_id": 0, "event_notification_type": "HardWiredMonitor", "timestamp": "2023-03-29T08:55:13Z", "trigger": "Delta", "variable": {"name": "AvailabilityState"}}], "generated_at": "2023-03-29T08:55:15Z", "seq_no": 0}, "cp_id": "cp6k", "status": null}
+INFO:ocpp:cp6k: send [3,"5adaa6ef26a2338516caa134c7111159",{}]
+INFO:ocpp:cp6k: receive message [3,"2aa8b318-610e-47f3-ac88-c055c118d1a8",{"status":"NoProfiles"}]
+API - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'NotifyEvent', 'type': 'ocpp_log', 'content': {'event_data': [{'actual_value': 'Available', 'component': {'evse': {'id': 1}, 'name': 'EVSE'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T08:55:13Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}, {'actual_value': 'Available', 'component': {'evse': {'id': 2}, 'name': 'EVSE'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T08:55:13Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}, {'actual_value': 'Available', 'component': {'name': 'ChargingStation'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T08:55:13Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}], 'generated_at': '2023-03-29T08:55:15Z', 'seq_no': 0}, 'cp_id': 'cp6k', 'status': None}
+SQL_DB - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'NotifyEvent', 'type': 'ocpp_log', 'content': {'event_data': [{'actual_value': 'Available', 'component': {'evse': {'id': 1}, 'name': 'EVSE'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T08:55:13Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}, {'actual_value': 'Available', 'component': {'evse': {'id': 2}, 'name': 'EVSE'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T08:55:13Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}, {'actual_value': 'Available', 'component': {'name': 'ChargingStation'}, 'event_id': 0, 'event_notification_type': 'HardWiredMonitor', 'timestamp': '2023-03-29T08:55:13Z', 'trigger': 'Delta', 'variable': {'name': 'AvailabilityState'}}], 'generated_at': '2023-03-29T08:55:15Z', 'seq_no': 0}, 'cp_id': 'cp6k', 'status': None}
+INFO:ocpp:cp6k: receive message [2,"89851b895d93aad93a0b412f899ce510","DataTransfer",{"data":{"installconf":"ewogICAgImRlZmF1bHRMYW5nIjogIkVOIiwKICAgICJjaXJjdWl0Q3VycmVudExpbWl0IjogMTYuMCwKICAgICJwb3J0Q3VycmVudExpbWl0IjogMTYuMCwKICAgICJpd2l6U3RhdHVzIjogMjU1LAogICAgImNpcmN1aXRTaGFyaW5nIjogMSwKICAgICJpbnB1dENhYmxlQ291bnQiOiAxLAogICAgInBhbmVsUGhhc2VzIjogMSwKICAgICJpbnB1dENhYmxlUGhhc2VzIjogMSwKICAgICJvdXRsZXQyUGhhc2UiOiAxLAogICAgIm91dGxldDFQaGFzZSI6IDIsCiAgICAiaXdpelZlcnNpb24iOiAyCn0="},"messageId":"NotifyInstallConfig","vendorId":"com.chargepoint"}]
+ERROR:ocpp:Error while handling request '<Call - unique_id=89851b895d93aad93a0b412f899ce510, action=DataTransfer, payload={'data': {'installconf': 'ewogICAgImRlZmF1bHRMYW5nIjogIkVOIiwKICAgICJjaXJjdWl0Q3VycmVudExpbWl0IjogMTYuMCwKICAgICJwb3J0Q3VycmVudExpbWl0IjogMTYuMCwKICAgICJpd2l6U3RhdHVzIjogMjU1LAogICAgImNpcmN1aXRTaGFyaW5nIjogMSwKICAgICJpbnB1dENhYmxlQ291bnQiOiAxLAogICAgInBhbmVsUGhhc2VzIjogMSwKICAgICJpbnB1dENhYmxlUGhhc2VzIjogMSwKICAgICJvdXRsZXQyUGhhc2UiOiAxLAogICAgIm91dGxldDFQaGFzZSI6IDIsCiAgICAiaXdpelZlcnNpb24iOiAyCn0='}, 'messageId': 'NotifyInstallConfig', 'vendorId': 'com.chargepoint'}>'
+Traceback (most recent call last):
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/charge_point.py", line 172, in _handle_call
+    handlers = self.route_map[msg.action]
+KeyError: 'DataTransfer'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/charge_point.py", line 150, in route_message
+    await self._handle_call(msg)
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/charge_point.py", line 174, in _handle_call
+    raise NotSupportedError(
+ocpp.exceptions.NotSupportedError: NotSupportedError: Request Action is recognized but not supported by the receiver, {'cause': 'No handler for DataTransfer registered.'}
+INFO:ocpp:cp6k: send [4,"89851b895d93aad93a0b412f899ce510","NotSupported","Request Action is recognized but not supported by the receiver",{"cause":"No handler for DataTransfer registered."}]
+INFO:ocpp:cp6k: receive message [2,"6355742e7128cd6d673a348d9fb94b87","StatusNotification",{"connectorId":1,"connectorStatus":"Available","evseId":2,"timestamp":"2023-03-29T08:55:17Z"}]
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"connector_id": 1, "connector_status": "Available", "evse_id": 2, "timestamp": "2023-03-29T08:55:17Z"}, "cp_id": "cp6k", "status": null}
+INFO:ocpp:cp6k: send [3,"6355742e7128cd6d673a348d9fb94b87",{}]
+SQL_DB - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'StatusNotification', 'type': 'ocpp_log', 'content': {'connector_id': 1, 'connector_status': 'Available', 'evse_id': 2, 'timestamp': '2023-03-29T08:55:17Z'}, 'cp_id': 'cp6k', 'status': None}
+API - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'StatusNotification', 'type': 'ocpp_log', 'content': {'connector_id': 1, 'connector_status': 'Available', 'evse_id': 2, 'timestamp': '2023-03-29T08:55:17Z'}, 'cp_id': 'cp6k', 'status': None}
+SQL_DB - ERROR - Traceback (most recent call last):
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1900, in _execute_context
+    self.dialect.do_execute(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 736, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/cursors.py", line 148, in execute
+    result = self._query(query)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/cursors.py", line 310, in _query
+    conn.query(q)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 548, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_query_result
+    result.read()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 1156, in read
+    first_packet = self.connection._read_packet()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 725, in _read_packet
+    packet.raise_for_error()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/protocol.py", line 221, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/err.py", line 143, in raise_mysql_exception
+    raise errorclass(errno, errval)
+pymysql.err.IntegrityError: (1452, 'Cannot add or update a child row: a foreign key constraint fails (`csms_db`.`Connector`, CONSTRAINT `Connector_ibfk_1` FOREIGN KEY (`cp_id`, `evse_id`) REFERENCES `EVSE` (`cp_id`, `evse_id`))')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/it2s/Desktop/joao_csms/IT_CSMS/src/rabbit_mq/rabbit_handler.py", line 122, in on_request
+    response_content = await self.handle_request(request)
+  File "/home/it2s/Desktop/joao_csms/IT_CSMS/src/CSMS/db/db.py", line 78, in on_db_request
+    raise e
+  File "/home/it2s/Desktop/joao_csms/IT_CSMS/src/CSMS/db/db.py", line 72, in on_db_request
+    self.session.commit()
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 1451, in commit
+    self._transaction.commit(_to_root=self.future)
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 829, in commit
+    self._prepare_impl()
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 808, in _prepare_impl
+    self.session.flush()
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 3429, in flush
+    self._flush(objects)
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 3568, in _flush
+    with util.safe_reraise():
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/util/langhelpers.py", line 70, in __exit__
+    compat.raise_(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/util/compat.py", line 208, in raise_
+    raise exception
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 3529, in _flush
+    flush_context.execute()
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/unitofwork.py", line 456, in execute
+    rec.execute(self)
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/unitofwork.py", line 630, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/persistence.py", line 245, in save_obj
+    _emit_insert_statements(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/persistence.py", line 1097, in _emit_insert_statements
+    c = connection._execute_20(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1705, in _execute_20
+    return meth(self, args_10style, kwargs_10style, execution_options)
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 333, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1572, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1943, in _execute_context
+    self._handle_dbapi_exception(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2124, in _handle_dbapi_exception
+    util.raise_(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/util/compat.py", line 208, in raise_
+    raise exception
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1900, in _execute_context
+    self.dialect.do_execute(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 736, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/cursors.py", line 148, in execute
+    result = self._query(query)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/cursors.py", line 310, in _query
+    conn.query(q)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 548, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_query_result
+    result.read()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 1156, in read
+    first_packet = self.connection._read_packet()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 725, in _read_packet
+    packet.raise_for_error()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/protocol.py", line 221, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/err.py", line 143, in raise_mysql_exception
+    raise errorclass(errno, errval)
+sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1452, 'Cannot add or update a child row: a foreign key constraint fails (`csms_db`.`Connector`, CONSTRAINT `Connector_ibfk_1` FOREIGN KEY (`cp_id`, `evse_id`) REFERENCES `EVSE` (`cp_id`, `evse_id`))')
+[SQL: INSERT INTO `Connector` (connector_id, connector_type, connector_status, cp_id, evse_id) VALUES (%(connector_id)s, %(connector_type)s, %(connector_status)s, %(cp_id)s, %(evse_id)s)]
+[parameters: {'connector_id': 1, 'connector_type': None, 'connector_status': 'available', 'cp_id': 'cp6k', 'evse_id': 2}]
+(Background on this error at: https://sqlalche.me/e/14/gkpj)
+
+INFO:ocpp:cp6k: receive message [2,"bc97161353fb2ac54835f327fb07123a","StatusNotification",{"connectorId":1,"connectorStatus":"Available","evseId":1,"timestamp":"2023-03-29T08:55:17Z"}]
+INFO:Ocpp_Server:RabbitMQ SENDING Message: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"connector_id": 1, "connector_status": "Available", "evse_id": 1, "timestamp": "2023-03-29T08:55:17Z"}, "cp_id": "cp6k", "status": null}
+INFO:ocpp:cp6k: send [3,"bc97161353fb2ac54835f327fb07123a",{}]
+API - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'StatusNotification', 'type': 'ocpp_log', 'content': {'connector_id': 1, 'connector_status': 'Available', 'evse_id': 1, 'timestamp': '2023-03-29T08:55:17Z'}, 'cp_id': 'cp6k', 'status': None}
+SQL_DB - INFO - RECEIVED: {'destination': None, 'origin': 'Ocpp_Server', 'method': 'StatusNotification', 'type': 'ocpp_log', 'content': {'connector_id': 1, 'connector_status': 'Available', 'evse_id': 1, 'timestamp': '2023-03-29T08:55:17Z'}, 'cp_id': 'cp6k', 'status': None}
+SQL_DB - ERROR - Traceback (most recent call last):
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1900, in _execute_context
+    self.dialect.do_execute(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 736, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/cursors.py", line 148, in execute
+    result = self._query(query)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/cursors.py", line 310, in _query
+    conn.query(q)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 548, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_query_result
+    result.read()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 1156, in read
+    first_packet = self.connection._read_packet()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 725, in _read_packet
+    packet.raise_for_error()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/protocol.py", line 221, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/err.py", line 143, in raise_mysql_exception
+    raise errorclass(errno, errval)
+pymysql.err.IntegrityError: (1452, 'Cannot add or update a child row: a foreign key constraint fails (`csms_db`.`Connector`, CONSTRAINT `Connector_ibfk_1` FOREIGN KEY (`cp_id`, `evse_id`) REFERENCES `EVSE` (`cp_id`, `evse_id`))')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/it2s/Desktop/joao_csms/IT_CSMS/src/rabbit_mq/rabbit_handler.py", line 122, in on_request
+    response_content = await self.handle_request(request)
+  File "/home/it2s/Desktop/joao_csms/IT_CSMS/src/CSMS/db/db.py", line 78, in on_db_request
+    raise e
+  File "/home/it2s/Desktop/joao_csms/IT_CSMS/src/CSMS/db/db.py", line 72, in on_db_request
+    self.session.commit()
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 1451, in commit
+    self._transaction.commit(_to_root=self.future)
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 829, in commit
+    self._prepare_impl()
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 808, in _prepare_impl
+    self.session.flush()
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 3429, in flush
+    self._flush(objects)
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 3568, in _flush
+    with util.safe_reraise():
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/util/langhelpers.py", line 70, in __exit__
+    compat.raise_(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/util/compat.py", line 208, in raise_
+    raise exception
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 3529, in _flush
+    flush_context.execute()
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/unitofwork.py", line 456, in execute
+    rec.execute(self)
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/unitofwork.py", line 630, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/persistence.py", line 245, in save_obj
+    _emit_insert_statements(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/orm/persistence.py", line 1097, in _emit_insert_statements
+    c = connection._execute_20(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1705, in _execute_20
+    return meth(self, args_10style, kwargs_10style, execution_options)
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 333, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1572, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1943, in _execute_context
+    self._handle_dbapi_exception(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2124, in _handle_dbapi_exception
+    util.raise_(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/util/compat.py", line 208, in raise_
+    raise exception
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1900, in _execute_context
+    self.dialect.do_execute(
+  File "/home/it2s/.local/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 736, in do_execute
+    cursor.execute(statement, parameters)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/cursors.py", line 148, in execute
+    result = self._query(query)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/cursors.py", line 310, in _query
+    conn.query(q)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 548, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_query_result
+    result.read()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 1156, in read
+    first_packet = self.connection._read_packet()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/connections.py", line 725, in _read_packet
+    packet.raise_for_error()
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/protocol.py", line 221, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/home/it2s/.local/lib/python3.10/site-packages/pymysql/err.py", line 143, in raise_mysql_exception
+    raise errorclass(errno, errval)
+sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1452, 'Cannot add or update a child row: a foreign key constraint fails (`csms_db`.`Connector`, CONSTRAINT `Connector_ibfk_1` FOREIGN KEY (`cp_id`, `evse_id`) REFERENCES `EVSE` (`cp_id`, `evse_id`))')
+[SQL: INSERT INTO `Connector` (connector_id, connector_type, connector_status, cp_id, evse_id) VALUES (%(connector_id)s, %(connector_type)s, %(connector_status)s, %(cp_id)s, %(evse_id)s)]
+[parameters: {'connector_id': 1, 'connector_type': None, 'connector_status': 'available', 'cp_id': 'cp6k', 'evse_id': 1}]
+(Background on this error at: https://sqlalche.me/e/14/gkpj)
+
+INFO:ocpp:cp6k: receive message [2,"beb16b98e95b3604760367f1db2ea33f","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-10.0,"rssi":-64.0,"snr":7.0,"vendorId":"com.chargepoint"}}]
+ERROR:ocpp:Error while handling request '<Call - unique_id=beb16b98e95b3604760367f1db2ea33f, action=Heartbeat, payload={'customData': {'rsrp': -93.0, 'rsrq': -10.0, 'rssi': -64.0, 'snr': 7.0, 'vendorId': 'com.chargepoint'}}>'
+Traceback (most recent call last):
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/charge_point.py", line 194, in _handle_call
+    response = handler(**snake_case_payload)
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/routing.py", line 47, in inner
+    return func(*args, **kwargs)
+TypeError: ChargePoint.on_Heartbeat() got an unexpected keyword argument 'custom_data'
+INFO:ocpp:cp6k: send [4,"beb16b98e95b3604760367f1db2ea33f","InternalError","An unexpected error occurred.",{}]
+INFO:ocpp:cp6k: receive message [2,"abaeca6e921fccbbbb16797f14ae2a73","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-10.0,"rssi":-64.0,"snr":4.4,"vendorId":"com.chargepoint"}}]
+ERROR:ocpp:Error while handling request '<Call - unique_id=abaeca6e921fccbbbb16797f14ae2a73, action=Heartbeat, payload={'customData': {'rsrp': -93.0, 'rsrq': -10.0, 'rssi': -64.0, 'snr': 4.4, 'vendorId': 'com.chargepoint'}}>'
+Traceback (most recent call last):
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/charge_point.py", line 194, in _handle_call
+    response = handler(**snake_case_payload)
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/routing.py", line 47, in inner
+    return func(*args, **kwargs)
+TypeError: ChargePoint.on_Heartbeat() got an unexpected keyword argument 'custom_data'
+INFO:ocpp:cp6k: send [4,"abaeca6e921fccbbbb16797f14ae2a73","InternalError","An unexpected error occurred.",{}]
+INFO:ocpp:cp6k: receive message [2,"aa0f2c5aec181eeeb114d91fdb24e614","Heartbeat",{"customData":{"rsrp":-93.0,"rsrq":-10.0,"rssi":-64.0,"snr":3.2,"vendorId":"com.chargepoint"}}]
+ERROR:ocpp:Error while handling request '<Call - unique_id=aa0f2c5aec181eeeb114d91fdb24e614, action=Heartbeat, payload={'customData': {'rsrp': -93.0, 'rsrq': -10.0, 'rssi': -64.0, 'snr': 3.2, 'vendorId': 'com.chargepoint'}}>'
+Traceback (most recent call last):
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/charge_point.py", line 194, in _handle_call
+    response = handler(**snake_case_payload)
+  File "/home/it2s/.local/lib/python3.10/site-packages/ocpp/routing.py", line 47, in inner
+    return func(*args, **kwargs)
+TypeError: ChargePoint.on_Heartbeat() got an unexpected keyword argument 'custom_data'
+INFO:ocpp:cp6k: send [4,"aa0f2c5aec181eeeb114d91fdb24e614","InternalError","An unexpected error occurred.",{}]
+SQL_DB - INFO - DB Shuting down
+INFO:Ocpp_Server:OCPP Server Shuting down
+INFO:websockets.server:connection closed
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [21351]
+INFO:Ocpp_Server:OCPP Server Shuting down
+ERROR:asyncio:Task was destroyed but it is pending!
+task: <Task pending name='Task-105' coro=<WebSocketCommonProtocol.close_connection() running at /home/it2s/.local/lib/python3.10/site-packages/websockets/legacy/protocol.py:1319> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[gather.<locals>._done_callback() at /usr/lib/python3.10/asyncio/tasks.py:720]>
+Exception ignored in: <coroutine object WebSocketCommonProtocol.close_connection at 0x7f57c1f55150>
+Traceback (most recent call last):
+  File "/home/it2s/.local/lib/python3.10/site-packages/websockets/legacy/protocol.py", line 1329, in close_connection
+  File "/home/it2s/.local/lib/python3.10/site-packages/websockets/legacy/protocol.py", line 1345, in close_transport
+  File "/usr/lib/python3.10/asyncio/selector_events.py", line 698, in close
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 750, in call_soon
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 515, in _check_closed
+RuntimeError: Event loop is closed

@@ -6,6 +6,7 @@ import asyncio
 from CSMS.db.database_Base import *
 from sqlalchemy.sql import true
 import uuid
+import dateutil.parser
 
 
 PASSLIB_CONTEXT = CryptContext(
@@ -83,6 +84,10 @@ class BootNotification(CustomBase):
 
     charging_station = relationship("Charge_Point", backref="boot_nofications", uselist=False)
 
+    def __init__(self, timestamp=None, **kwargs):
+        if timestamp:
+            timestamp = dateutil.parser.parse(timestamp)
+        super().__init__(timestamp=timestamp, **kwargs)
 
 
 class EVSE(CustomBase):
@@ -127,6 +132,11 @@ class StatusNotification(CustomBase):
                                             [ "Connector.cp_id", "Connector.evse_id", "Connector.connector_id"]),{})
 
     connector = relationship("Connector", backref="status_nofications", uselist=False)
+
+    def __init__(self, timestamp=None, **kwargs):
+        if timestamp:
+            timestamp = dateutil.parser.parse(timestamp)
+        super().__init__(timestamp=timestamp, **kwargs)
 
 ####################################################################################
 
@@ -256,6 +266,12 @@ class MeterValue(CustomBase):
                                     ["EVSE.cp_id", "EVSE.evse_id"]),
                     ForeignKeyConstraint(["transaction_id", "seq_no"],
                                     ["Transaction_Event.transaction_id", "Transaction_Event.seq_no"]),{})
+    
+    def __init__(self, timestamp=None, **kwargs):
+        if timestamp:
+            timestamp = dateutil.parser.parse(timestamp)
+        super().__init__(timestamp=timestamp, **kwargs)
+                                    
 
 
 class SampledValue(CustomBase):
@@ -351,6 +367,11 @@ class Transaction_Event(CustomBase):
     #Meter value
     meter_value = relationship("MeterValue", backref=backref("transaction_event", uselist=False))
 
+    def __init__(self, timestamp=None, **kwargs):
+        if timestamp:
+            timestamp = dateutil.parser.parse(timestamp)
+        super().__init__(timestamp=timestamp, **kwargs)
+
 
 ############################
 
@@ -397,8 +418,8 @@ class ChargingProfile(CustomBase):
     charging_profile_purpose = Column(Enum(enums.ChargingProfilePurposeType))
     charging_profile_kind = Column(Enum(enums.ChargingProfileKindType))
     recurrency_kind = Column(Enum(enums.RecurrencyKindType))
-    valid_from = Column(DateTime)
-    valid_to = Column(DateTime)
+    valid_from = Column(String(50))
+    valid_to = Column(String(50))
 
     transaction_id = Column(String(36), ForeignKey('Transaction.transaction_id'))
     transaction = relationship("Transaction", backref="charging_profile",uselist=False)
@@ -411,7 +432,7 @@ class ChargingSchedule(CustomBase):
     __tablename__ = "ChargingSchedule"
 
     id = Column(Integer, primary_key = True)
-    start_schedule = Column(DateTime)
+    start_schedule = Column(String(50))
     duration = Column(Integer)
     charging_rate_unit = Column(Enum(enums.ChargingRateUnitType))
     min_charging_rate = Column(Float)
@@ -461,7 +482,6 @@ async def create_Tables(engine, session, insert_hardCoded=False):
 def insert_Hard_Coded(session):
     objects = []
     objects.append(Charge_Point(cp_id = "CP_1", password="passcp1"))
-    objects.append(Charge_Point(cp_id = "CP_2", password="passcp1"))
 
     evse = EVSE(cp_id = "CP_1", evse_id = 1)
     evse2 = EVSE(cp_id = "CP_1", evse_id = 2)
@@ -470,6 +490,15 @@ def insert_Hard_Coded(session):
     objects.append(evse)
     objects.append(evse2)
     objects.append(evse3)
+
+    objects.append(Connector(cp_id="CP_1", evse_id=1,connector_id=1))
+
+    i = IdToken(id_token = "1dee35d6-ed03-4882-9762-86197f258a74", type=enums.IdTokenType.iso14443)
+    i2 = IdTokenInfo(id_token=i, valid=True,language1="PT", evse=[evse, evse2])
+    objects.append(i)
+    objects.append(i2)
+    objects.append(User(password="user1", email="user1", id_token=i))
+
 
     objects.append(IdToken(id_token = "", type=enums.IdTokenType.no_authorization))
     objects.append(IdToken(id_token = "test_idToken", type=enums.IdTokenType.local))

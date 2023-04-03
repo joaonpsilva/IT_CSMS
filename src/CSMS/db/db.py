@@ -282,6 +282,7 @@ class DataBase:
         
         #separate transation object and remove Nones
         transaction_info = content.pop("transaction_info")
+
         transaction_info = {k: v for k, v in transaction_info.items() if v is not None}
 
         #Instantiate event obj

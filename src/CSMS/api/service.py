@@ -130,6 +130,7 @@ class API_Service:
         
         local_authorization_list=[]
         for id_token in idtokens:
+
             
             #if only adding or deleting need to get information regarding specific idtoken
             mode = {}
@@ -154,6 +155,9 @@ class API_Service:
             else:
                 id_token_info = None
 
+            if id_token["id_token"] == "":
+                continue
+
             local_authorization_list.append({"id_token":id_token, "id_token_info":id_token_info})
         
         if len(local_authorization_list) == 0:
@@ -173,7 +177,8 @@ class API_Service:
         request = {
             "evse_id" : evse_id,
             "id_token" : id_token[0],
-            "expiry_date_time" : datetime.utcnow() + timedelta(hours=1)            
+            #TODO only to utc after add timedeslta
+            "expiry_date_time" : (datetime.utcnow() + timedelta(hours=1)).isoformat()  
         }
 
         return await self.send_request("reserveNow", cp_id, request)
