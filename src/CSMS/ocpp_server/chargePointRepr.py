@@ -695,27 +695,28 @@ class ChargePoint(cp):
 
     
     def authorize_certificate(self, hash_algorithm, issuer_name_hash, issuer_key_hash, serial_number, responder_url):
-        # from cryptography.x509 import ocsp
-        # import base64
-        # from cryptography.hazmat.primitives import serialization
-        # import urllib
+        from cryptography.x509 import ocsp
+        import base64
+        from cryptography.hazmat.primitives import serialization, hashes
+        import urllib
 
-        # builder = ocsp.OCSPRequestBuilder()
-        # builder.add_certificate_by_hash(issuer_name_hash, issuer_key_hash, serial_number, hash_algorithm)
+        
+        builder = ocsp.OCSPRequestBuilder()
+        builder.add_certificate_by_hash(bytes(issuer_name_hash), bytes(issuer_key_hash), int(serial_number), hashes.SHA256())
 
-        # req = builder.build()
-        # der_res = req.public_bytes(serialization.Encoding.DER)
-        # req_path = base64.b64encode(der_res).decode("ascii")
-        # ocsp_req_url = f"{responder_url}{req_path}"
-        # print(ocsp_req_url)
+        req = builder.build()
+        der_res = req.public_bytes(serialization.Encoding.DER)
+        req_path = base64.b64encode(der_res).decode("ascii")
+        ocsp_req_url = f"{responder_url}{req_path}"
+        print(ocsp_req_url)
 
-        # req = urllib.request.Request(ocsp_req_url)
+        req = urllib.request.Request(ocsp_req_url)
 
-        # with urllib.request.urlopen(req) as res:
-        #     body = res.read()
-        # # validate the OCSP check
-        # ocsp_resp = ocsp.load_der_ocsp_response(body)
-        # print("ocsp response status: " + str(ocsp_resp.response_status))
+        with urllib.request.urlopen(req) as res:
+            body = res.read()
+        # validate the OCSP check
+        ocsp_resp = ocsp.load_der_ocsp_response(body)
+        print("ocsp response status: " + str(ocsp_resp.response_status))
 
         return True
     
@@ -731,7 +732,7 @@ class ChargePoint(cp):
         if iso15118_certificate_hash_data is not None:
             certificate_status = enums.AuthorizeCertificateStatusType.accepted
 
-            for i in iso15118_certificate_hash_data:                
+            for i in iso15118_certificate_hash_data:    
                 if not self.authorize_certificate(**i): 
                     certificate_status = enums.AuthorizeCertificateStatusType.cert_chain_error
                     break

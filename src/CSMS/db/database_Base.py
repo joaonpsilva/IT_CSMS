@@ -10,7 +10,7 @@ class CustomBase(Base):
     """
     __abstract__ = True
 
-    def __init__(self, **kwargs):
+    def __init__(self, custom_data=None, **kwargs):
 
         for arg in kwargs:
             if arg in self.__mapper__.relationships.keys():

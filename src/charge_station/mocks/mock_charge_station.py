@@ -90,12 +90,32 @@ class ChargePoint(cp):
 
     
     async def authorizeRequest(self):
-        request = call.AuthorizePayload(
-            id_token=datatypes.IdTokenType(
-                id_token="3e19b1cc-7858-440c-bd7f-7335555841bd",
-                type=enums.IdTokenType.local
-            )
-        )
+
+        request = call.AuthorizePayload(**{"id_token":{"id_token":"FRTRIC00618333C","type":"eMAID"},
+         "iso15118_certificate_hash_data":[{"hash_algorithm":"SHA256",
+                                         "issuer_key_hash":"c1d7f8a9b7f43b34dac1fc008a6b47572b6b365ed2eef69b21460f83993e6ad2",
+                                         "issuer_name_hash":"bb6a2707584ddad7a90f646b4266857311e598b4cb131977c3ae4635cfcdf98d",
+                                         "serial_number":"1",
+                                         "responder_uRL":"https://7kravoouwj.execute-api.eu-west-1.amazonaws.com/test/OCSP-Responder"
+                                         },
+                                         {"hash_algorithm":"SHA256",
+                                          "issuer_key_hash":"8af01e8af72c643cd0570a89acbee2b050490302e0481d27b9722bf5047a79c3",
+                                          "issuer_name_hash":"fecdee34ce9cf0088fd56b80aecde3ef4b5f5ef557d415da83f7bdb9be68a5dc",
+                                          "responder_uRL":"https://7kravoouwj.execute-api.eu-west-1.amazonaws.com/test/OCSP-Responder",
+                                          "serial_number":"2"},
+                                          {"hash_algorithm":"SHA256",
+                                           "issuer_key_hash":"497b489273c0df5006301ff66c452cd999a70e04cfeb4145744b8767e5df0ac9",
+                                           "issuer_name_hash":"f4abd13cd5357e773ea38b5629e099bf3ae3e8a3ef29f0971d62634ffb57bef2",
+                                           "responder_uRL":"https://7kravoouwj.execute-api.eu-west-1.amazonaws.com/test/OCSP-Responder",
+                                           "serial_number":"3"}]})
+        
+
+        #request = call.AuthorizePayload(
+        #    id_token=datatypes.IdTokenType(
+        #        id_token="3e19b1cc-7858-440c-bd7f-7335555841bd",
+        #        type=enums.IdTokenType.local
+        #    )
+        #)
         
         response = await self.call(request)
         return response.id_token_info['status'] == "Accepted"
