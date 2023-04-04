@@ -695,30 +695,33 @@ class ChargePoint(cp):
 
     
     def authorize_certificate(self, hash_algorithm, issuer_name_hash, issuer_key_hash, serial_number, responder_url):
-        from cryptography.x509 import ocsp
-        import base64
-        from cryptography.hazmat.primitives import serialization, hashes
-        import urllib
-
         
-        builder = ocsp.OCSPRequestBuilder()
-        builder.add_certificate_by_hash(bytes(issuer_name_hash), bytes(issuer_key_hash), int(serial_number), hashes.SHA256())
+        try:
+            from cryptography.x509 import ocsp
+            import base64
+            from cryptography.hazmat.primitives import serialization, hashes
+            import urllib
 
-        req = builder.build()
-        der_res = req.public_bytes(serialization.Encoding.DER)
-        req_path = base64.b64encode(der_res).decode("ascii")
-        ocsp_req_url = f"{responder_url}{req_path}"
-        print(ocsp_req_url)
+            builder = ocsp.OCSPRequestBuilder()
+            builder.add_certificate_by_hash(bytes(issuer_name_hash, encoding="utf-8"), bytes(issuer_key_hash, encoding="utf-8"), int(serial_number), getattr(hashes, hash_algorithm)())
+            
+            req = builder.build()
+            der_res = req.public_bytes(serialization.Encoding.DER)
+            req_path = base64.b64encode(der_res).decode("ascii")
+            ocsp_req_url = f"{responder_url}{req_path}"
 
-        req = urllib.request.Request(ocsp_req_url)
+            req = urllib.request.Request(ocsp_req_url)
 
-        with urllib.request.urlopen(req) as res:
-            body = res.read()
-        # validate the OCSP check
-        ocsp_resp = ocsp.load_der_ocsp_response(body)
-        print("ocsp response status: " + str(ocsp_resp.response_status))
+            with urllib.request.urlopen(req) as res:
+                body = res.read()
+            # validate the OCSP check
+            ocsp_resp = ocsp.load_der_ocsp_response(body)
+            print("ocsp response status: " + str(ocsp_resp.response_status))
 
-        return True
+            return True
+        except:
+            self.logger.error(traceback.format_exc())
+            return False
     
     
     @on('Authorize')
@@ -785,9 +788,12 @@ class ChargePoint(cp):
             
             if transaction_status.messages_in_queue == True:
                 #CP still holding messages
-                #TODO pop from out_of_order_transaction
                 self.out_of_order_transaction.add(transaction_id)
             else:
+
+                if transaction_id in self.out_of_order_transaction:
+                    self.out_of_order_transaction.remove(transaction_id)
+
                 #verify in db if we have all messages
                 try:
                     all_messages_received = await self.guarantee_transaction_integrity(transaction_id)
