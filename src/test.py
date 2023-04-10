@@ -10,6 +10,27 @@ from cryptography.x509 import NameOID
 from cryptography.x509.oid import ExtensionOID
 
 
+# try:
+#     # Verify the EV's certificate chain
+#     ev_cert_chain = [ev_cert, ca_certificate]
+#     x509.verify_certificate_chain(ev_cert_chain, hashes.SHA256())
+
+#     # Verify the EV's signature
+#     if isinstance(ev_public_key, RSAPublicKey):
+#         ev_public_key.verify(
+#             ev_signature,
+#             ev_certificate,
+#             padding.PKCS1v15(),
+#             hashes.SHA256()
+#         )
+#     elif isinstance(ev_public_key, EllipticCurvePublicKey):
+#         ev_public_key.verify(
+#             ev_signature,
+#             ev_certificate.tbs_certificate_bytes,
+#             ec.ECDSA(hashes.SHA256())
+#         )
+
+
 data = open("root.pem", "rb")
 data = data.read()
 cert = x509.load_pem_x509_certificate(data, default_backend())
@@ -33,19 +54,26 @@ def validate_time(cert):
 
 
 def validate_issuer(cert, issuer):  # cert = certificado a validar, issuer= entidade acima na cadeia
-        issuer_public_key = issuer.public_key()
+        from cryptography.hazmat.primitives import serialization, hashes
+        from hashlib import sha256
+        import ecdsa
+        from ecdsa.util import sigdecode_der
 
         try:
-            issuer_public_key.verify(
-                cert.signature,
-                cert.tbs_certificate_bytes,
-                padding.PKCS1v15(),
-                cert.signature_hash_algorithm)
+            issuer_public_key = issuer.public_key()
+
+            # Verify the signature using the public key
+            #issuer_public_key.verify(cert.signature,cert.tbs_certificate_bytes,cert.signature_hash_algorithm)
+
+            # Verify the signature using the public key
+            ecdsa_key = issuer_public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
+            vk = ecdsa.VerifyingKey.from_pem(ecdsa_key)
+            vk.verify(cert.signature, cert.tbs_certificate_bytes, hashfunc=sha256, sigdecode=sigdecode_der)
+
+            return True
         except:
             return False
-
-        return True
-
+            
 
 def validate_cert(cert, flag=False):
     # verifica a data de validade
