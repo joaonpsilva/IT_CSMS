@@ -30,12 +30,7 @@ from cryptography.x509.oid import ExtensionOID
 #             ec.ECDSA(hashes.SHA256())
 #         )
 
-
-data = open("root.pem", "rb")
-data = data.read()
-cert = x509.load_pem_x509_certificate(data, default_backend())
-
-cert_dict = {cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value : cert}
+cert_dict = {}
 
 def get_issuer(cert):
         autenticador = cert.issuer.get_attributes_for_oid(
@@ -122,4 +117,45 @@ def validate_cert(cert, flag=False):
             print("CRL não encontrado")
             return False
 
+
+data = open("root.pem", "rb")
+data = data.read()
+cert = x509.load_pem_x509_certificate(data, default_backend())
+
+cert_dict[cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value] = cert
+
 print(validate_cert(cert))
+
+################################################
+
+from cryptography.x509 import ocsp
+import base64
+from cryptography.hazmat.primitives import serialization, hashes
+import urllib
+from cryptography.hazmat.primitives.hashes import SHA256
+from cryptography.x509.oid import ExtensionOID, AuthorityInformationAccessOID
+
+builder = ocsp.OCSPRequestBuilder()
+builder = builder.add_certificate(cert, cert, SHA256())
+req = builder.build()
+
+der_res = req.public_bytes(serialization.Encoding.DER)
+req_path = base64.b64encode(der_res).decode("ascii")
+
+
+#aia = cert.extensions.get_extension_for_oid(ExtensionOID.AUTHORITY_INFORMATION_ACCESS).value
+#ocsps = [ia for ia in aia if ia.access_method == AuthorityInformationAccessOID.OCSP]
+#if not ocsps:
+#    raise Exception(f'no ocsp server entry in AIA')
+#print(ocsps[0].access_location.value)
+
+responder_url = "https://hubject.com"
+ocsp_req_url = f"{responder_url}{req_path}"
+
+req = urllib.request.Request(ocsp_req_url)
+with urllib.request.urlopen(req) as res:
+    body = res.read()
+
+# validate the OCSP check
+ocsp_resp = ocsp.load_der_ocsp_response(body)
+print("ocsp response status: " + str(ocsp_resp.response_status))
