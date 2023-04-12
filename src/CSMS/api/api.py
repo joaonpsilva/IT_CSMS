@@ -66,8 +66,8 @@ async def get_user_byEmail(email:str):
 
 
 @app.post("/create_GroupidToken/", status_code=201)
-async def create_GroupidToken(type:enums.IdTokenType = enums.IdTokenType.local, user=Depends(auth_handler.check_permission_level_2)):
-    return await service.send_request("create_new_Group_IdToken", payload={"type": type}, destination="SQL_DB")
+async def create_GroupidToken(type:enums.IdTokenType = enums.IdTokenType.local, id_token:str=None, user=Depends(auth_handler.check_permission_level_2)):
+    return await service.send_request("create_new_Group_IdToken", payload={"type": type, "id_token":id_token}, destination="SQL_DB")
 
 @app.post("/create_idToken/", status_code=201)
 async def create_idToken(id_token_info:schemas.new_IdToken, user=Depends(auth_handler.check_permission_level_2)):
