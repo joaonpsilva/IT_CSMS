@@ -51,5 +51,6 @@ class new_IdToken:
     language1 : str = None
     language2 : str = None
     valid : bool = True
+    id_token: str = None
     type:enums.IdTokenType = enums.IdTokenType.local
 

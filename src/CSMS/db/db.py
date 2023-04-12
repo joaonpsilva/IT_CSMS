@@ -174,15 +174,15 @@ class DataBase:
             return {"approved" : False}
     
 
-    def create_new_Group_IdToken(self, type, **kwargs):
-        id_token = GroupIdToken(type=type)
+    def create_new_Group_IdToken(self, type=None, id_token=None, **kwargs):
+        id_token = GroupIdToken(type=type, id_token=id_token)
         self.session.add(id_token)
         return id_token.get_dict_obj()
     
 
-    def create_new_IdToken(self, type, cp_id, **kwargs):
+    def create_new_IdToken(self, cp_id, type=None, id_token=None, **kwargs):
         
-        id_token = IdToken(type=type)
+        id_token = IdToken(type=type, id_token=id_token)
         id_token_info = IdTokenInfo(**kwargs)
         
         evses = self.session.query(EVSE).all()
