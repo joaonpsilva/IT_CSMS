@@ -58,15 +58,21 @@ def validate_issuer(cert, issuer):  # cert = certificado a validar, issuer= enti
             issuer_public_key = issuer.public_key()
 
             # Verify the signature using the public key
-            #issuer_public_key.verify(cert.signature,cert.tbs_certificate_bytes,cert.signature_hash_algorithm)
 
-            # Verify the signature using the public key
-            ecdsa_key = issuer_public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
-            vk = ecdsa.VerifyingKey.from_pem(ecdsa_key)
-            vk.verify(cert.signature, cert.tbs_certificate_bytes, hashfunc=sha256, sigdecode=sigdecode_der)
+            try:
+                #hubject certificaye
+                ecdsa_key = issuer_public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
+                vk = ecdsa.VerifyingKey.from_pem(ecdsa_key)
+                vk.verify(cert.signature, cert.tbs_certificate_bytes, hashfunc=sha256, sigdecode=sigdecode_der)
+            except:
+
+                #Regular Certificate
+                issuer_public_key.verify(cert.signature,cert.tbs_certificate_bytes,padding.PKCS1v15(),cert.signature_hash_algorithm)
 
             return True
         except:
+            import traceback
+            print(traceback.format_exc())
             return False
             
 
@@ -121,10 +127,16 @@ def validate_cert(cert, flag=False):
 data = open("root.pem", "rb")
 data = data.read()
 cert = x509.load_pem_x509_certificate(data, default_backend())
-
 cert_dict[cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value] = cert
-
 print(validate_cert(cert))
+
+data = open("certificate.pem", "rb")
+data = data.read()
+cert = x509.load_pem_x509_certificate(data, default_backend())
+cert_dict[cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value] = cert
+print(validate_cert(cert))
+
+exit(0)
 
 ################################################
 
