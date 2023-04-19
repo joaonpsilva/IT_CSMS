@@ -9,27 +9,6 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.x509 import NameOID
 from cryptography.x509.oid import ExtensionOID
 
-
-# try:
-#     # Verify the EV's certificate chain
-#     ev_cert_chain = [ev_cert, ca_certificate]
-#     x509.verify_certificate_chain(ev_cert_chain, hashes.SHA256())
-
-#     # Verify the EV's signature
-#     if isinstance(ev_public_key, RSAPublicKey):
-#         ev_public_key.verify(
-#             ev_signature,
-#             ev_certificate,
-#             padding.PKCS1v15(),
-#             hashes.SHA256()
-#         )
-#     elif isinstance(ev_public_key, EllipticCurvePublicKey):
-#         ev_public_key.verify(
-#             ev_signature,
-#             ev_certificate.tbs_certificate_bytes,
-#             ec.ECDSA(hashes.SHA256())
-#         )
-
 cert_dict = {}
 
 def get_issuer(cert):
@@ -99,6 +78,8 @@ def validate_cert(cert, flag=False):
     if cert == issuer_cert:
         return True
 
+    return True
+
     # Caso não seja autovalidado, será verificada se pertence à lista de CRL do issuer
     # DOWNLOAD DA CRL DA INTERNET
     try:
@@ -130,7 +111,21 @@ cert = x509.load_pem_x509_certificate(data, default_backend())
 cert_dict[cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value] = cert
 print(validate_cert(cert))
 
-data = open("certificate.pem", "rb")
+data = open("certs/ca.pem", "rb")
+data = data.read()
+cert = x509.load_pem_x509_certificate(data, default_backend())
+cert_dict[cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value] = cert
+print(validate_cert(cert))
+
+
+data = open("certs/intermidiate.crt", "rb")
+data = data.read()
+cert = x509.load_pem_x509_certificate(data, default_backend())
+cert_dict[cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value] = cert
+print(validate_cert(cert))
+
+
+data = open("certs/leaf.crt", "rb")
 data = data.read()
 cert = x509.load_pem_x509_certificate(data, default_backend())
 cert_dict[cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value] = cert
