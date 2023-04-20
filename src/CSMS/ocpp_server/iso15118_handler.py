@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 import datetime
 import os
 import wget
+import traceback
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -38,61 +39,26 @@ class ISO15118_Handler:
             self.issuer_cert = ISO15118_Handler.cert_dict[self.issuer]
 
 
-    def validate_time(self):
-            not_valid_before = self.cert.not_valid_before
-            not_valid_after = self.cert.not_valid_after
-            now = datetime.datetime.now()
-            if not (not_valid_before < now < not_valid_after):
-                return False
-            return True
-
-
     def validate_issuer(self):  # cert = certificado a validar, issuer= entidade acima na cadeia
-            
+        try:
+            issuer_public_key = self.issuer_cert.public_key()
+
+            # Verify the signature using the public key
             try:
-                issuer_public_key = self.issuer_cert.public_key()
-
-                # Verify the signature using the public key
-                try:
-                    #hubject certificaye
-                    ecdsa_key = issuer_public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
-                    vk = ecdsa.VerifyingKey.from_pem(ecdsa_key)
-                    vk.verify(self.cert.signature, self.cert.tbs_certificate_bytes, hashfunc=sha256, sigdecode=sigdecode_der)
-                except:
-
-                    #Regular Certificate
-                    issuer_public_key.verify(self.cert.signature,self.cert.tbs_certificate_bytes,padding.PKCS1v15(),self.cert.signature_hash_algorithm)
-
-                return True
+                #hubject certificaye
+                ecdsa_key = issuer_public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
+                vk = ecdsa.VerifyingKey.from_pem(ecdsa_key)
+                vk.verify(self.cert.signature, self.cert.tbs_certificate_bytes, hashfunc=sha256, sigdecode=sigdecode_der)
             except:
-                import traceback
-                print(traceback.format_exc())
-                return False
-    
+                #Regular Certificate
+                issuer_public_key.verify(self.cert.signature,self.cert.tbs_certificate_bytes,padding.PKCS1v15(),self.cert.signature_hash_algorithm)
 
-    def validate_cert(self, flag=False):
-        # verifica a data de validade
-        if not self.validate_time():  # Verifica a data
-            print("Certificado expirado")
-            return False
-
-        # vê o issuer
-        self.check_issuer()  
-
-        # Vê se consegue estabelecer uma cadeia ( se o issuer está np dicionario com os issuers conhecidos)
-        if self.issuer_cert is None:
-            print("Não foi possivel estabelecer uma cadeia de certificados")
-            return False
-
-        # Valida a chave publica do cert, com as informações do issuer
-        if not self.validate_issuer():
-            print("Certificado não foi validado pelo issuer")
-            return False
-
-        # Se o issuer for o mesmo que o cert, ele será autovalidado
-        if self.cert == self.issuer_cert:
             return True
+        except:
+            print(traceback.format_exc())
+            return False
 
+    def check_crl(self):   
         # Caso não seja autovalidado, será verificada se pertence à lista de CRL do issuer
         # DOWNLOAD DA CRL DA INTERNET
         try:
@@ -113,11 +79,41 @@ class ISO15118_Handler:
                 return False
             os.remove(CRL)
         except:
-            if not flag:
-                print("CRL não encontrado")
-                return False
-            
-            
+            print("CRL não encontrado")
+            return False
+        
+        return True
+    
+
+    def validate_cert(self, crl=False):
+        #Date validation
+        if not self.cert.not_valid_before < datetime.datetime.now() < self.cert.not_valid_after:
+            print("Certificado expirado")
+            return False
+
+        try:
+            self.check_issuer() 
+        except:
+            return False 
+
+        #Issuer certificate is not local
+        if self.issuer_cert is None:
+            return False
+
+        # Valida a chave publica do cert, com as informações do issuer
+        if not self.validate_issuer():
+            print("Certificado não foi validado pelo issuer")
+            return False
+
+        # Se o issuer for o mesmo que o cert, ele será autovalidado
+        if self.cert == self.issuer_cert:
+            return True
+
+        if crl:
+            return self.check_crl()
+        return True
+
+        
     def get_issuer_url(self):
         aia = self.cert.extensions.get_extension_for_oid(ExtensionOID.AUTHORITY_INFORMATION_ACCESS).value
         issuers = [ia for ia in aia if ia.access_method == AuthorityInformationAccessOID.OCSP]
@@ -126,7 +122,7 @@ class ISO15118_Handler:
         return issuers[0].access_location.value
     
 
-    def ocsp_request(self, hash_algorithm, issuer_name_hash, issuer_key_hash, serial_number, responder_url):
+    def ocsp_request(hash_algorithm, issuer_name_hash, issuer_key_hash, serial_number, responder_url):
         builder = ocsp.OCSPRequestBuilder()
         builder.add_certificate_by_hash(bytes(issuer_name_hash, encoding="utf-8"), bytes(issuer_key_hash, encoding="utf-8"), int(serial_number), getattr(hashes, hash_algorithm)())
         req = builder.build()
@@ -139,7 +135,9 @@ class ISO15118_Handler:
         if ocsp_resp.ok:
             ocsp_decoded = ocsp.load_der_ocsp_response(ocsp_resp.content)
             if ocsp_decoded.response_status == OCSPResponseStatus.SUCCESSFUL:
-                return ocsp_decoded.certificate_status
+                return ocsp_decoded.certificate_status == OCSPResponseStatus.SUCCESSFUL
             else:
-                raise Exception(f'decoding ocsp response failed: {ocsp_decoded.response_status}')
-        raise Exception(f'fetching ocsp cert status failed with response status: {ocsp_resp.status_code}')
+                print(f'decoding ocsp response failed: {ocsp_decoded.response_status}')
+                return False
+        print(f'fetching ocsp cert status failed with response status: {ocsp_resp.status_code}')
+        return False

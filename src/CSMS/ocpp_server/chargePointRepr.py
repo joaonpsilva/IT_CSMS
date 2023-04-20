@@ -10,7 +10,7 @@ import dateutil.parser
 from sys import getsizeof
 import traceback
 from rabbit_mq.exceptions import ValidationError, OtherError
-
+from CSMS.ocpp_server.iso15118_handler import ISO15118_Handler
 from rabbit_mq.Rabbit_Message import Topic_Message
 
 
@@ -694,36 +694,6 @@ class ChargePoint(cp):
         return call_result.MeterValuesPayload()
 
     
-    def authorize_certificate(self, hash_algorithm, issuer_name_hash, issuer_key_hash, serial_number, responder_url):
-        
-        try:
-            from cryptography.x509 import ocsp
-            import base64
-            from cryptography.hazmat.primitives import serialization, hashes
-            import urllib
-
-            builder = ocsp.OCSPRequestBuilder()
-            builder.add_certificate_by_hash(bytes(issuer_name_hash, encoding="utf-8"), bytes(issuer_key_hash, encoding="utf-8"), int(serial_number), getattr(hashes, hash_algorithm)())
-            
-            req = builder.build()
-            der_res = req.public_bytes(serialization.Encoding.DER)
-            req_path = base64.b64encode(der_res).decode("ascii")
-            ocsp_req_url = f"{responder_url}{req_path}"
-
-            req = urllib.request.Request(ocsp_req_url)
-
-            with urllib.request.urlopen(req) as res:
-                body = res.read()
-            # validate the OCSP check
-            ocsp_resp = ocsp.load_der_ocsp_response(body)
-            print("ocsp response status: " + str(ocsp_resp.response_status))
-
-            return True
-        except:
-            self.logger.error(traceback.format_exc())
-            return False
-    
-    
     @on('Authorize')
     async def on_Authorize(self, id_token, certificate=None, iso15118_certificate_hash_data=None):
 
@@ -736,7 +706,7 @@ class ChargePoint(cp):
             certificate_status = enums.AuthorizeCertificateStatusType.accepted
 
             for i in iso15118_certificate_hash_data:    
-                if not self.authorize_certificate(**i): 
+                if not ISO15118_Handler.ocsp_request(**i): 
                     certificate_status = enums.AuthorizeCertificateStatusType.cert_chain_error
                     break
         
