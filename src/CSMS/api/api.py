@@ -289,6 +289,40 @@ async def CRUD(payload: schemas.CRUD_Payload, user=Depends(auth_handler.check_pe
     return await service.send_request(payload.operation, payload=payload, destination="SQL_DB")
 
 
+@app.get("/ocsp_intermidiate/{cert_data:path}")
+def ocsp(cert_data: str):
+    import datetime
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.x509 import load_pem_x509_certificate, ocsp
+    from cryptography.hazmat.backends import default_backend
+
+    #ocsp_req = ocsp.load_der_ocsp_request(cert_data)
+    #cert = load_pem_x509_certificate(cert_data)
+
+    #data = open("certs/intermidiate.crt", "rb")
+    #data = data.read()
+    issuer_cert = load_pem_x509_certificate(data, default_backend())
+
+    data = open("certs/intermidiate.key", "rb")
+    data = data.read()
+    responder_key = serialization.load_pem_private_key(data, None)
+
+    builder = ocsp.OCSPResponseBuilder()
+    builder = builder.add_response(
+        #cert=cert,
+        issuer=issuer_cert, algorithm=hashes.SHA256(),
+        cert_status=ocsp.OCSPCertStatus.GOOD,
+        this_update=datetime.datetime.now(),
+        next_update=datetime.datetime.now(),
+        revocation_time=None, revocation_reason=None
+    ).responder_id(
+        ocsp.OCSPResponderEncoding.HASH, issuer_cert
+    )
+    response = builder.sign(responder_key, hashes.SHA256())
+    
+    return response
+
+
 @app.get('/stream')
 async def message_stream(request: Request, events: List[enums.Action]= Query(
                     [],

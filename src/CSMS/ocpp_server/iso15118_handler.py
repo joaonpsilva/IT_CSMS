@@ -58,6 +58,7 @@ class ISO15118_Handler:
             print(traceback.format_exc())
             return False
 
+
     def check_crl(self):   
         # Caso não seja autovalidado, será verificada se pertence à lista de CRL do issuer
         # DOWNLOAD DA CRL DA INTERNET
@@ -135,7 +136,7 @@ class ISO15118_Handler:
         if ocsp_resp.ok:
             ocsp_decoded = ocsp.load_der_ocsp_response(ocsp_resp.content)
             if ocsp_decoded.response_status == OCSPResponseStatus.SUCCESSFUL:
-                return ocsp_decoded.certificate_status == OCSPResponseStatus.SUCCESSFUL
+                return ocsp_decoded.certificate_status == ocsp.OCSPCertStatus.GOOD
             else:
                 print(f'decoding ocsp response failed: {ocsp_decoded.response_status}')
                 return False

@@ -80,36 +80,7 @@ def validate_cert(cert, flag=False):
 
     return True
 
-    # Caso não seja autovalidado, será verificada se pertence à lista de CRL do issuer
-    # DOWNLOAD DA CRL DA INTERNET
-    try:
-        crl_url = (cert.extensions.get_extension_for_oid(ExtensionOID.CRL_DISTRIBUTION_POINTS).value[0].full_name[0].value)
-        CRL = wget.download(crl_url,bar="")
-        # Leitura da CRL descarregada
-        path = os.path.abspath(CRL)
-        data = open(path, "rb")
-        data = data.read()
-        try:
-            crl = x509.load_pem_x509_crl(data, default_backend())   
-        except:
-            crl = x509.load_der_x509_crl(data, default_backend())
-        # Verificação se o certificado está na CRL
-        if cert in crl:
-            print("Certificado Revogado")
-            os.remove(CRL)
-            return False
-        os.remove(CRL)
-    except:
-        if not flag:
-            print("CRL não encontrado")
-            return False
 
-
-data = open("root.pem", "rb")
-data = data.read()
-cert = x509.load_pem_x509_certificate(data, default_backend())
-cert_dict[cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value] = cert
-print(validate_cert(cert))
 
 data = open("certs/ca.pem", "rb")
 data = data.read()

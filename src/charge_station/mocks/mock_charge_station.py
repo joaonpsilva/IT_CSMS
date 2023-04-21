@@ -87,8 +87,39 @@ class ChargePoint(cp):
         response = await self.call(request)
     
 
+    async def iso_auth(self):
+        from cryptography.x509 import load_pem_x509_certificate, ocsp
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.x509 import NameOID
+        import hashlib
 
+        data = open("certs/leaf.crt", "rb")
+        data = data.read()
+        cert = load_pem_x509_certificate(data, default_backend())
+
+        serial_number = cert.serial_number
+
+        data = open("certs/intermidiate.crt", "rb")
+        data = data.read()
+        issuer = load_pem_x509_certificate(data, default_backend())
     
+        hash_name=hashlib.sha256(issuer.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value.encode())
+        hash_public_key = hashlib.sha256(str(issuer.public_key()).encode())
+
+        request = call.AuthorizePayload(
+            id_token={"id_token":"FRTRIC00618333C","type":"eMAID"},
+            certificate=str(data),
+            iso15118_certificate_hash_data=[{"hash_algorithm":"SHA256",
+                                         "issuer_key_hash":str(hash_public_key),
+                                         "issuer_name_hash":str(hash_name),
+                                         "serial_number":str(serial_number),
+                                         "responder_uRL":"http://localhost:8000/ocsp_intermidiate/"}]              
+        )
+
+        response = await self.call(request)
+        return response.id_token_info['status'] == "Accepted"
+        
+
     async def authorizeRequest(self):
 
         request = call.AuthorizePayload(**{"id_token":{"id_token":"FRTRIC00618333C","type":"eMAID"},
@@ -109,7 +140,6 @@ class ChargePoint(cp):
                                            "responder_uRL":"https://7kravoouwj.execute-api.eu-west-1.amazonaws.com/test/OCSP-Responder",
                                            "serial_number":"3"}]})
         
-
         #request = call.AuthorizePayload(
         #    id_token=datatypes.IdTokenType(
         #        id_token="3e19b1cc-7858-440c-bd7f-7335555841bd",
@@ -704,7 +734,8 @@ async def get_input(cp):
         "authorize" : cp.authorizeRequest,
         "start_cable" : cp.startTransaction_CablePluginFirst,
         "start_unsorted" : cp.unsorted_transaction,
-        "notify_limit" : cp.NotifyChargingLimitRequest
+        "notify_limit" : cp.NotifyChargingLimitRequest,
+        "iso": cp.iso_auth
     }
 
     while True:
