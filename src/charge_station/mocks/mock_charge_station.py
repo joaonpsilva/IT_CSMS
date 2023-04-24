@@ -103,8 +103,8 @@ class ChargePoint(cp):
         data = data.read()
         issuer = load_pem_x509_certificate(data, default_backend())
     
-        hash_name=hashlib.sha256(issuer.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value.encode())
-        hash_public_key = hashlib.sha256(str(issuer.public_key()).encode())
+        hash_name=hashlib.sha256(issuer.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value.encode()).hexdigest()
+        hash_public_key = hashlib.sha256(issuer.public_key()).hexdigest()
 
         request = call.AuthorizePayload(
             id_token={"id_token":"FRTRIC00618333C","type":"eMAID"},
@@ -112,7 +112,7 @@ class ChargePoint(cp):
             iso15118_certificate_hash_data=[{"hash_algorithm":"SHA256",
                                          "issuer_key_hash":str(hash_public_key),
                                          "issuer_name_hash":str(hash_name),
-                                         "serial_number":str(serial_number),
+                                         "serial_number":str("1234"),
                                          "responder_uRL":"http://localhost:8000/ocsp_intermidiate/"}]              
         )
 
