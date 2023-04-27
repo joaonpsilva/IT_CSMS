@@ -124,8 +124,14 @@ class ISO15118_Handler:
     
 
     def ocsp_request(hash_algorithm, issuer_name_hash, issuer_key_hash, serial_number, responder_url):
+
+        issuer_name_hash = bytes.fromhex(issuer_name_hash)
+        issuer_key_hash = bytes.fromhex(issuer_key_hash)
+        serial_number = int(serial_number)
+        hash_algorithm = getattr(hashes, hash_algorithm)()
+
         builder = ocsp.OCSPRequestBuilder()
-        builder.add_certificate_by_hash(bytes(issuer_name_hash, encoding="utf-8"), bytes(issuer_key_hash, encoding="utf-8"), int(serial_number), getattr(hashes, hash_algorithm)())
+        builder= builder.add_certificate_by_hash(issuer_name_hash, issuer_key_hash, serial_number, hash_algorithm)
         req = builder.build()
 
         der_res = req.public_bytes(serialization.Encoding.DER)
@@ -134,7 +140,7 @@ class ISO15118_Handler:
         ocsp_resp = requests.get(urljoin(responder_url + '/', req_path))
 
         if ocsp_resp.ok:
-            ocsp_decoded = ocsp.load_der_ocsp_response(ocsp_resp.content)
+            ocsp_decoded = ocsp.load_der_ocsp_response(bytes.fromhex(ocsp_resp.content.decode("utf-8")[1:-1]))
             if ocsp_decoded.response_status == OCSPResponseStatus.SUCCESSFUL:
                 return ocsp_decoded.certificate_status == ocsp.OCSPCertStatus.GOOD
             else:

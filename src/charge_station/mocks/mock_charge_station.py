@@ -91,29 +91,30 @@ class ChargePoint(cp):
         from cryptography.x509 import load_pem_x509_certificate, ocsp
         from cryptography.hazmat.backends import default_backend
         from cryptography.x509 import NameOID
+        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
         import hashlib
+        from cryptography.hazmat.primitives import serialization, hashes
 
-        data = open("certs/leaf.crt", "rb")
+        data = open("certs/leaf/leaf.crt", "rb")
         data = data.read()
         cert = load_pem_x509_certificate(data, default_backend())
 
-        serial_number = cert.serial_number
-
-        data = open("certs/intermidiate.crt", "rb")
+        data = open("certs/intermidiate/intermidiate.crt", "rb")
         data = data.read()
         issuer = load_pem_x509_certificate(data, default_backend())
-    
-        hash_name=hashlib.sha256(issuer.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value.encode()).hexdigest()
-        hash_public_key = hashlib.sha256(issuer.public_key()).hexdigest()
+
+        serial_number = cert.serial_number
+        hash_name=hashlib.sha256(issuer.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value.encode()).digest()
+        hash_public_key=hashlib.sha256(issuer.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)).digest()
 
         request = call.AuthorizePayload(
             id_token={"id_token":"FRTRIC00618333C","type":"eMAID"},
             certificate=str(data),
             iso15118_certificate_hash_data=[{"hash_algorithm":"SHA256",
-                                         "issuer_key_hash":str(hash_public_key),
-                                         "issuer_name_hash":str(hash_name),
-                                         "serial_number":str("1234"),
-                                         "responder_uRL":"http://localhost:8000/ocsp_intermidiate/"}]              
+                                         "issuer_key_hash":hash_public_key.hex(),
+                                         "issuer_name_hash":hash_name.hex(),
+                                         "serial_number":"1234",
+                                         "responder_uRL":"http://localhost:8001/ocsp_intermidiate/"}]              
         )
 
         response = await self.call(request)
