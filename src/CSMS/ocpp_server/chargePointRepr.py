@@ -10,7 +10,7 @@ import dateutil.parser
 from sys import getsizeof
 import traceback
 from rabbit_mq.exceptions import ValidationError, OtherError
-from CSMS.ocpp_server.iso15118_handler import ISO15118_Handler
+from CSMS.ocpp_server import iso15118_handler
 from rabbit_mq.Rabbit_Message import Topic_Message
 
 
@@ -706,7 +706,7 @@ class ChargePoint(cp):
             certificate_status = enums.AuthorizeCertificateStatusType.accepted
 
             for i in iso15118_certificate_hash_data:    
-                if not ISO15118_Handler.ocsp_request(**i): 
+                if not iso15118_handler.ocsp_request(**i): 
                     certificate_status = enums.AuthorizeCertificateStatusType.cert_chain_error
                     break
         
