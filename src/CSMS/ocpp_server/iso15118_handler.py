@@ -21,12 +21,11 @@ from cryptography.hazmat.primitives.asymmetric import padding
 import os
 
 cert_dict = {}
-path_to_rootCA = os.fsencode("certs/root/")
+path_to_rootCA = "certs/root/"
     
 for file in os.listdir(path_to_rootCA):
-    filename = os.fsdecode(file)
-    if filename.endswith(".pem"):
-        data = open(os.path.join(path_to_rootCA, filename), "rb")
+    if file.endswith(".pem"):
+        data = open(os.path.join(path_to_rootCA, file), "rb")
         data = data.read()
         cert = x509.load_pem_x509_certificate(data, default_backend())
         cert_dict[cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value] = cert
@@ -109,7 +108,7 @@ def check_crl(cert):
     return True
 
 
-def validate_cert(self,cert, crl=False):
+def validate_cert(cert, crl=False):
     cert = x509.load_pem_x509_certificate(cert, default_backend())
     flag = False 
     

@@ -642,6 +642,11 @@ class ChargePoint(cp):
     async def getInstalledCertificateIds(self, **kwargs):
         request = call.GetInstalledCertificateIdsPayload(**kwargs)
         return await self.call(request, suppress=False)
+    
+
+    async def installCertificate(self, **kwargs):
+        request = call.InstallCertificatePayload(**kwargs)
+        return await self.call(request, suppress=False)
         
 
 #######################Funtions staring from the CP Initiative

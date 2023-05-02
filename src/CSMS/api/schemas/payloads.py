@@ -184,7 +184,7 @@ class HeartbeatPayload:
 
 @dataclass
 class InstallCertificatePayload:
-    certificate_type: str
+    certificate_type: enums.InstallCertificateUseType
     certificate: str
 
 
