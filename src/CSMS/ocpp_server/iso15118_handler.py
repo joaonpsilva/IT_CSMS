@@ -109,7 +109,7 @@ def check_crl(cert):
 
 
 def validate_cert(cert, crl=False):
-    cert = x509.load_pem_x509_certificate(cert, default_backend())
+    cert = x509.load_pem_x509_certificate(bytes(cert, "utf-8"), default_backend())
     flag = False 
     
     while True:
