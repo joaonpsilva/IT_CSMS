@@ -12,6 +12,8 @@ import signal
 import sys
 import json
 
+import ssl
+
 logging.basicConfig(level=logging.INFO)
 
 LOGGER = logging.getLogger("Ocpp_Server")
@@ -53,7 +55,7 @@ class OCPP_Server:
         sys.exit(0)
     
 
-    async def run(self, port, rb, variables_file, not_secure):
+    async def run(self, port, rb, variables_file, security_profile):
         #broker handles the rabbit mq queues and communication between services
         try:
             self.broker = Rabbit_Handler("Ocpp_Server", self.handle_api_request)
@@ -75,18 +77,32 @@ class OCPP_Server:
             LOGGER.error("Could not read variables file")
 
         #start server
-        await self.start_server(port, not_secure)
+        await self.start_server(port, security_profile)
     
 
-    async def start_server(self, port, not_secure):
+    async def start_server(self, port, security_profile):
 
-        BasicAuth_Custom_Handler = Basic_auth_with_broker(self.broker) if not not_secure else None
+        BasicAuth_Custom_Handler=None
+        ssl_context=None
+
+        #Security profile settings
+        if security_profile in [1, 2]:
+            BasicAuth_Custom_Handler = Basic_auth_with_broker(self.broker)
+
+        if security_profile == 2:
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            # Generate with Lets Encrypt, copied to this location, chown to current user and 400 permissions
+            ssl_cert = "certs/ssl/localhost.crt"
+            ssl_key = "certs/ssl/localhost.decrypted.key"
+            ssl_context.load_cert_chain(ssl_cert, keyfile=ssl_key)
+
         server = await websockets.serve(
             self.on_cp_connect,
             '0.0.0.0',
             port,
             subprotocols=['ocpp2.0.1'],
-            create_protocol=BasicAuth_Custom_Handler
+            create_protocol=BasicAuth_Custom_Handler, 
+            ssl=ssl_context
         )
         LOGGER.info("WebSocket Server Started")
 
@@ -168,7 +184,7 @@ if __name__ == '__main__':
     parser.add_argument("-p", type=int, default = 9000, help="OCPP server port")
     parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
     parser.add_argument("-vf", type=str, default = "CSMS/ocpp_server/ocpp_server_variables.json", help="variables_file")
-    parser.add_argument("-ns", action="store_true", help="turn off security")
+    parser.add_argument("-s", type=int, default = 2, help="Security Profile")
 
     args = parser.parse_args()
 
@@ -179,4 +195,4 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, ocpp_server.shut_down)
     signal.signal(signal.SIGTERM, ocpp_server.shut_down)
 
-    asyncio.run(ocpp_server.run(args.p, args.rb, args.vf, args.ns))
+    asyncio.run(ocpp_server.run(args.p, args.rb, args.vf, args.s))
