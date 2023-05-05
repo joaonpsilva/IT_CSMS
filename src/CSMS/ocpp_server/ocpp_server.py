@@ -91,6 +91,8 @@ class OCPP_Server:
 
         if security_profile == 2:
             ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            #ssl_context.verify_mode = ssl.CERT_REQUIRED
+
             # Generate with Lets Encrypt, copied to this location, chown to current user and 400 permissions
             ssl_cert = "certs/ssl/localhost.crt"
             ssl_key = "certs/ssl/localhost.decrypted.key"

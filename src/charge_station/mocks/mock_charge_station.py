@@ -747,11 +747,19 @@ async def get_input(cp):
 async def main(cp_id):
 
     logging.info("Trying to connect to csms with id %s", cp_id)
+    
+    import ssl
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
+    ssl_cert = "certs/ssl/localhost.crt"
+    ssl_key = "certs/ssl/localhost.decrypted.key"
+    ssl_context.load_verify_locations("certs/root/ca.pem")
+    ssl_context.load_cert_chain(ssl_cert, keyfile=ssl_key)
 
     async with websockets.connect(
         'wss://{cp_id}:{password}@localhost:9000/{cp_id}'.format(cp_id = cp_id, password='passcp1'),
-        
-            subprotocols=['ocpp2.0.1']
+            subprotocols=['ocpp2.0.1'],
+            ssl=ssl_context
     ) as ws:
 
         cp = ChargePoint(cp_id, ws)
