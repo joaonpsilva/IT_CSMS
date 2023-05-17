@@ -12,9 +12,13 @@ import signal
 import sys
 import json
 
-import ssl
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+                    #filename="logs/log.txt",
+                    #filemode='a',
+                    format='%(asctime)s - %(name)s-%(levelname)s: %(message)s',
+                    datefmt='%D:%H:%M:%S',
+                    level=logging.INFO)
 
 LOGGER = logging.getLogger("Ocpp_Server")
 

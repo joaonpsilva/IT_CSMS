@@ -23,15 +23,16 @@ parser.add_argument("-p", type=int, default = 8000, help="OCPP server port")
 parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
 args = parser.parse_args()
 
+
+
+logging.basicConfig(
+                    #filename="logs/log.txt",
+                    #filemode='a',
+                    format='%(asctime)s - %(name)s-%(levelname)s: %(message)s',
+                    datefmt='%D:%H:%M:%S',
+                    level=logging.INFO)
+
 LOGGER = logging.getLogger("API")
-LOGGER.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-LOGGER.addHandler(ch)
 
 
 app = FastAPI()
