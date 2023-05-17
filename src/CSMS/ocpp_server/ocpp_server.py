@@ -93,14 +93,17 @@ class OCPP_Server:
         if security_profile in [1, 2]:
             BasicAuth_Custom_Handler = Basic_auth_with_broker(self.broker)
 
-        if security_profile == 2:
+        if security_profile >= 2:
             ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-            #ssl_context.verify_mode = ssl.CERT_REQUIRED
 
             # Generate with Lets Encrypt, copied to this location, chown to current user and 400 permissions
             ssl_cert = "certs/ssl/localhost.crt"
             ssl_key = "certs/ssl/localhost.decrypted.key"
             ssl_context.load_cert_chain(ssl_cert, keyfile=ssl_key)
+        
+        if security_profile == 3:
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+            ssl_context.load_verify_locations("certs/root/ca.pem")
 
         server = await websockets.serve(
             self.on_cp_connect,
@@ -190,7 +193,7 @@ if __name__ == '__main__':
     parser.add_argument("-p", type=int, default = 9000, help="OCPP server port")
     parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
     parser.add_argument("-vf", type=str, default = "CSMS/ocpp_server/ocpp_server_variables.json", help="variables_file")
-    parser.add_argument("-s", type=int, default = 2, help="Security Profile")
+    parser.add_argument("-s", type=int, default = 3, help="Security Profile")
 
     args = parser.parse_args()
 
