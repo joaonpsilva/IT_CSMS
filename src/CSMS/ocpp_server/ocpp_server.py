@@ -11,7 +11,7 @@ import argparse
 import signal
 import sys
 import json
-
+import ssl
 
 logging.basicConfig(
                     #filename="logs/log.txt",
