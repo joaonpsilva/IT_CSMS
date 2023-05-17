@@ -15,18 +15,14 @@ from rabbit_mq.exceptions import ValidationError, OtherError
 
 import dateutil.parser
 
+logging.basicConfig(
+                    #filename="logs/log.txt",
+                    #filemode='a',
+                    format='%(asctime)s - %(name)s-%(levelname)s: %(message)s',
+                    datefmt='%D:%H:%M:%S',
+                    level=logging.INFO)
 
 LOGGER = logging.getLogger("SQL_DB")
-LOGGER.setLevel(logging.DEBUG)
-
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-
-LOGGER.addHandler(ch)
 
 
 class DataBase:

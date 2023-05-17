@@ -38,14 +38,6 @@ class ChargePoint(cp):
         self.change_is_online = None
 
         self.logger = logging.getLogger(self.id)
-        self.logger.setLevel(logging.DEBUG)
-        # create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
-        # create formatter and add it to the handlers
-        formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
     
     
     async def send_CP_Message(self, method, content={}, **kwargs):
