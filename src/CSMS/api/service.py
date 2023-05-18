@@ -52,7 +52,7 @@ class API_Service:
     async def send_request(self, method, cp_id=None, payload=None, destination="Ocpp_Server"):
         message = Topic_Message(method=method, content=payload, cp_id = cp_id, origin="API", destination=destination)
         try:
-            if destination=="Ocpp_Server" and message.cp_id is None:
+            if message.content is not None and destination=="Ocpp_Server" and message.cp_id is None:
                 if "transaction_id" in message.content:
                     message.cp_id = (await self.getInfo_by_TransactionId(message.content["transaction_id"]))["cp_id"]
 
