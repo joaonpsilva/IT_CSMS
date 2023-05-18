@@ -150,6 +150,13 @@ class OCPP_Server:
             LOGGER.warning("Id already taken | Closing connection")
             return await websocket.close()
         
+
+        message = Topic_Message(destination="SQL_DB", method = "select", content={"table" : "Charge_Point", "mode":{"describe":False}})
+        response =  await self.broker.send_request_wait_response(message)
+        if charge_point_id not in [cp["cp_id"] for cp in response]:
+            LOGGER.warning("Unknown Charging Station Id")
+            return await websocket.close()
+        
         await self.verify_protocols(websocket)
 
         #create new charge point object that will handle the comunication

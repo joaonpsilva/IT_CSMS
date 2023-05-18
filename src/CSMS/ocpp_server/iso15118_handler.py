@@ -20,6 +20,10 @@ from ecdsa.util import sigdecode_der
 from cryptography.hazmat.primitives.asymmetric import padding
 import os
 
+import logging
+LOGGER = logging.getLogger("Ocpp_Server")
+
+
 cert_dict = {}
 path_to_rootCA = "certs/root/"
     
@@ -161,8 +165,12 @@ def ocsp_request(hash_algorithm, issuer_name_hash, issuer_key_hash, serial_numbe
     der_res = req.public_bytes(serialization.Encoding.DER)
     req_path = base64.b64encode(der_res).decode("ascii")
 
-    ocsp_resp = requests.get(urljoin(responder_url + '/', req_path))
-
+    try:
+        ocsp_resp = requests.get(urljoin(responder_url + '/', req_path))
+    except:
+        LOGGER.info("Failed to contact the ocsp server")
+        return False
+        
     if ocsp_resp.ok:
         ocsp_decoded = ocsp.load_der_ocsp_response(bytes.fromhex(ocsp_resp.content.decode("utf-8")[1:-1]))
         if ocsp_decoded.response_status == OCSPResponseStatus.SUCCESSFUL:
