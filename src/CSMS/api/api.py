@@ -253,12 +253,12 @@ async def getMonitoringReport(cp_id: str, payload: payloads.GetMonitoringReportP
     return await service.send_request("getMonitoringReport", cp_id, payload)
 
 
-@app.post("/Reset/{cp_id}", status_code=200)
+@app.post("/Reset/{cp_id}", status_code=200, response_model=call_result.ResetPayload)
 async def Reset(cp_id: str, payload: payloads.ResetPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("reset", cp_id, payload)
 
 
-@app.post("/GetTransactionStatus/{cp_id}", status_code=200)
+@app.post("/GetTransactionStatus/{cp_id}", status_code=200, response_model=call_result.GetTransactionStatusPayload)
 async def GetTransactionStatus(cp_id: str, payload: payloads.GetTransactionStatusPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getTransactionStatus", cp_id, payload)
 
@@ -267,7 +267,7 @@ async def GetTransactionStatus(transaction_id: str, user=Depends(auth_handler.ch
     return await service.send_request("getTransactionStatus", payload={"transaction_id":transaction_id})
 
 
-@app.post("/SetDisplayMessage/{cp_id}", status_code=200)
+@app.post("/SetDisplayMessage/{cp_id}", status_code=200, response_model=call_result.SetDisplayMessagePayload)
 async def SetDisplayMessage(cp_id: str, payload: payloads.SetDisplayMessagePayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("setDisplayMessage", cp_id, payload)
 
@@ -275,17 +275,17 @@ async def SetDisplayMessage(cp_id: str, payload: payloads.SetDisplayMessagePaylo
 async def GetDisplayMessages(cp_id: str, payload: payloads.GetDisplayMessagesPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getDisplayMessages", cp_id, payload)
 
-@app.post("/ClearDisplayMessage/{cp_id}", status_code=200)
+@app.post("/ClearDisplayMessage/{cp_id}", status_code=200, response_model=call_result.ClearDisplayMessagePayload)
 async def ClearDisplayMessage(cp_id: str, payload: payloads.ClearDisplayMessagePayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("clearDisplayMessage", cp_id, payload)
 
 
-@app.post("/getInstalledCertificateIds/{cp_id}", status_code=200)
+@app.post("/getInstalledCertificateIds/{cp_id}", status_code=200, response_model=call_result.GetInstalledCertificateIdsPayload)
 async def getInstalledCertificateIds(cp_id: str, payload: payloads.GetInstalledCertificateIdsPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getInstalledCertificateIds", cp_id, payload)
 
 
-@app.post("/InstallCertificate/{cp_id}", status_code=200)
+@app.post("/InstallCertificate/{cp_id}", status_code=200, response_model=call_result.InstallCertificatePayload)
 async def InstallCertificate(cp_id: str, certificate_type: enums.InstallCertificateUseType, certificate_path:str, user=Depends(auth_handler.check_permission_level_2)):
     payload = payloads.InstallCertificatePayload(certificate_type, open(certificate_path, "r").read())
     return await service.send_request("installCertificate", cp_id, payload)
