@@ -197,7 +197,7 @@ if __name__ == '__main__':
     parser.add_argument("-p", type=int, default = 9000, help="OCPP server port")
     parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
     parser.add_argument("-vf", type=str, default = "CSMS/ocpp_server/ocpp_server_variables.json", help="variables_file")
-    parser.add_argument("-s", type=int, default = 3, help="Security Profile")
+    parser.add_argument("-s", type=int, default = 1, help="Security Profile")
 
     args = parser.parse_args()
 
