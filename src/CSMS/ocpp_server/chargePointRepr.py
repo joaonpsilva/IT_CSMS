@@ -876,5 +876,5 @@ class ChargePoint(cp):
     
     @on("GetCertificateStatus")
     async def on_GetCertificateStatus(self, ocsp_request_data):
-        status = enums.GetCertificateStatusType.accepted if self.authorize_certificate(**ocsp_request_data) else enums.GetCertificateStatusType.failed
-        return call_result.GetCertificateStatusPayload(status=enums.GetCertificateStatusType.accepted)
+        status = enums.GetCertificateStatusType.accepted if iso15118_handler.ocsp_request(**ocsp_request_data) else enums.GetCertificateStatusType.failed
+        return call_result.GetCertificateStatusPayload(status=status)
