@@ -3,9 +3,7 @@ from fastapi import FastAPI, Depends, Query, Response, status, Request, HTTPExce
 from enum import Enum
 from typing import List, Optional
 from ocpp.v201 import call, call_result, enums
-from CSMS.api.schemas import datatypes
-from CSMS.api.schemas import payloads
-from CSMS.api.schemas import schemas
+from CSMS.api.schemas import datatypes, payloads, schemas, result_payloads
 from CSMS.api.auth import AuthHandler
 from CSMS.api.service import API_Service
 from rabbit_mq.exceptions import OtherError
@@ -36,13 +34,13 @@ service = API_Service()
 
 ##################################################################
 
-@app.post("/register", status_code=201)
+@app.post("/register", status_code=201, response_model=result_payloads.User)
 async def register(email: str, password:str, full_name:str, status:str, cust_id:int, id_token:str=None):
     values = {"email": email, "password":password, "full_name":full_name, "status":status, "cust_id":cust_id, "_id_token":id_token}
     return await service.send_request("register", payload=values, destination="SQL_DB")
 
 
-@app.get("/login", status_code=200)
+@app.get("/login", status_code=200, response_model=result_payloads.LoginToken)
 async def login(email: str, password:str):
     try:
         response = await service.send_request("login", payload={"email": email, "password":password}, destination="SQL_DB")
@@ -52,57 +50,61 @@ async def login(email: str, password:str):
         raise HTTPException(401, detail=e.args[0])
         
 
-@app.get("/users", status_code=200)
+@app.get("/users", status_code=200, response_model=List[result_payloads.User])
 async def getUsers():
     return await service.send_request("select", payload={"table": "User"}, destination="SQL_DB")
 
-@app.get("/users/{email}", status_code=200)
+
+@app.get("/users/{email}", status_code=200, response_model=List[result_payloads.User])
 async def get_user_byEmail(email:str):
     return await service.send_request("select", payload={"table": "User", "filters":{"email":email}}, destination="SQL_DB")
 
 
-@app.post("/create_GroupidToken/", status_code=201)
+@app.post("/create_GroupidToken/", status_code=201, response_model=result_payloads.IdToken)
 async def create_GroupidToken(type:enums.IdTokenType = enums.IdTokenType.local, id_token:str=None, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("create_new_Group_IdToken", payload={"type": type, "id_token":id_token}, destination="SQL_DB")
 
-@app.post("/create_idToken/", status_code=201)
+
+@app.post("/create_idToken/", status_code=201, response_model=result_payloads.IdToken)
 async def create_idToken(id_token_info:schemas.new_IdToken, user=Depends(auth_handler.check_permission_level_2)):
     return await service.create_new_IdToken(id_token_info)
+
 
 @app.post("/give_group_to_idToken/", status_code=201)
 async def give_group_to_idToken(id_token:str, group_id_token:str, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("update", payload={"table": "IdTokenInfo", "filters":{"_id_token":id_token}, "values":{"_group_id_token" : group_id_token}}, destination="SQL_DB")
 
 
-@app.get("/group_idTokens/", status_code=200)
+@app.get("/group_idTokens/", status_code=200, response_model=List[result_payloads.IdToken])
 async def group_idTokens(user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("select", payload={"table": "GroupIdToken"}, destination="SQL_DB")
 
 
-@app.get("/transactions", status_code=200)
+@app.get("/transactions", status_code=200, response_model=List[result_payloads.Transaction])
 async def getTransactions(transaction_id:str, user=Depends(auth_handler.check_permission_level_1)):
     return await service.send_request("select", payload={"table": "Transaction", "filters":{"transaction_id":transaction_id}}, destination="SQL_DB")
 
-@app.get("/transactions/open/by_IdToken", status_code=200)
+
+@app.get("/transactions/open/by_IdToken", status_code=200, response_model=List[result_payloads.Transaction])
 async def getOpenTransactionsByIdToken(user=Depends(auth_handler.check_permission_level_1)):
     if user["id_token"] is None:
         raise HTTPException(400, detail="User doesn't have an Id Token")
     return await service.send_request("get_Open_Transactions_byIdToken", payload={"id_token": user["id_token"]["id_token"]}, destination="SQL_DB")
 
 
-@app.get("/transactions/open", status_code=200)
+@app.get("/transactions/open", status_code=200, response_model=List[result_payloads.Transaction])
 async def getOpenTransactions(user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("select", payload={"table":"Transaction", "filters":{"active":True}}, destination="SQL_DB")
 
 
-@app.get("/transactions/{date}", status_code=200)
+@app.get("/transactions/{date}", status_code=200, response_model=List[result_payloads.Transaction])
 async def getOpenTransactionsByIdToken(date: datetime.datetime, user=Depends(auth_handler.check_permission_level_1)):
     if user["id_token"] is None:
         raise HTTPException(400, detail="User doesn't have an Id Token")
     return await service.send_request("get_Transactions_byDate", payload={"id_token": user["id_token"]["id_token"], "date":date}, destination="SQL_DB")
 
 
-@app.post("/charge/start", status_code=200)
+@app.post("/charge/start", status_code=200, response_model=call_result.RequestStartTransactionPayload)
 async def charge_start(evse_id: int, cp_id:str, user=Depends(auth_handler.check_permission_level_1)):
 
     if user["id_token"] is None:
@@ -117,33 +119,32 @@ async def charge_start(evse_id: int, cp_id:str, user=Depends(auth_handler.check_
     return await service.send_request("requestStartTransaction", cp_id=cp_id, payload=payload)
 
 
-@app.post("/charge/stop", status_code=200)
+@app.post("/charge/stop", status_code=200, response_model=call_result.RequestStopTransactionPayload)
 async def charge_stop(transaction_id: str, user=Depends(auth_handler.check_permission_level_1)):
     return await service.send_request("requestStopTransaction", payload={"transaction_id" : transaction_id})
 
 
-@app.post("/setmaxpower", status_code=200)
+@app.post("/setmaxpower", status_code=200, response_model=call_result.SetChargingProfilePayload)
 async def setmaxpower(transaction_id: str, max_power: int, user=Depends(auth_handler.check_permission_level_1)):
     return await service.setmaxpower(transaction_id, max_power)
 
 
-
-@app.post("/set_charging_limits", status_code=200)
+@app.post("/set_charging_limits", status_code=200, response_model=call_result.DataTransferPayload)
 async def set_charging_power(transaction_id: str, action:schemas.Charger_Action=None, power: int=None, max_soc:int=None, min_soc:int=None,user=Depends(auth_handler.check_permission_level_2)):
     return await service.set_transaction_limits(transaction_id, action, power, max_soc, min_soc)
 
 
-@app.get("/getTransactions")
+@app.get("/getTransactions", response_model=List[result_payloads.Transaction])
 async def getTransactions(user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("select", payload={"table" : schemas.DB_Tables.Transaction}, destination="SQL_DB")
 
 
-@app.get("/getConnected_ChargePoints/")
+@app.get("/getConnected_ChargePoints/", response_model=List[str])
 async def getConnected_ChargePoints():
     return await service.send_request("get_connected_cps")
 
 
-@app.get("/stations", status_code=200)
+@app.get("/stations", status_code=200,  response_model=List[result_payloads.Charge_Station])
 async def stations():
     return await service.send_request("select", payload={"table": "Charge_Point"}, destination="SQL_DB")
 
@@ -154,37 +155,37 @@ async def getStationById(cp_id : str):
     return await service.send_request("select", payload={"table": "Charge_Point", "filters":{"cp_id":cp_id}, "mode":mode}, destination="SQL_DB")
 
 
-@app.post("/update_auth_list/{cp_id}", status_code=200)
+@app.post("/update_auth_list/{cp_id}", status_code=200, response_model=List[call_result.SendLocalListPayload])
 async def update_auth_list(cp_id: str, update_type:schemas.Update_type,id_tokens:List[str]=None,user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_authList(cp_id, update_type, id_tokens)
 
 
-@app.post("/ReserveNow", status_code=200)
+@app.post("/ReserveNow", status_code=200, response_model=result_payloads.ReserveNowPayload)
 async def reserve_now(cp_id: str, evse_id: int, user=Depends(auth_handler.check_permission_level_1)):
     if user["id_token"] is None:
         raise HTTPException(400, detail="User doesn't have an Id Token")
     return await service.reserve(cp_id, evse_id, user["id_token"]["id_token"])
 
-@app.post("/cancel_Reservation", status_code=200)
+@app.post("/cancel_Reservation", status_code=200, response_model=call_result.CancelReservationPayload)
 async def cancel_Reservation(reservation_id : int, user=Depends(auth_handler.check_permission_level_1)):
     return await service.cancel_reservation(reservation_id)
 
 
-@app.post("/ChangeAvailability/{cp_id}", status_code=200)
+@app.post("/ChangeAvailability/{cp_id}", status_code=200, response_model=call_result.ChangeAvailabilityPayload)
 async def ChangeAvailability(cp_id: str, payload: payloads.ChangeAvailabilityPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("changeAvailability", cp_id, payload)
 
-@app.post("/UnlockConnector/{cp_id}", status_code=200)
+@app.post("/UnlockConnector/{cp_id}", status_code=200, response_model=call_result.UnlockConnectorPayload)
 async def UnlockConnector(cp_id: str, payload: payloads.UnlockConnectorPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("unlockConnector", cp_id, payload)
 
 
-@app.post("/GetVariables/{cp_id}", status_code=200)
+@app.post("/GetVariables/{cp_id}", status_code=200, response_model=call_result.GetVariablesPayload)
 async def GetVariables(cp_id: str, payload: payloads.GetVariablesPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("getVariables", cp_id, payload)
 
 
-@app.post("/SetVariables/{cp_id}", status_code=200)
+@app.post("/SetVariables/{cp_id}", status_code=200, response_model=call_result.SetVariablesPayload)
 async def SetVariables(cp_id: str, payload: payloads.SetVariablesPayload, user=Depends(auth_handler.check_permission_level_2)):
     return await service.send_request("setVariables", cp_id, payload)
 
