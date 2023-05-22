@@ -31,11 +31,11 @@ class API_Service:
         
         transaction_id = message.content["transaction_info"]["transaction_id"]
         if transaction_id not in self.transaction_cache:
-            self.transaction_cache[transaction_id] = {"cp_id": message.cp_id , "evse_id":None, "action": None}
+            self.transaction_cache[transaction_id] = {
+                "cp_id": message.cp_id ,
+                "evse_id":message.content["evse"]["id"] if "evse" in message.content else None,
+                "action": None}
 
-        if "evse" in message.content:
-            self.transaction_cache[transaction_id]["evse_id"] = message.content["evse"]["id"]
-        
         if message.content["event_type"] == enums.TransactionEventType.ended:
             self.transaction_cache.pop(transaction_id)
 
@@ -220,7 +220,7 @@ class API_Service:
                     "vendor_id": "MagnumCap",
                     "message_id": "v2g_action",
                     "data": {
-                        "evse_id": evse_id,
+                        #"evse_id": evse_id,
                         "v2g_action": {
                             "action": action
                 }}}
@@ -237,7 +237,7 @@ class API_Service:
                 "vendor_id": "MagnumCap",
                 "message_id": "v2g_action",
                 "data": {
-                    "evse_id": evse_id,
+                    #"evse_id": evse_id,
                     "change_profile": {
                         "power": power,
                         "min_soc": min_soc,
