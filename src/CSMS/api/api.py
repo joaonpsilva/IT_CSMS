@@ -1,7 +1,6 @@
 import uvicorn
 from fastapi import FastAPI, Depends, Query, Response, status, Request, HTTPException
 from enum import Enum
-
 from typing import List, Optional
 from ocpp.v201 import call, call_result, enums
 from CSMS.api.schemas import datatypes
@@ -12,6 +11,8 @@ from CSMS.api.service import API_Service
 from rabbit_mq.exceptions import OtherError
 import asyncio
 import logging
+import logging.config
+
 from sse_starlette.sse import EventSourceResponse
 
 import argparse
@@ -25,13 +26,7 @@ args = parser.parse_args()
 
 
 
-logging.basicConfig(
-                    #filename="logs/log.txt",
-                    #filemode='a',
-                    format='%(asctime)s - %(name)s-%(levelname)s: %(message)s',
-                    datefmt='%D:%H:%M:%S',
-                    level=logging.INFO)
-
+logging.config.fileConfig("log.ini", disable_existing_loggers=False)
 LOGGER = logging.getLogger("API")
 
 
@@ -340,4 +335,4 @@ async def main():
 
     
 if __name__ == '__main__':
-    uvicorn.run(app, host="0.0.0.0", port=args.p,loop= 'asyncio')
+    uvicorn.run(app, host="0.0.0.0", port=args.p,loop= 'asyncio',log_config="log.ini")

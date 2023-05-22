@@ -3,6 +3,7 @@ import asyncio
 from rabbit_mq.rabbit_handler import Rabbit_Handler
 
 import logging
+import logging.config
 from sqlalchemy import create_engine, update, select, delete, insert
 from sqlalchemy.orm import sessionmaker
 from CSMS.db.db_Tables import *
@@ -15,13 +16,7 @@ from rabbit_mq.exceptions import ValidationError, OtherError
 
 import dateutil.parser
 
-logging.basicConfig(
-                    #filename="logs/log.txt",
-                    #filemode='a',
-                    format='%(asctime)s - %(name)s-%(levelname)s: %(message)s',
-                    datefmt='%D:%H:%M:%S',
-                    level=logging.INFO)
-
+logging.config.fileConfig("log.ini", disable_existing_loggers=False)
 LOGGER = logging.getLogger("SQL_DB")
 
 

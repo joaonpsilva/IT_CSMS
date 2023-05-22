@@ -1,5 +1,6 @@
 import websockets
 import logging
+import logging.config
 from CSMS.ocpp_server.chargePointRepr import ChargePoint
 
 from rabbit_mq.rabbit_handler import Rabbit_Handler
@@ -13,14 +14,10 @@ import sys
 import json
 import ssl
 
-logging.basicConfig(
-                    #filename="logs/log.txt",
-                    #filemode='a',
-                    format='%(asctime)s - %(name)s-%(levelname)s: %(message)s',
-                    datefmt='%D:%H:%M:%S',
-                    level=logging.INFO)
 
+logging.config.fileConfig("log.ini", disable_existing_loggers=False)
 LOGGER = logging.getLogger("Ocpp_Server")
+
 
 def Basic_auth_with_broker(broker):
     class BasicAuth(websockets.BasicAuthWebSocketServerProtocol):
