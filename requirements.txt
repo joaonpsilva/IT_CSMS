@@ -14,3 +14,5 @@ python-decouple==3.8
 requests==2.25.1
 urllib3==1.26.5
 wget==3.2
+cryptography==39.0.2
+ecdsa==0.18.0
