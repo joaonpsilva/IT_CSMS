@@ -95,24 +95,37 @@ class ChargePoint(cp):
         import hashlib
         from cryptography.hazmat.primitives import serialization, hashes
 
-        #data = open("certs/leaf/leaf.crt", "rb").read()
-        #cert = load_pem_x509_certificate(data, default_backend())
-        #serial_number = cert.serial_number
+        iso15118_certificate_hash_data=[]
 
-        data = open("certs/intermidiate/intermidiate.crt", "rb").read()
-        issuer = load_pem_x509_certificate(data, default_backend())
-        
+        #load certificates
+        leaf = load_pem_x509_certificate(open("certs/leaf/leaf.crt", "rb").read(), default_backend())
+        issuer = load_pem_x509_certificate(open("certs/intermidiate/intermidiate.crt", "rb").read(), default_backend())
+        root = load_pem_x509_certificate(open("certs/root/ca.pem", "rb").read(), default_backend())
+
+        #extract info from intermidiate cert
         hash_name=hashlib.sha256(issuer.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value.encode()).digest()
         hash_public_key=hashlib.sha256(issuer.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)).digest()
+
+        iso15118_certificate_hash_data.append({"hash_algorithm":"SHA256",
+                                         "issuer_key_hash":hash_public_key.hex(),
+                                         "issuer_name_hash":hash_name.hex(),
+                                         "serial_number":"1",
+                                         "responder_uRL":"http://localhost:8001/ocsp_intermidiate/"})
+
+        #extract info from root cert
+        hash_name=hashlib.sha256(root.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value.encode()).digest()
+        hash_public_key=hashlib.sha256(root.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)).digest()
+
+        iso15118_certificate_hash_data.append({"hash_algorithm":"SHA256",
+                                         "issuer_key_hash":hash_public_key.hex(),
+                                         "issuer_name_hash":hash_name.hex(),
+                                         "serial_number":"2",
+                                         "responder_uRL":"http://localhost:8001/ocsp_intermidiate/"})
 
         request = call.AuthorizePayload(
             id_token={"id_token":"FRTRIC00618333C","type":"eMAID"},
             certificate=open("certs/leaf/leaf.crt", "r").read(),
-            iso15118_certificate_hash_data=[{"hash_algorithm":"SHA256",
-                                         "issuer_key_hash":hash_public_key.hex(),
-                                         "issuer_name_hash":hash_name.hex(),
-                                         "serial_number":"1234",
-                                         "responder_uRL":"http://localhost:8001/ocsp_intermidiate/"}]              
+            iso15118_certificate_hash_data=iso15118_certificate_hash_data     
         )
 
         response = await self.call(request)

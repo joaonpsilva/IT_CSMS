@@ -497,6 +497,12 @@ def insert_Hard_Coded(session):
     i2 = IdTokenInfo(id_token=i, valid=True,language1="PT", evse=[evse, evse2])
     objects.append(i)
     objects.append(i2)
+
+    i = IdToken(id_token = "FRTRIC00618333C", type=enums.IdTokenType.e_maid)
+    i2 = IdTokenInfo(id_token=i, valid=True,language1="PT", evse=[evse, evse2])
+    objects.append(i)
+    objects.append(i2)
+
     objects.append(User(password="user1", email="user1", id_token=i))
 
 

@@ -153,6 +153,8 @@ def validate_cert(cert, crl=False):
 
 def ocsp_request(hash_algorithm, issuer_name_hash, issuer_key_hash, serial_number, responder_url):
 
+    LOGGER.info("Validating certificate with serial number: %s", serial_number)
+
     issuer_name_hash = bytes.fromhex(issuer_name_hash)
     issuer_key_hash = bytes.fromhex(issuer_key_hash)
     serial_number = int(serial_number)
@@ -174,10 +176,11 @@ def ocsp_request(hash_algorithm, issuer_name_hash, issuer_key_hash, serial_numbe
     if ocsp_resp.ok:
         ocsp_decoded = ocsp.load_der_ocsp_response(bytes.fromhex(ocsp_resp.content.decode("utf-8")[1:-1]))
         if ocsp_decoded.response_status == OCSPResponseStatus.SUCCESSFUL:
-            print(ocsp_decoded)
-            return ocsp_decoded.certificate_status == ocsp.OCSPCertStatus.GOOD
+            if ocsp_decoded.certificate_status == ocsp.OCSPCertStatus.GOOD:
+                LOGGER.info("Certificate is valid")
+                return True
         else:
-            print(f'decoding ocsp response failed: {ocsp_decoded.response_status}')
+            LOGGER.info(f'decoding ocsp response failed: {ocsp_decoded.response_status}')
             return False
-    print(f'fetching ocsp cert status failed with response status: {ocsp_resp.status_code}')
+    LOGGER.info(f'fetching ocsp cert status failed with response status: {ocsp_resp.status_code}')
     return False

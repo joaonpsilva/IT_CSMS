@@ -1,0 +1,217 @@
+2023-05-23 11:55:22,662 - Ocpp_Server-INFO: Connected to the RMQ Broker
+2023-05-23 11:55:22,676 - websockets.server-INFO: server listening on 0.0.0.0:9000
+2023-05-23 11:55:22,677 - Ocpp_Server-INFO: WebSocket Server Started
+2023-05-23 11:55:22,958 - uvicorn.error-INFO: Started server process [15526]
+2023-05-23 11:55:22,958 - uvicorn.error-INFO: Waiting for application startup.
+2023-05-23 11:55:22,977 - API-INFO: Connected to the RMQ Broker
+2023-05-23 11:55:22,977 - uvicorn.error-INFO: Application startup complete.
+2023-05-23 11:55:22,978 - uvicorn.error-INFO: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2023-05-23 11:55:24,898 - SQL_DB-INFO: Connected to the database
+2023-05-23 11:55:24,912 - SQL_DB-INFO: Connected to the RMQ Broker
+2023-05-23 11:55:32,041 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "verify_password", "type": "request", "content": {"CP_ID": "CP_1", "password": "passcp1"}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:55:32,066 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "verify_password", "type": "response", "content": {"approved": true}, "cp_id": "CP_1", "status": "OK"}
+2023-05-23 11:55:32,069 - websockets.server-INFO: connection open
+2023-05-23 11:55:32,069 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "Charge_Point", "mode": {"describe": false}}, "cp_id": null, "status": null}
+2023-05-23 11:55:32,073 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"cp_id": "CP_1"}], "cp_id": null, "status": "OK"}
+2023-05-23 11:55:32,075 - Ocpp_Server-INFO: Protocols Matched: ocpp2.0.1
+2023-05-23 11:55:32,077 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "BootNotification", "type": "ocpp_log", "content": {"charging_station": {"vendor_name": "vendor_name", "model": "model", "modem": {"iccid": "jklasdfhlkjashdl"}}, "reason": "PowerUp", "timestamp": "2023-05-23T10:55:32.077081"}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:55:32,081 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T10:55:32.080361", "connector_status": "Available", "evse_id": 1, "connector_id": 0}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:55:32,087 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 284, "charging_limit_source": "Other", "charging_profile": [{"id": 5, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 0, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 1, "tbc": true}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:55:32,094 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T10:55:32.085771", "connector_status": "Available", "evse_id": 1, "connector_id": 1}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:55:32,098 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 284, "charging_limit_source": "Other", "charging_profile": [{"id": 8, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 8, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 0, "tbc": false}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:55:32,101 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T10:55:32.096971", "connector_status": "Available", "evse_id": 1, "connector_id": 2}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:55:32,105 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": true}}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:56:42,127 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": false}}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:58:42,221 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T10:58:42.220776", "connector_status": "Occupied", "evse_id": 1, "connector_id": 1}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:58:42,226 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "TransactionEvent", "type": "ocpp_log", "content": {"event_type": "Started", "timestamp": "2023-05-23T10:58:42.223319", "trigger_reason": "CablePluggedIn", "seq_no": 1, "transaction_info": {"transaction_id": "eNCwpZmhQS", "charging_state": "EVConnected"}, "meter_value": [{"timestamp": "2023-05-23T10:58:42.223335", "sampled_value": [{"value": 20, "context": "Transaction.Begin"}]}], "evse": {"id": 1, "connector_id": 1}}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:58:42,232 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "IdToken", "filters": {"id_token": "FRTRIC00618333C"}, "mode": {"id_token_info": {"group_id_token": {}, "evse": {}}}}, "cp_id": "CP_1", "status": null}
+2023-05-23 11:58:42,270 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [], "cp_id": "CP_1", "status": "OK"}
+2023-05-23 12:05:16,985 - Ocpp_Server-INFO: OCPP Server Shuting down
+2023-05-23 12:05:16,985 - SQL_DB-INFO: DB Shuting down
+2023-05-23 12:05:16,987 - websockets.server-INFO: connection closed
+2023-05-23 12:05:17,073 - uvicorn.error-INFO: Shutting down
+2023-05-23 12:05:17,174 - uvicorn.error-INFO: Waiting for application shutdown.
+2023-05-23 12:05:17,175 - uvicorn.error-INFO: Application shutdown complete.
+2023-05-23 12:05:17,175 - uvicorn.error-INFO: Finished server process [15526]
+2023-05-23 12:05:41,660 - Ocpp_Server-INFO: Connected to the RMQ Broker
+2023-05-23 12:05:41,670 - websockets.server-INFO: server listening on 0.0.0.0:9000
+2023-05-23 12:05:41,671 - Ocpp_Server-INFO: WebSocket Server Started
+2023-05-23 12:05:41,937 - uvicorn.error-INFO: Started server process [16713]
+2023-05-23 12:05:41,937 - uvicorn.error-INFO: Waiting for application startup.
+2023-05-23 12:05:41,952 - API-INFO: Connected to the RMQ Broker
+2023-05-23 12:05:41,952 - uvicorn.error-INFO: Application startup complete.
+2023-05-23 12:05:41,952 - uvicorn.error-INFO: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2023-05-23 12:05:43,902 - SQL_DB-INFO: Connected to the database
+2023-05-23 12:05:43,912 - SQL_DB-INFO: Connected to the RMQ Broker
+2023-05-23 12:05:53,406 - websockets.server-INFO: connection open
+2023-05-23 12:05:53,406 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "Charge_Point", "mode": {"describe": false}}, "cp_id": null, "status": null}
+2023-05-23 12:05:53,412 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"cp_id": "CP_1"}], "cp_id": null, "status": "OK"}
+2023-05-23 12:05:53,415 - Ocpp_Server-INFO: Protocols Matched: ocpp2.0.1
+2023-05-23 12:05:53,417 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "BootNotification", "type": "ocpp_log", "content": {"charging_station": {"vendor_name": "vendor_name", "model": "model", "modem": {"iccid": "jklasdfhlkjashdl"}}, "reason": "PowerUp", "timestamp": "2023-05-23T11:05:53.417612"}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:05:53,424 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:05:53.422127", "connector_status": "Available", "evse_id": 1, "connector_id": 0}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:05:53,431 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 285, "charging_limit_source": "Other", "charging_profile": [{"id": 5, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 0, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 1, "tbc": true}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:05:53,436 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:05:53.429516", "connector_status": "Available", "evse_id": 1, "connector_id": 1}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:05:53,439 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 285, "charging_limit_source": "Other", "charging_profile": [{"id": 8, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 8, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 0, "tbc": false}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:05:53,442 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:05:53.438518", "connector_status": "Available", "evse_id": 1, "connector_id": 2}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:05:53,446 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": true}}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:06:30,361 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:06:30.359238", "connector_status": "Occupied", "evse_id": 1, "connector_id": 1}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:06:30,372 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "TransactionEvent", "type": "ocpp_log", "content": {"event_type": "Started", "timestamp": "2023-05-23T11:06:30.367453", "trigger_reason": "CablePluggedIn", "seq_no": 1, "transaction_info": {"transaction_id": "qHpYDQdAwd", "charging_state": "EVConnected"}, "meter_value": [{"timestamp": "2023-05-23T11:06:30.367496", "sampled_value": [{"value": 20, "context": "Transaction.Begin"}]}], "evse": {"id": 1, "connector_id": 1}}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:06:30,379 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "IdToken", "filters": {"id_token": "FRTRIC00618333C"}, "mode": {"id_token_info": {"group_id_token": {}, "evse": {}}}}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:06:30,404 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [], "cp_id": "CP_1", "status": "OK"}
+2023-05-23 12:07:03,468 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": false}}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:07:33,577 - Ocpp_Server-WARNING: CP closed the connection
+2023-05-23 12:07:33,578 - websockets.server-INFO: connection closed
+2023-05-23 12:07:34,549 - Ocpp_Server-INFO: OCPP Server Shuting down
+2023-05-23 12:07:34,549 - SQL_DB-INFO: DB Shuting down
+2023-05-23 12:07:34,645 - uvicorn.error-INFO: Shutting down
+2023-05-23 12:07:34,746 - uvicorn.error-INFO: Finished server process [16713]
+2023-05-23 12:07:34,751 - uvicorn.error-ERROR: Traceback (most recent call last):
+  File "/home/joaonps/.local/lib/python3.8/site-packages/starlette/routing.py", line 648, in lifespan
+    await receive()
+  File "/home/joaonps/.local/lib/python3.8/site-packages/uvicorn/middleware/message_logger.py", line 62, in inner_receive
+    message = await receive()
+  File "/home/joaonps/.local/lib/python3.8/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+    return await self.receive_queue.get()
+  File "/usr/lib/python3.8/asyncio/queues.py", line 163, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+2023-05-23 12:08:42,608 - Ocpp_Server-INFO: Connected to the RMQ Broker
+2023-05-23 12:08:42,619 - websockets.server-INFO: server listening on 0.0.0.0:9000
+2023-05-23 12:08:42,619 - Ocpp_Server-INFO: WebSocket Server Started
+2023-05-23 12:08:42,895 - uvicorn.error-INFO: Started server process [17147]
+2023-05-23 12:08:42,895 - uvicorn.error-INFO: Waiting for application startup.
+2023-05-23 12:08:42,912 - API-INFO: Connected to the RMQ Broker
+2023-05-23 12:08:42,912 - uvicorn.error-INFO: Application startup complete.
+2023-05-23 12:08:42,912 - uvicorn.error-INFO: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2023-05-23 12:08:44,503 - websockets.server-INFO: connection open
+2023-05-23 12:08:44,504 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "Charge_Point", "mode": {"describe": false}}, "cp_id": null, "status": null}
+2023-05-23 12:08:45,734 - SQL_DB-INFO: Connected to the database
+2023-05-23 12:08:45,744 - SQL_DB-INFO: Connected to the RMQ Broker
+2023-05-23 12:08:45,748 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"cp_id": "CP_1"}], "cp_id": null, "status": "OK"}
+2023-05-23 12:08:45,751 - Ocpp_Server-INFO: Protocols Matched: ocpp2.0.1
+2023-05-23 12:08:45,753 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "BootNotification", "type": "ocpp_log", "content": {"charging_station": {"vendor_name": "vendor_name", "model": "model", "modem": {"iccid": "jklasdfhlkjashdl"}}, "reason": "PowerUp", "timestamp": "2023-05-23T11:08:45.753321"}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:08:45,759 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:08:45.757842", "connector_status": "Available", "evse_id": 1, "connector_id": 0}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:08:45,767 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 286, "charging_limit_source": "Other", "charging_profile": [{"id": 5, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 0, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 1, "tbc": true}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:08:45,772 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:08:45.764237", "connector_status": "Available", "evse_id": 1, "connector_id": 1}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:08:45,777 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 286, "charging_limit_source": "Other", "charging_profile": [{"id": 8, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 8, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 0, "tbc": false}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:08:45,780 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:08:45.775350", "connector_status": "Available", "evse_id": 1, "connector_id": 2}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:08:45,784 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": true}}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:09:00,984 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:09:00.981843", "connector_status": "Occupied", "evse_id": 1, "connector_id": 1}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:09:01,004 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "TransactionEvent", "type": "ocpp_log", "content": {"event_type": "Started", "timestamp": "2023-05-23T11:09:00.992035", "trigger_reason": "CablePluggedIn", "seq_no": 1, "transaction_info": {"transaction_id": "tAKeqzetwc", "charging_state": "EVConnected"}, "meter_value": [{"timestamp": "2023-05-23T11:09:00.992087", "sampled_value": [{"value": 20, "context": "Transaction.Begin"}]}], "evse": {"id": 1, "connector_id": 1}}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:09:01,016 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "IdToken", "filters": {"id_token": "FRTRIC00618333C"}, "mode": {"id_token_info": {"group_id_token": {}, "evse": {}}}}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:09:01,044 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [], "cp_id": "CP_1", "status": "OK"}
+2023-05-23 12:09:45,118 - SQL_DB-INFO: DB Shuting down
+2023-05-23 12:09:45,118 - Ocpp_Server-INFO: OCPP Server Shuting down
+2023-05-23 12:09:45,119 - websockets.server-INFO: connection closed
+2023-05-23 12:09:45,186 - uvicorn.error-INFO: Shutting down
+2023-05-23 12:09:45,287 - uvicorn.error-INFO: Waiting for application shutdown.
+2023-05-23 12:09:45,287 - uvicorn.error-INFO: Application shutdown complete.
+2023-05-23 12:09:45,287 - uvicorn.error-INFO: Finished server process [17147]
+2023-05-23 12:09:56,548 - Ocpp_Server-INFO: Connected to the RMQ Broker
+2023-05-23 12:09:56,558 - websockets.server-INFO: server listening on 0.0.0.0:9000
+2023-05-23 12:09:56,558 - Ocpp_Server-INFO: WebSocket Server Started
+2023-05-23 12:09:56,851 - uvicorn.error-INFO: Started server process [17335]
+2023-05-23 12:09:56,852 - uvicorn.error-INFO: Waiting for application startup.
+2023-05-23 12:09:56,877 - API-INFO: Connected to the RMQ Broker
+2023-05-23 12:09:56,878 - uvicorn.error-INFO: Application startup complete.
+2023-05-23 12:09:56,879 - uvicorn.error-INFO: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2023-05-23 12:09:58,802 - SQL_DB-INFO: Connected to the database
+2023-05-23 12:09:58,812 - SQL_DB-INFO: Connected to the RMQ Broker
+2023-05-23 12:10:00,753 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "verify_password", "type": "request", "content": {"CP_ID": "CP_1", "password": "passcp1"}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:10:00,780 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "verify_password", "type": "response", "content": {"approved": true}, "cp_id": "CP_1", "status": "OK"}
+2023-05-23 12:10:00,782 - websockets.server-INFO: connection open
+2023-05-23 12:10:00,783 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "Charge_Point", "mode": {"describe": false}}, "cp_id": null, "status": null}
+2023-05-23 12:10:00,787 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"cp_id": "CP_1"}], "cp_id": null, "status": "OK"}
+2023-05-23 12:10:00,789 - Ocpp_Server-INFO: Protocols Matched: ocpp2.0.1
+2023-05-23 12:10:00,791 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "BootNotification", "type": "ocpp_log", "content": {"charging_station": {"vendor_name": "vendor_name", "model": "model", "modem": {"iccid": "jklasdfhlkjashdl"}}, "reason": "PowerUp", "timestamp": "2023-05-23T11:10:00.791584"}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:10:00,795 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:10:00.794496", "connector_status": "Available", "evse_id": 1, "connector_id": 0}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:10:00,801 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 287, "charging_limit_source": "Other", "charging_profile": [{"id": 5, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 0, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 1, "tbc": true}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:10:00,804 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:10:00.799139", "connector_status": "Available", "evse_id": 1, "connector_id": 1}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:10:00,808 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 287, "charging_limit_source": "Other", "charging_profile": [{"id": 8, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 8, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 0, "tbc": false}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:10:00,811 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T11:10:00.807466", "connector_status": "Available", "evse_id": 1, "connector_id": 2}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:10:00,816 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": true}}, "cp_id": "CP_1", "status": null}
+2023-05-23 12:10:32,903 - Ocpp_Server-INFO: OCPP Server Shuting down
+2023-05-23 12:10:32,903 - SQL_DB-INFO: DB Shuting down
+2023-05-23 12:10:32,904 - websockets.server-INFO: connection closed
+2023-05-23 12:10:32,933 - uvicorn.error-INFO: Shutting down
+2023-05-23 12:10:33,034 - uvicorn.error-INFO: Waiting for application shutdown.
+2023-05-23 12:10:33,034 - uvicorn.error-INFO: Application shutdown complete.
+2023-05-23 12:10:33,034 - uvicorn.error-INFO: Finished server process [17335]
+2023-05-23 16:53:37,836 - Ocpp_Server-INFO: Connected to the RMQ Broker
+2023-05-23 16:53:37,845 - websockets.server-INFO: server listening on 0.0.0.0:9000
+2023-05-23 16:53:37,846 - Ocpp_Server-INFO: WebSocket Server Started
+2023-05-23 16:53:38,095 - uvicorn.error-INFO: Started server process [40095]
+2023-05-23 16:53:38,095 - uvicorn.error-INFO: Waiting for application startup.
+2023-05-23 16:53:38,110 - API-INFO: Connected to the RMQ Broker
+2023-05-23 16:53:38,111 - uvicorn.error-INFO: Application startup complete.
+2023-05-23 16:53:38,111 - uvicorn.error-INFO: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2023-05-23 16:53:41,375 - SQL_DB-INFO: Connected to the database
+2023-05-23 16:53:41,385 - SQL_DB-INFO: Connected to the RMQ Broker
+2023-05-23 16:53:53,992 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "verify_password", "type": "request", "content": {"CP_ID": "CP_1", "password": "passcp1"}, "cp_id": "CP_1", "status": null}
+2023-05-23 16:53:54,015 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "verify_password", "type": "response", "content": {"approved": true}, "cp_id": "CP_1", "status": "OK"}
+2023-05-23 16:53:54,017 - websockets.server-INFO: connection open
+2023-05-23 16:53:54,017 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "Charge_Point", "mode": {"describe": false}}, "cp_id": null, "status": null}
+2023-05-23 16:53:54,021 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"cp_id": "CP_1"}], "cp_id": null, "status": "OK"}
+2023-05-23 16:53:54,023 - Ocpp_Server-INFO: Protocols Matched: ocpp2.0.1
+2023-05-23 16:53:54,025 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "BootNotification", "type": "ocpp_log", "content": {"charging_station": {"vendor_name": "vendor_name", "model": "model", "modem": {"iccid": "jklasdfhlkjashdl"}}, "reason": "PowerUp", "timestamp": "2023-05-23T15:53:54.025124"}, "cp_id": "CP_1", "status": null}
+2023-05-23 16:53:54,029 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T15:53:54.028133", "connector_status": "Available", "evse_id": 1, "connector_id": 0}, "cp_id": "CP_1", "status": null}
+2023-05-23 16:53:54,035 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 288, "charging_limit_source": "Other", "charging_profile": [{"id": 5, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 0, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 1, "tbc": true}, "cp_id": "CP_1", "status": null}
+2023-05-23 16:53:54,038 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T15:53:54.033463", "connector_status": "Available", "evse_id": 1, "connector_id": 1}, "cp_id": "CP_1", "status": null}
+2023-05-23 16:53:54,042 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 288, "charging_limit_source": "Other", "charging_profile": [{"id": 8, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 8, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 0, "tbc": false}, "cp_id": "CP_1", "status": null}
+2023-05-23 16:53:54,044 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T15:53:54.040717", "connector_status": "Available", "evse_id": 1, "connector_id": 2}, "cp_id": "CP_1", "status": null}
+2023-05-23 16:53:54,048 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": true}}, "cp_id": "CP_1", "status": null}
+2023-05-23 16:53:58,451 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "IdToken", "filters": {"id_token": "FRTRIC00618333C"}, "mode": {"id_token_info": {"group_id_token": {}, "evse": {}}}}, "cp_id": "CP_1", "status": null}
+2023-05-23 16:53:58,460 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"type": "eMAID", "id_token": "FRTRIC00618333C", "id_token_info": {"charging_priority": null, "language2": null, "valid": true, "cache_expiry_date_time": null, "language1": "PT", "group_id_token": null, "evse": [1, 2]}}], "cp_id": "CP_1", "status": "OK"}
+2023-05-23 16:53:58,462 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "EVSE", "filters": {"cp_id": "CP_1"}}, "cp_id": "CP_1", "status": null}
+2023-05-23 16:53:58,467 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"evse_id": 1, "cp_id": "CP_1"}, {"evse_id": 2, "cp_id": "CP_1"}, {"evse_id": 3, "cp_id": "CP_1"}], "cp_id": "CP_1", "status": "OK"}
+2023-05-23 16:53:58,470 - Ocpp_Server-INFO: Validating certificate with serial number: 1234
+2023-05-23 16:53:58,490 - Ocpp_Server-INFO: Certificate is valid
+2023-05-23 16:55:04,065 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": false}}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:28,338 - Ocpp_Server-WARNING: CP closed the connection
+2023-05-23 17:00:28,339 - websockets.server-INFO: connection closed
+2023-05-23 17:00:29,680 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "verify_password", "type": "request", "content": {"CP_ID": "CP_1", "password": "passcp1"}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:29,704 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "verify_password", "type": "response", "content": {"approved": true}, "cp_id": "CP_1", "status": "OK"}
+2023-05-23 17:00:29,707 - websockets.server-INFO: connection open
+2023-05-23 17:00:29,707 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "Charge_Point", "mode": {"describe": false}}, "cp_id": null, "status": null}
+2023-05-23 17:00:29,711 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"cp_id": "CP_1"}], "cp_id": null, "status": "OK"}
+2023-05-23 17:00:29,713 - Ocpp_Server-INFO: Protocols Matched: ocpp2.0.1
+2023-05-23 17:00:29,714 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "BootNotification", "type": "ocpp_log", "content": {"charging_station": {"vendor_name": "vendor_name", "model": "model", "modem": {"iccid": "jklasdfhlkjashdl"}}, "reason": "PowerUp", "timestamp": "2023-05-23T16:00:29.714439"}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:29,718 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T16:00:29.717650", "connector_status": "Available", "evse_id": 1, "connector_id": 0}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:29,724 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 289, "charging_limit_source": "Other", "charging_profile": [{"id": 5, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 0, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 1, "tbc": true}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:29,728 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T16:00:29.723236", "connector_status": "Available", "evse_id": 1, "connector_id": 1}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:29,730 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 289, "charging_limit_source": "Other", "charging_profile": [{"id": 8, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 8, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 0, "tbc": false}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:29,733 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T16:00:29.730010", "connector_status": "Available", "evse_id": 1, "connector_id": 2}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:29,736 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": true}}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:34,556 - Ocpp_Server-WARNING: CP closed the connection
+2023-05-23 17:00:34,556 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": false}}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:34,558 - websockets.server-INFO: connection closed
+2023-05-23 17:00:49,401 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "verify_password", "type": "request", "content": {"CP_ID": "CP_1", "password": "passcp1"}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:49,429 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "verify_password", "type": "response", "content": {"approved": true}, "cp_id": "CP_1", "status": "OK"}
+2023-05-23 17:00:49,431 - websockets.server-INFO: connection open
+2023-05-23 17:00:49,432 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "Charge_Point", "mode": {"describe": false}}, "cp_id": null, "status": null}
+2023-05-23 17:00:49,436 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"cp_id": "CP_1"}], "cp_id": null, "status": "OK"}
+2023-05-23 17:00:49,438 - Ocpp_Server-INFO: Protocols Matched: ocpp2.0.1
+2023-05-23 17:00:49,439 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "BootNotification", "type": "ocpp_log", "content": {"charging_station": {"vendor_name": "vendor_name", "model": "model", "modem": {"iccid": "jklasdfhlkjashdl"}}, "reason": "PowerUp", "timestamp": "2023-05-23T16:00:49.439332"}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:49,443 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T16:00:49.442605", "connector_status": "Available", "evse_id": 1, "connector_id": 0}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:49,452 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 290, "charging_limit_source": "Other", "charging_profile": [{"id": 5, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 0, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 1, "tbc": true}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:49,455 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T16:00:49.450637", "connector_status": "Available", "evse_id": 1, "connector_id": 1}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:49,459 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "ReportChargingProfiles", "type": "ocpp_log", "content": {"request_id": 290, "charging_limit_source": "Other", "charging_profile": [{"id": 8, "stack_level": 0, "charging_profile_purpose": "ChargingStationExternalConstraints", "charging_profile_kind": "Absolute", "charging_schedule": [{"id": 8, "charging_rate_unit": "W", "charging_schedule_period": [{"start_period": 0, "limit": 0, "number_phases": 0, "phase_to_use": 0}]}]}], "evse_id": 0, "tbc": false}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:49,463 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "StatusNotification", "type": "ocpp_log", "content": {"timestamp": "2023-05-23T16:00:49.457807", "connector_status": "Available", "evse_id": 1, "connector_id": 2}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:49,466 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": true}}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:51,189 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "IdToken", "filters": {"id_token": "FRTRIC00618333C"}, "mode": {"id_token_info": {"group_id_token": {}, "evse": {}}}}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:51,195 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"type": "eMAID", "id_token": "FRTRIC00618333C", "id_token_info": {"charging_priority": null, "language2": null, "valid": true, "cache_expiry_date_time": null, "language1": "PT", "group_id_token": null, "evse": [1, 2]}}], "cp_id": "CP_1", "status": "OK"}
+2023-05-23 17:00:51,197 - Ocpp_Server-INFO: SEND: {"destination": "SQL_DB", "origin": "Ocpp_Server", "method": "select", "type": "request", "content": {"table": "EVSE", "filters": {"cp_id": "CP_1"}}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:00:51,200 - SQL_DB-INFO: SEND: {"destination": "Ocpp_Server", "origin": "SQL_DB", "method": "select", "type": "response", "content": [{"evse_id": 1, "cp_id": "CP_1"}, {"evse_id": 2, "cp_id": "CP_1"}, {"evse_id": 3, "cp_id": "CP_1"}], "cp_id": "CP_1", "status": "OK"}
+2023-05-23 17:00:51,202 - Ocpp_Server-INFO: Validating certificate with serial number: 1
+2023-05-23 17:00:51,210 - Ocpp_Server-INFO: Certificate is valid
+2023-05-23 17:00:51,210 - Ocpp_Server-INFO: Validating certificate with serial number: 2
+2023-05-23 17:00:51,218 - Ocpp_Server-INFO: Certificate is valid
+2023-05-23 17:01:59,490 - Ocpp_Server-INFO: SEND: {"destination": null, "origin": "Ocpp_Server", "method": "update", "type": "ocpp_log", "content": {"table": "Charge_Point", "filters": {"cp_id": "CP_1"}, "values": {"is_online": false}}, "cp_id": "CP_1", "status": null}
+2023-05-23 17:02:06,003 - Ocpp_Server-INFO: OCPP Server Shuting down
+2023-05-23 17:02:06,003 - SQL_DB-INFO: DB Shuting down
+2023-05-23 17:02:06,005 - websockets.server-INFO: connection closed
+2023-05-23 17:02:06,017 - uvicorn.error-INFO: Shutting down
+2023-05-23 17:02:06,118 - uvicorn.error-INFO: Waiting for application shutdown.
+2023-05-23 17:02:06,118 - uvicorn.error-INFO: Application shutdown complete.
+2023-05-23 17:02:06,118 - uvicorn.error-INFO: Finished server process [40095]
