@@ -10,53 +10,53 @@ class LoginToken:
 
 @dataclass
 class User:
-    id : int
-    cust_id : int
-    full_name : str
-    email : str
-    status : str
-    permission_level : int
+    id : int = None
+    cust_id : int = None
+    full_name : str = None
+    email : str = None
+    status : str = None
+    permission_level : int = None
 
 @dataclass
 class IdToken:
-    id_token : str
-    type : enums.IdTokenType
+    id_token : str = None
+    type : enums.IdTokenType = None
 
 @dataclass
 class Transaction:
-    active : bool
-    cable_max_current : int
-    initial_export: float
-    cp_id : str
-    final_export: float
-    evse_id : int
-    transaction_id: str
-    initial_import: float
-    charging_state: enums.ChargingStateType
-    final_import: float
-    time_spent_charging: int
-    soc: float
-    stopped_reason: enums.ReasonType
-    power_export: float
-    remote_start_id: int
-    power_import: float
+    active : bool = None
+    cable_max_current : int = None
+    initial_export: float = None
+    cp_id : str = None
+    final_export: float = None
+    evse_id : int = None
+    transaction_id: str = None
+    initial_import: float = None
+    charging_state: enums.ChargingStateType = None
+    final_import: float = None
+    time_spent_charging: int = None
+    soc: float = None
+    stopped_reason: enums.ReasonType = None
+    power_export: float = None
+    remote_start_id: int = None
+    power_import: float = None
 
 @dataclass
 class Charge_Station:
-    model: str
-    cp_id: str
-    serial_number: str
-    city: str
-    longitude: str
-    ocpp_version: str
-    vendor_name: str
-    firmware_version: str
-    latitude: str
-    country: str
-    is_online: bool
+    model: str = None
+    cp_id: str = None
+    serial_number: str = None
+    city: str = None
+    longitude: str = None
+    ocpp_version: str = None
+    vendor_name: str = None
+    firmware_version: str = None
+    latitude: str = None
+    country: str = None
+    is_online: bool = None
 
 @dataclass
 class ReserveNowPayload:
-    status: str
+    status: str = None
     status_info: Optional[Dict] = None
     id : int = None
