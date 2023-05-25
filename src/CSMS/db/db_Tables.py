@@ -464,10 +464,10 @@ class EventData(CustomBase):
 
 
 async def create_Tables(engine, session, insert_hardCoded=False):
-    Base.metadata.drop_all(engine)
 
     while True:
         try:
+            Base.metadata.drop_all(engine)
             Base.metadata.create_all(engine, checkfirst=True)
             break
         except:
