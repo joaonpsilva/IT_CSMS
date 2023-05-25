@@ -770,9 +770,9 @@ async def main(cp_id):
     ssl_context.load_cert_chain(ssl_cert, keyfile=ssl_key)
 
     async with websockets.connect(
-        'ws://{cp_id}:{password}@localhost:9000/{cp_id}'.format(cp_id = cp_id, password='passcp1'),
+        'wss://{cp_id}:{password}@localhost:9000/{cp_id}'.format(cp_id = cp_id, password='passcp1'),
             subprotocols=['ocpp2.0.1'],
-            #ssl=ssl_context
+            ssl=ssl_context
     ) as ws:
 
         cp = ChargePoint(cp_id, ws)

@@ -1,1 +1,1 @@
-{"request_Id": 290, "charging_profile_id": 100003, "charging_schedule_id": 100003, "heartBeat_time": 30}
+{"request_Id": 296, "charging_profile_id": 9, "charging_schedule_id": 9, "heartBeat_time": 30, "ssl_cert": "certs/ssl/localhost.crt", "ssl_key": "certs/ssl/localhost.decrypted.key", "root_cert": "certs/root/ca.pem"}
