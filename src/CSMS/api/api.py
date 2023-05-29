@@ -10,9 +10,11 @@ from rabbit_mq.exceptions import OtherError
 import asyncio
 import logging
 import logging.config
-
+from starlette.responses import FileResponse
 from sse_starlette.sse import EventSourceResponse
-
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 import argparse
 import datetime
 import sys
@@ -31,6 +33,15 @@ LOGGER = logging.getLogger("API")
 app = FastAPI()
 auth_handler = AuthHandler()
 service = API_Service()
+
+
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/open_transactions_html")
+async def opentransactions(request: Request):
+    transactions = await getOpenTransactions()
+    return templates.TemplateResponse("index.html", {"request":request, "transactions":transactions})
+
 
 ##################################################################
 
@@ -93,7 +104,7 @@ async def getOpenTransactionsByIdToken(user=Depends(auth_handler.check_permissio
 
 
 @app.get("/transactions/open", status_code=200, response_model=List[result_payloads.Transaction])
-async def getOpenTransactions(user=Depends(auth_handler.check_permission_level_2)):
+async def getOpenTransactions():
     return await service.send_request("select", payload={"table":"Transaction", "filters":{"active":True}}, destination="SQL_DB")
 
 

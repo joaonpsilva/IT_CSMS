@@ -493,7 +493,7 @@ def insert_Hard_Coded(session):
 
     objects.append(Connector(cp_id="CP_1", evse_id=1,connector_id=1))
 
-    i = IdToken(id_token = "1dee35d6-ed03-4882-9762-86197f258a74", type=enums.IdTokenType.iso14443)
+    i = IdToken(id_token = "3e19b1cc-7858-440c-bd7f-7335555841bd", type=enums.IdTokenType.iso14443)
     i2 = IdTokenInfo(id_token=i, valid=True,language1="PT", evse=[evse, evse2])
     objects.append(i)
     objects.append(i2)
