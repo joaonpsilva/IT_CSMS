@@ -6,6 +6,7 @@ import datetime
 import os
 import wget
 import traceback
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -184,3 +185,31 @@ def ocsp_request(hash_algorithm, issuer_name_hash, issuer_key_hash, serial_numbe
             return False
     LOGGER.info(f'fetching ocsp cert status failed with response status: {ocsp_resp.status_code}')
     return False
+
+
+def check_chain_ocsp(iso15118_certificate_hash_data):
+
+    for i in iso15118_certificate_hash_data:    
+        if not ocsp_request(**i): 
+            return False
+
+        issuer_name_hash = bytes.fromhex(i["issuer_name_hash"])
+        issuer_key_hash = bytes.fromhex(i["issuer_key_hash"])
+
+        for name, cert in cert_dict.items():
+            
+            digest = hashes.Hash(getattr(hashes, i["hash_algorithm"])())
+            digest.update(name.encode())
+            hash_name = digest.finalize()
+
+            digest = hashes.Hash(getattr(hashes, i["hash_algorithm"])())
+            digest.update(cert.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)) 
+            hash_public_key = digest.finalize()
+
+            if issuer_name_hash == hash_name and issuer_key_hash == hash_public_key:
+                LOGGER.info("issuer is installed locally")
+                return True
+    
+    return False
+
+            
