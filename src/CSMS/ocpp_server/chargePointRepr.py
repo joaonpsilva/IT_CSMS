@@ -700,13 +700,15 @@ class ChargePoint(cp):
         #iso15118
         certificate_status = None
         if iso15118_certificate_hash_data is not None:
-            certificate_status = enums.AuthorizeCertificateStatusType.accepted
+            #certificate_status = enums.AuthorizeCertificateStatusType.accepted
 
-            for i in iso15118_certificate_hash_data:    
-                if not iso15118_handler.ocsp_request(**i): 
-                    certificate_status = enums.AuthorizeCertificateStatusType.cert_chain_error
-                    break
-        
+            #for i in iso15118_certificate_hash_data:    
+            #    if not iso15118_handler.ocsp_request(**i): 
+            #        certificate_status = enums.AuthorizeCertificateStatusType.cert_chain_error
+            #        break
+            
+            certificate_status = enums.AuthorizeCertificateStatusType.accepted if iso15118_handler.check_chain_ocsp(iso15118_certificate_hash_data) else enums.AuthorizeCertificateStatusType.cert_chain_error
+
         return call_result.AuthorizePayload(id_token_info=id_token_info, certificate_status=certificate_status)
         
 
