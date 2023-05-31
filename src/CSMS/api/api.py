@@ -18,12 +18,12 @@ from fastapi.templating import Jinja2Templates
 import argparse
 import datetime
 import sys
+from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", type=int, default = 8000, help="OCPP server port")
 parser.add_argument("-rb", type=str, default = "amqp://guest:guest@localhost/", help="RabbitMq")
 args = parser.parse_args()
-
 
 
 logging.config.fileConfig("log.ini", disable_existing_loggers=False)
@@ -34,16 +34,25 @@ app = FastAPI()
 auth_handler = AuthHandler()
 service = API_Service()
 
-
-templates = Jinja2Templates(directory="templates")
-
-@app.get("/open_transactions_html")
-async def opentransactions(request: Request):
-    transactions = await getOpenTransactions()
-    return templates.TemplateResponse("index.html", {"request":request, "transactions":transactions})
+app.mount("/static", StaticFiles(directory="CSMS/api/static"), name="static")
+templates = Jinja2Templates(directory="CSMS/api/templates")
 
 
-##################################################################
+@app.get("/open_transactions/html")
+async def getOpenTransactionsHTML(request: Request):
+    return templates.TemplateResponse("index.html", {"request":request, "columns": result_payloads.Transaction.__dataclass_fields__ ,
+                                                      "result":await getOpenTransactions()})
+
+@app.get("/users/html")
+async def getUsersHTML(request: Request):
+    return templates.TemplateResponse("index.html", {"request":request, "columns": result_payloads.User.__dataclass_fields__ ,
+                                                      "result":await getUsers()})
+
+@app.get("/stations/html")
+async def getStationsHTML(request: Request):
+    return templates.TemplateResponse("index.html", {"request":request, "columns": result_payloads.Charge_Station.__dataclass_fields__ ,
+                                                      "result":await getStations()})
+
 
 @app.post("/register", status_code=201, response_model=result_payloads.User)
 async def register(email: str, password:str, full_name:str, status:str, cust_id:int, id_token:str=None):
@@ -156,7 +165,7 @@ async def getConnected_ChargePoints():
 
 
 @app.get("/stations", status_code=200,  response_model=List[result_payloads.Charge_Station])
-async def stations():
+async def getStations():
     return await service.send_request("select", payload={"table": "Charge_Point"}, destination="SQL_DB")
 
 
