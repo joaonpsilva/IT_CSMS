@@ -10,6 +10,7 @@ class DB_Tables(str, Enum):
     MeterValue="MeterValue"
     SignedMeterValue="SignedMeterValue"
     SampledValue="SampledValue"
+    User="User"
     IdToken="IdToken"
     GroupIdToken="GroupIdToken"
     IdTokenInfo="IdTokenInfo"

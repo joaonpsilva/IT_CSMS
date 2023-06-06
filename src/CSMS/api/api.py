@@ -68,7 +68,12 @@ async def login(email: str, password:str):
         return {"token" : token}
     except OtherError as e:
         raise HTTPException(401, detail=e.args[0])
-        
+
+
+@app.post("/user/change_password")
+async def change_user_password(password: str, user=Depends(auth_handler.check_permission_level_1 )):
+    return await service.send_request("update_User_password", payload={"user_id":user["id"], "password":password}, destination="SQL_DB")
+
 
 @app.get("/users", status_code=200, response_model=List[result_payloads.User])
 async def getUsers():

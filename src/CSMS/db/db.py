@@ -109,18 +109,13 @@ class DataBase:
     def create(self, table, values={}, **kwargs):
         obj = self.table_mapping[table](**values)
         self.session.add(obj)
-        return 0
+        return obj
     
     def remove(self, table, filters ={}, **kwargs):
-        self.session.query(self.table_mapping[table]).filter_by(**filters).delete()
-        #statement = delete(self.table_mapping[table]).filter_by(**filters)
-        #self.session.execute(statement)
-        return 0
+        return self.session.query(self.table_mapping[table]).filter_by(**filters).delete()
 
     def update(self, table, filters={},values={}, **kwargs):
-        statement = update(self.table_mapping[table]).filter_by(**filters).values(**values)
-        self.session.execute(statement)
-        return 0
+        return self.session.query(self.table_mapping[table]).filter_by(**filters).update(values)
 
 
     def register(self, cp_id=None, **content):
@@ -164,6 +159,17 @@ class DataBase:
         except:
             return {"approved" : False}
     
+
+    def update_User_password(self, user_id, password, **kwargs):
+        user = self.session.query(User).get(user_id)
+        user.password = password
+        return user.get_dict_obj()
+    
+    def update_CP_password(self, cp_id, password, **kwargs):
+        charge_point = self.session.query(Charge_Point).get(cp_id)
+        charge_point.password = password
+        return charge_point.get_dict_obj()
+
 
     def create_new_Group_IdToken(self, type=None, id_token=None, **kwargs):
         id_token = GroupIdToken(type=type, id_token=id_token)
