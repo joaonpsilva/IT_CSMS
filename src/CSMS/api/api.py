@@ -19,6 +19,8 @@ import argparse
 import datetime
 import sys
 from pathlib import Path
+from fastapi.responses import PlainTextResponse
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", type=int, default = 8000, help="OCPP server port")
@@ -37,6 +39,13 @@ service = API_Service()
 app.mount("/static", StaticFiles(directory="CSMS/api/static"), name="static")
 templates = Jinja2Templates(directory="CSMS/api/templates")
 
+@app.get("/view_logs")
+async def view_logs():
+    file = open("logs/logfile.log")
+    data = file.read()
+    file.close()
+    
+    return PlainTextResponse(data)
 
 @app.get("/open_transactions/html")
 async def getOpenTransactionsHTML(request: Request):
