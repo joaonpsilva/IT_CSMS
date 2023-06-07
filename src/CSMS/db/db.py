@@ -13,6 +13,8 @@ import argparse
 import signal
 import sys
 from rabbit_mq.exceptions import ValidationError, OtherError
+from pymysql.err import OperationalError
+
 
 import dateutil.parser
 
@@ -46,7 +48,7 @@ class DataBase:
         LOGGER.info("DB Shuting down")
         exit(0)
 
-    async def on_db_request(self, request):
+    async def on_db_request(self, request, retry_flag=False):
         """
         Function that will handle incoming requests from the api or ocpp Server
         """
@@ -63,7 +65,14 @@ class DataBase:
             self.session.commit()
             
             return toReturn
-        
+
+        except OperationalError as e:
+            #Handle Broken Pipe. Retry operation
+            if retry_flag is True:
+                raise e
+            
+            return await self.on_db_request(request, retry_flag=True)
+
         except Exception as e:
             self.session.rollback()
             raise e        
