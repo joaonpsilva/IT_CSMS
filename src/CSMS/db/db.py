@@ -65,6 +65,20 @@ class DataBase:
             self.session.commit()
             
             return toReturn
+        
+        except OperationalError as e:
+            self.session.rollback()
+
+            #REDO operation
+            try:
+                #call method
+                toReturn = method(cp_id=request.cp_id, **request.content)
+                #commit possible changes
+                self.session.commit()
+                return toReturn
+            except Exception as e:
+                self.session.rollback()
+                raise e        
 
         except Exception as e:
             self.session.rollback()
