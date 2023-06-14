@@ -208,6 +208,11 @@ class DataBase:
 
 
     def StatusNotification(self, cp_id, connector_id,evse_id, **content):
+
+        #Magnum cap sometimes sends this
+        if connector_id == 0 or evse_id == 0:
+            return
+        
         content["connector"] = {"cp_id": cp_id, "evse_id":evse_id, "connector_id":connector_id, "connector_status":content["connector_status"]}
 
         statusNotification = StatusNotification(**content)
