@@ -49,18 +49,21 @@ async def view_logs():
 
 @app.get("/open_transactions/html")
 async def getOpenTransactionsHTML(request: Request):
-    return templates.TemplateResponse("index.html", {"request":request, "columns": result_payloads.Transaction.__dataclass_fields__ ,
-                                                      "result":await getOpenTransactions()})
+    result = await getOpenTransactions()
+    columns = result_payloads.Transaction.__dataclass_fields__ if len(result) == 0 else result[0]
+    return templates.TemplateResponse("index.html", {"request":request, "columns": columns , "result":result})
 
 @app.get("/users/html")
 async def getUsersHTML(request: Request):
-    return templates.TemplateResponse("index.html", {"request":request, "columns": result_payloads.User.__dataclass_fields__ ,
-                                                      "result":await getUsers()})
+    result = await getUsers()
+    columns = result_payloads.User.__dataclass_fields__ if len(result) == 0 else result[0]
+    return templates.TemplateResponse("index.html", {"request":request, "columns": columns ,"result":result})
 
 @app.get("/stations/html")
 async def getStationsHTML(request: Request):
-    return templates.TemplateResponse("index.html", {"request":request, "columns": result_payloads.Charge_Station.__dataclass_fields__ ,
-                                                      "result":await getStations()})
+    result = await getStations()
+    columns = result_payloads.Charge_Station.__dataclass_fields__ if len(result) == 0 else result[0]
+    return templates.TemplateResponse("index.html", {"request":request, "columns": columns , "result":result})
 
 
 @app.post("/register", status_code=201, response_model=result_payloads.User)
