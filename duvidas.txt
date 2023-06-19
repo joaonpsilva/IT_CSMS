@@ -1,3 +1,5 @@
+https://www.typhoon-hil.com/documentation/typhoon-hil-software-manual/References/iso15118_protocol.html
+
 csms------------------------------------
 cp validation
 billing? total cost transaction? charge profile tem charge tariff?
