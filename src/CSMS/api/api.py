@@ -191,6 +191,10 @@ async def getStationById(cp_id : str):
     mode = {"evse":{"describe":False, "connector":{}, "reservation":{}}}
     return await service.send_request("select", payload={"table": "Charge_Point", "filters":{"cp_id":cp_id}, "mode":mode}, destination="SQL_DB")
 
+@app.post("/stations/{cp_id}/change_password")
+async def change_user_password(cp_id : str, password: str, user=Depends(auth_handler.check_permission_level_2 )):
+    return await service.update_cp_password(cp_id, password)
+
 
 @app.post("/update_auth_list/{cp_id}", status_code=200, response_model=List[call_result.SendLocalListPayload])
 async def update_auth_list(cp_id: str, update_type:schemas.Update_type,id_tokens:List[str]=None,user=Depends(auth_handler.check_permission_level_2)):

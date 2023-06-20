@@ -247,3 +247,18 @@ class API_Service:
             return await self.send_request("dataTransfer", cp_id, payload=payload)
 
 
+    async def update_cp_password(self, cp_id, password):
+
+        set_variable_data = [datatypes.SetVariableDataType(
+            attribute_value=password,
+            component=datatypes.ComponentType(name="SecurityCtrlr"),
+            variable=datatypes.VariableType(name="BasicAuthPassword")
+        )]
+        result = await self.send_request("setVariables", cp_id=cp_id, payload={"set_variable_data": set_variable_data})
+
+        if result["set_variable_result"][0]["attribute_status"] == enums.SetVariableStatusType.accepted:
+            result = await self.send_request("update_CP_password", cp_id=cp_id, payload={"password":password}, destination="SQL_DB")
+        
+        return result
+
+

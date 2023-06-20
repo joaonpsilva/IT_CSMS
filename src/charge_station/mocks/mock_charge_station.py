@@ -22,7 +22,7 @@ class ChargePoint(cp):
 
         self.variables = {
             "DeviceDataCtrlrItemsPerMessageGetVariablesActual" : 10,
-            "DeviceDataCtrlrItemsPerMessageSetVariablesActual" : 10,
+            "DeviceDataCtrlrItemsPerMessageSetVariablesActual" : 1,
             "MonitoringCtrlrBytesPerMessageSetVariableMonitoringActual" : 1000,
             "MonitoringCtrlrItemsPerMessageSetVariableMonitoringActual" : 10,
             "MonitoringCtrlrItemsPerMessageClearVariableMonitoringActual" : 10,
@@ -384,8 +384,10 @@ class ChargePoint(cp):
     @on('SetVariables')
     def on_set_variables(self, set_variable_data):
 
-        return call_result.SetVariablesPayload(
-            set_variable_result=[
+        set_variable_result = []
+
+        for i in range(len(set_variable_data)):
+            set_variable_result.append(
                 datatypes.SetVariableResultType(
                     attribute_status=enums.SetVariableStatusType.accepted,
                     component=datatypes.ComponentType(
@@ -395,8 +397,9 @@ class ChargePoint(cp):
                         name="ABC"
                     )
                 )
-            ]
-        )
+            )
+
+        return call_result.SetVariablesPayload(set_variable_result=set_variable_result)
     
 
     @on('RequestStartTransaction')
