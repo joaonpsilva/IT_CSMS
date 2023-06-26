@@ -202,6 +202,9 @@ class API_Service:
 
     async def set_transaction_limits(self, transaction_id, action, power, max_soc, min_soc):
 
+        if action is None and power is None and max_soc is None and min_soc is None:
+            raise HTTPException(400, detail="Specify at least one of the fields")
+
         transaction_info = await self.getInfo_by_TransactionId(transaction_id)
         if "action" not in transaction_info:
             raise HTTPException(404, "No active Transaction with that ID")

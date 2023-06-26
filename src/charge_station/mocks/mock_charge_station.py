@@ -38,13 +38,16 @@ class ChargePoint(cp):
 
         request = call.BootNotificationPayload(
                     charging_station=datatypes.ChargingStationType(
-                        vendor_name="vendor_name",
-                        model="model",
+                        vendor_name="MagnumCap",
+                        model="V2G-WB-AC",
                         modem=datatypes.ModemType(
-                            iccid="jklasdfhlkjashdl"
-                        )
+                            iccid="0",
+                            imsi="0"
+                        ),
+                        serial_number= "TBD",
+                        firmware_version="MC_OCPP16_v20-3"
                     ),
-                    reason=enums.BootReasonType.power_up
+                    reason=enums.BootReasonType.unknown
                 )
 
         response = await self.call(request)

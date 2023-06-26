@@ -16,18 +16,19 @@ import signal
 
 class ChargePoint(cp):
 
-    def __init__(self, id, connection, p, f):
+    def __init__(self, id, connection, p, f, evs):
         super().__init__(id, connection)
 
         self.period = p
         self.factor = f
 
         self.loop = asyncio.get_running_loop()
-        self.evses = {
-            1: {"connectors" : [1,2], "transaction_id":None},
-            2: {"connectors" : [1,2,3], "transaction_id":None},
-            3: {"connectors" : [1,2], "transaction_id":None}
-        }
+
+        self.evses = {}
+
+        for i in range(evs):
+            self.evses[i+1] = {"connectors" : [1,2], "transaction_id":None}
+
         self.active_transactions = {}
 
 
@@ -124,7 +125,8 @@ class ChargePoint(cp):
 
     @after("DataTransfer")
     async def after_DataTransfer(self, data, **kwargs):
-        transaction_id = self.evses[data["evse_id"]]["transaction_id"]
+        evse_id = 1 if len(self.evses) == 1 else data["evse_id"]
+        transaction_id = self.evses[evse_id]["transaction_id"]
         transaction = self.active_transactions[transaction_id]
 
         if "v2g_action" in data:
@@ -141,7 +143,7 @@ class ChargePoint(cp):
                 await transaction.set_power(data["change_profile"]["power"])
 
 
-async def main(p, f, cp_id="CP_1"):
+async def main(p, f, evs, cp_id="CP_1"):
 
     logging.info("Trying to connect to csms with id %s", cp_id)
 
@@ -151,7 +153,7 @@ async def main(p, f, cp_id="CP_1"):
             subprotocols=['ocpp2.0.1']
     ) as ws:
 
-        cp = ChargePoint(cp_id, ws, p, f)
+        cp = ChargePoint(cp_id, ws, p, f, evs)
 
 
         loop = asyncio.get_event_loop()
@@ -166,6 +168,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, default = 2*60, help="event_period_time")
     parser.add_argument("-f", type=int, default = 1, help="factor")
+    parser.add_argument("-ev", type=int, default=1, help="number of evse")
     args = parser.parse_args()    
 
-    asyncio.run(main(args.p, args.f))
+    asyncio.run(main(args.p, args.f, args.ev))

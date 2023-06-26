@@ -28,6 +28,7 @@ class Transaction:
         self.ev_current_capacity = self.soc/100 * self.ev_total_capacity
 
         self.time_charging_goal = random.randrange(30*60, 60*60*12)
+        self.time_charging_goal =1000
         self._time_current = 0
         self.done_charging = asyncio.Event()
 
@@ -267,18 +268,21 @@ class Transaction:
 
         #wait csms corrections until end of transaction
         await self.done_charging.wait()
-     
-        periodic_meter.cancel()
-        update_charging_variables.cancel()
         
 
     async def periodic_meter_values(self):
         while True:
+            if self.done_charging.is_set():
+                break
+
             await self.send_update_Transaction_Event(enums.TriggerReasonType.meter_value_periodic)
             await asyncio.sleep(self.event_period_time/self.factor)
         
     
     async def continuously_update_charging_variables(self):
         while True:
+            if self.done_charging.is_set():
+                break
+            
             await self.update_charging_variables()
             await asyncio.sleep(self.event_period_time/2/self.factor)
