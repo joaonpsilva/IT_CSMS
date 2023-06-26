@@ -261,7 +261,13 @@ class ChargePoint(cp):
 
         results = await self.sendListByChunks(call.SetVariablesPayload, payload, "set_variable_data", max_set_messages)
         result = {"set_variable_result" : [var for r in results for var in r.set_variable_result]}
-  
+
+        #check if CP needs to reboot
+        for r in result["set_variable_result"]:
+            if r["attribute_status"] == enums.SetVariableStatusType.reboot_required:
+                await self.reset(**{"type":enums.ResetType.on_idle})
+                break
+
         return result
     
 
@@ -880,3 +886,7 @@ class ChargePoint(cp):
     async def on_GetCertificateStatus(self, ocsp_request_data):
         status = enums.GetCertificateStatusType.accepted if iso15118_handler.ocsp_request(**ocsp_request_data) else enums.GetCertificateStatusType.failed
         return call_result.GetCertificateStatusPayload(status=status)
+    
+    @on("SecurityEventNotification")
+    async def on_SecurityEventNotification(self, **kwargs):
+        return call_result.SecurityEventNotificationPayload()
