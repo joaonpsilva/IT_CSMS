@@ -91,6 +91,9 @@ class ChargePoint(cp):
     
 
     async def iso_auth(self):
+        #interesting?
+        #https://www.typhoon-hil.com/documentation/typhoon-hil-software-manual/References/iso15118_protocol.html
+        
         from cryptography.x509 import load_pem_x509_certificate, ocsp
         from cryptography.hazmat.backends import default_backend
         from cryptography.x509 import NameOID

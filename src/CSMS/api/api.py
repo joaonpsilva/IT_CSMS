@@ -68,6 +68,7 @@ async def getStationsHTML(request: Request):
 
 @app.post("/register", status_code=201, response_model=result_payloads.User)
 async def register(email: str, password:str, full_name:str, status:str, cust_id:int, id_token:str=None):
+    #futureTODO figure arch where user will be created in multiple dbs
     values = {"email": email, "password":password, "full_name":full_name, "status":status, "cust_id":cust_id, "_id_token":id_token}
     return await service.send_request("register", payload=values, destination="SQL_DB")
 
