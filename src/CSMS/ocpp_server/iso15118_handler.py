@@ -169,9 +169,10 @@ def ocsp_request(hash_algorithm, issuer_name_hash, issuer_key_hash, serial_numbe
     req_path = base64.b64encode(der_res).decode("ascii")
 
     try:
+        LOGGER.info("Contacting OCSP server in %s", responder_url)
         ocsp_resp = requests.get(urljoin(responder_url + '/', req_path))
     except:
-        LOGGER.info("Failed to contact the ocsp server")
+        LOGGER.info("Failed to contact the OCSP server")
         return False
         
     if ocsp_resp.ok:
