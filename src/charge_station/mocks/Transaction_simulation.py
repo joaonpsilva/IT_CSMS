@@ -28,7 +28,6 @@ class Transaction:
         self.ev_current_capacity = self.soc/100 * self.ev_total_capacity
 
         self.time_charging_goal = random.randrange(30*60, 60*60*12)
-        self.time_charging_goal =1000
         self._time_current = 0
         self.done_charging = asyncio.Event()
 
