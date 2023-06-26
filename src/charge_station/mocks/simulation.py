@@ -143,12 +143,12 @@ class ChargePoint(cp):
                 await transaction.set_power(data["change_profile"]["power"])
 
 
-async def main(p, f, evs, cp_id="CP_1"):
+async def main(p, f, evs, csms, cp_id="CP_1"):
 
     logging.info("Trying to connect to csms with id %s", cp_id)
 
     async with websockets.connect(
-        'ws://{cp_id}:{password}@localhost:9000/{cp_id}'.format(cp_id = cp_id, password='passcp1'),
+        'ws://{cp_id}:{password}@{csms}:9000/{cp_id}'.format(cp_id = cp_id, password='passcp1', csms=csms),
         
             subprotocols=['ocpp2.0.1']
     ) as ws:
@@ -169,6 +169,7 @@ if __name__ == '__main__':
     parser.add_argument("-p", type=int, default = 2*60, help="event_period_time")
     parser.add_argument("-f", type=int, default = 1, help="factor")
     parser.add_argument("-ev", type=int, default=1, help="number of evse")
+    parser.add_argument("-csms", type=str, default="193.136.93.74", help="csms ip")
     args = parser.parse_args()    
 
-    asyncio.run(main(args.p, args.f, args.ev))
+    asyncio.run(main(args.p, args.f, args.ev, args.csms))
