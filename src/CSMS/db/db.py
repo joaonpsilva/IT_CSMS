@@ -59,16 +59,25 @@ class DataBase:
             return
 
         try:
+            return await self.call_db_method(method, request)
+        except OperationalError:
+            
+            await asyncio.sleep(1)
+            #retry
+            return await self.call_db_method(method, request)
+    
+
+    async def call_db_method(self, method, request):
+        try:
             #call method
             toReturn = method(cp_id=request.cp_id, **request.content)
             #commit possible changes
             self.session.commit()
             
             return toReturn
-
+    
         except Exception as e:
             self.session.rollback()
-            LOGGER.info(e.__class__.__name__)
             raise e        
 
 
