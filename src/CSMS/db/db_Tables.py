@@ -221,7 +221,7 @@ class IdTokenInfo(CustomBase):
 
     valid = Column(Boolean)
 
-    _id_token = Column(String(36), ForeignKey("IdToken.id_token"), primary_key=True)
+    _id_token = Column(String(36), ForeignKey("IdToken.id_token", ondelete="CASCADE"), primary_key=True)
     id_token = relationship("IdToken", backref=backref("id_token_info", uselist=False), uselist=False)
 
     cache_expiry_date_time = Column(DateTime)
@@ -265,7 +265,7 @@ class MeterValue(CustomBase):
     __table_args__ = (ForeignKeyConstraint(["cp_id", "evse_id"],
                                     ["EVSE.cp_id", "EVSE.evse_id"]),
                     ForeignKeyConstraint(["transaction_id", "seq_no"],
-                                    ["Transaction_Event.transaction_id", "Transaction_Event.seq_no"]),{})
+                                    ["Transaction_Event.transaction_id", "Transaction_Event.seq_no"], ondelete="CASCADE"),{})
     
     def __init__(self, timestamp=None, **kwargs):
         if timestamp:
@@ -286,7 +286,7 @@ class SampledValue(CustomBase):
     unit = Column(String(20))
     multiplier = Column(Integer)
 
-    _meter_value_id = Column(Integer, ForeignKey("MeterValue.id"))
+    _meter_value_id = Column(Integer, ForeignKey("MeterValue.id", ondelete="CASCADE"))
     meter_value = relationship("MeterValue", backref="sampled_value", uselist=False)
 
     signed_meter_value = Column(JSON)
@@ -306,8 +306,8 @@ class SampledValue(CustomBase):
 idToken_Transactions = Table(
     'idToken_Transactions',
     Base.metadata,
-    Column('id_token', String(36), ForeignKey("IdToken.id_token")),
-    Column('transaction_id', String(36), ForeignKey("Transaction.transaction_id"))
+    Column('id_token', String(36), ForeignKey("IdToken.id_token", ondelete="CASCADE")),
+    Column('transaction_id', String(36), ForeignKey("Transaction.transaction_id", ondelete="CASCADE"))
 )
 
 class Transaction(CustomBase):
@@ -361,7 +361,7 @@ class Transaction_Event(CustomBase):
     connector_id = Column(Integer)
 
     #Transaction
-    transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id"), primary_key = True)
+    transaction_id = Column(String(36), ForeignKey("Transaction.transaction_id", ondelete="CASCADE"), primary_key = True)
     transaction_info = relationship("Transaction", backref="transaction_event",uselist=False)
 
     #Meter value
