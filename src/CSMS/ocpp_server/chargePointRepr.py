@@ -864,8 +864,14 @@ class ChargePoint(cp):
         #couroutine might be cancelled
         await asyncio.sleep(wait)
 
-        if not self.is_online == on: 
+        if self.is_online != on: 
             self.is_online = on
+
+            if not self.is_online:
+                #perhaps this is very slow when db has a lot of transactions?
+                message = Topic_Message(method="update", cp_id=self.id, content={"table":"Transaction", "filters" : {"cp_id" : self.id, "active": True}, "values":{"active":False}})            
+                await ChargePoint.broker.ocpp_log(message)
+
             message = Topic_Message(method="update", cp_id=self.id, content={"table":"Charge_Point", "filters" : {"cp_id" : self.id}, "values":{"is_online":self.is_online}})            
             await ChargePoint.broker.ocpp_log(message)
     
