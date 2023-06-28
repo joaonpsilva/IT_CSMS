@@ -55,7 +55,7 @@ class ChargePoint(cp):
 
         #initiate heart beat?
         loop = asyncio.get_event_loop()
-        #loop.create_task(self.heartBeat(response.interval))
+        loop.create_task(self.heartBeat(response.interval))
 
         for evse, info in self.evses.items():
             for connector in info["connectors"]:

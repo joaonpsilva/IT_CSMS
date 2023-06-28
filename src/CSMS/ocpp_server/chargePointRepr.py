@@ -664,6 +664,9 @@ class ChargePoint(cp):
         message = Topic_Message(method="BootNotification", cp_id=self.id, content=kwargs)
         await ChargePoint.broker.ocpp_log(message)
 
+        #function tracks online cp
+        await self.after_Heartbeat()
+
         return call_result.BootNotificationPayload(
             current_time=datetime.utcnow().isoformat(),
             interval=ChargePoint.server_variables["heartBeat_time"],
