@@ -1,3 +1,8 @@
+#TODO heartbeat set offline false only if 1st heartbeat
+#cp already offline in simulation?
+
+#simulation soc to slow
+
 from ocpp.v201 import ChargePoint as cp
 from ocpp.v201 import call, call_result, enums, datatypes
 from ocpp.routing import on, after

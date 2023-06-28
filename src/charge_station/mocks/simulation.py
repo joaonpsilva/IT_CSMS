@@ -53,6 +53,10 @@ class ChargePoint(cp):
         if response.status == 'Accepted':
            logging.info("Connected to central system.")
 
+        #initiate heart beat?
+        loop = asyncio.get_event_loop()
+        #loop.create_task(self.heartBeat(response.interval))
+
         for evse, info in self.evses.items():
             for connector in info["connectors"]:
                 request = call.StatusNotificationPayload(
@@ -64,6 +68,13 @@ class ChargePoint(cp):
                 response = await self.call(request)
 
         await self.random_simulation()
+
+
+    async def heartBeat(self, interval):
+        while True:
+            request = call.HeartbeatPayload()
+            response = await self.call(request)
+            await asyncio.sleep(interval)
             
 
     async def random_simulation(self):
