@@ -307,6 +307,8 @@ class DataBase:
         #active var in transaction
         if transaction_event.event_type == enums.TransactionEventType.ended:
             transaction_info["active"] = False
+        elif transaction_event.offline == False:
+            transaction_info["active"] = True
 
         #check if there is a more recent event. (Dont update transaction)
         transaction = self.session.query(Transaction).get(transaction_info["transaction_id"])
