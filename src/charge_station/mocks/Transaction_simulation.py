@@ -37,8 +37,8 @@ class Transaction:
         self.total_import = 0
         self.total_export = 0
 
-        self.max_soc = None
-        self.min_soc = None
+        self.max_soc = 100
+        self.min_soc = 0
 
         logging.info(
             "Starting transaction\n \
@@ -217,20 +217,21 @@ class Transaction:
             await self.set_charging_action(2)
 
         #w to wh
-        if self.charging_action == 2:
-            amount_exported = 0
-            amount_imported = 0
+        amount_exported = 0
+        amount_imported = 0
 
-        elif self.charging_action == 3:
+        if self.charging_action == 3:
             amount_imported = self.power * time_since_update/60/60
             self.total_import += amount_imported
             self.ev_current_capacity += amount_imported
 
-        elif self.charging_action == 4:
+        if self.charging_action == 4:
             amount_exported = self.power * time_since_update/60/60
             self.total_export += amount_exported
             self.ev_current_capacity -= amount_exported 
         
+        self.ev_current_capacity = min(max(0, self.ev_current_capacity), self.ev_total_capacity)
+
         self.soc = self.ev_current_capacity / self.ev_total_capacity * 100
 
         self.last_meter_values_time = time.time()
