@@ -5,6 +5,7 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
+    restart: always
     ports:
       - 5672:5672 
       - 15672:15672
@@ -31,6 +32,7 @@ services:
     build: 
       context: .
       dockerfile: ./CSMS/api/dockerfile
+    restart: always
     volumes:
       - .:/app
     ports:
@@ -42,6 +44,7 @@ services:
     build: 
       context: .
       dockerfile: ./CSMS/db/dockerfile
+    restart: always
     volumes:
       - .:/app
     depends_on:
@@ -52,6 +55,7 @@ services:
     build: 
       context: .
       dockerfile: ./CSMS/ocpp_server/dockerfile
+    restart: always
     volumes:
       - .:/app
     ports:
