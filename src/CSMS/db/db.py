@@ -63,7 +63,8 @@ class DataBase:
         except OperationalError:
             
             await asyncio.sleep(1)
-            #retry
+            
+            LOGGER.info("RETRYING")
             return await self.call_db_method(method, request)
     
 
